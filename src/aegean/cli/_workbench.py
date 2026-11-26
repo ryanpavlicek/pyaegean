@@ -83,10 +83,11 @@ def _damos_file(*, fetch_if_missing: bool = False) -> Path | None:
     return None
 
 
-def _load_corpus_bytes(corpus_arg: str) -> bytes:
-    """Load a pyaegean corpus id or local JSON file and serialize to workbench JSON bytes."""
+def _load_corpus_payload(corpus_arg: str) -> tuple[bytes, str]:
+    """Load a pyaegean corpus id or local JSON file and serialize to a multi-script
+    workbench bundle JSON payload alongside its script id."""
     from .. import load
-    from ..io.workbench import from_workbench_export, to_workbench
+    from ..io.workbench import from_workbench_export, to_workbench_bundle
 
     path = Path(corpus_arg)
     if path.is_file():
@@ -103,14 +104,21 @@ def _load_corpus_bytes(corpus_arg: str) -> bytes:
             corpus = Corpus.from_json(path)
     else:
         corpus = load(corpus_arg)
-    records = to_workbench(corpus)
-    return json.dumps(records, ensure_ascii=False).encode("utf-8")
+    bundle = to_workbench_bundle(corpus)
+    script_id = str(bundle.get("_meta", {}).get("script") or corpus.script_id or "lineara")
+    return (json.dumps(bundle, ensure_ascii=False).encode("utf-8"), script_id)
+
+
+def _load_corpus_bytes(corpus_arg: str) -> bytes:
+    """Serialize a corpus id or local JSON path to workbench bundle JSON bytes."""
+    return _load_corpus_payload(corpus_arg)[0]
 
 
 def _build_launch_url(
     port: int,
     *,
     has_corpus: bool = False,
+    script_id: str | None = None,
     has_damos: bool = False,
     has_state: bool = False,
     module: str | None = None,
@@ -124,6 +132,8 @@ def _build_launch_url(
     query: list[tuple[str, str]] = []
     if has_corpus:
         query.append(("corpus", "/api/local/corpus.json"))
+        if script_id and script_id != "lineara":
+            query.append(("script", script_id))
     if has_damos:
         query.append(("damos", "/api/local/damos-corpus.json"))
     if has_state:
@@ -385,9 +395,10 @@ def workbench(
         raise fail(f"could not fetch the imagery: {exc}") from exc
 
     corpus_bytes: bytes | None = None
+    corpus_script_id: str | None = None
     if corpus is not None:
         try:
-            corpus_bytes = _load_corpus_bytes(corpus)
+            corpus_bytes, corpus_script_id = _load_corpus_payload(corpus)
         except Exception as exc:
             raise fail(f"could not load --corpus {corpus!r}: {exc}") from exc
 
@@ -420,6 +431,7 @@ def workbench(
     url = _build_launch_url(
         actual_port,
         has_corpus=corpus_bytes is not None,
+        script_id=corpus_script_id,
         has_damos=damos_path is not None,
         has_state=state_path is not None,
         module=module,

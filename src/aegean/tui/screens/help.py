@@ -19,14 +19,18 @@ _HELP = """[b]aegean — keys[/b]
 
   h   Home                 l   Library manager (download/remove everything)
   c   Corpus browser       b   Biblical Greek study (NT, MSS, Strong's, LXX)
-  g   Greek workbench      w   Works library (~1,778 Greek literary works)
-  d   Data & environment   :   Command console (any CLI command)
+  g   Greek workbench      r   Annotation & conflict review (CSVs & risk queues)
+  w   Works library        d   Data & environment   ·   : Command console
   t   Theme picker         Esc Back / exit input   ·   ? Help   ·   q Quit
   ctrl+p   Command palette (open a corpus, fetch, jump, theme…)
 
 [b]In the corpus browser (c)[/b]  /  focus search · Tab cycle panes · f download
   selected uninstalled corpus · type a sign pattern (KU-*) to search ·
   In the reader: ↑/↓ line · ←/→ word · i inline gloss · Enter / a analyze line
+
+[b]Annotation review (r)[/b]  open a review CSV, multi-reviewer merge, or corpus
+  risk queue · a accept · e edit fields · 1/2/3 pick conflict option · d defer ·
+  x reject · n/p next/prev unresolved · f cycle filter · s save CSV
 
 [b]Biblical Greek study (b)[/b]  interlinear NT · 5-edition comparison · 2nd–5th c.
   manuscript witnesses · Strong's word study · LXX (55 books) & NT Catenae ·

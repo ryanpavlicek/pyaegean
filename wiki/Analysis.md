@@ -1,92 +1,87 @@
 # Analysis
 
-`aegean.analysis` is the toolkit's "what can I learn from this corpus?" layer:
-weighted phonetic distance and alignment, cross-script sound comparison,
-association and corpus statistics (dispersion, keyness, bootstrap), vocabulary
-richness, morphology and graphotactics, scribal-hand profiling, accounting and
-metrology, a compound query engine, SQLite persistence, and more. Every method
-is **exploratory evidence to weigh**: you'd use it to find patterns worth a
-closer look, rank candidates, or sanity-check a claim, not to produce a reading.
+`aegean.analysis` provides the statistical, distributional, structural, and
+query layer over any loaded corpus: weighted phonetic distance and alignment,
+cross-script comparison, association tests, dispersion, keyness, bootstrap
+intervals, vocabulary richness, morphology and graphotactics, scribal-hand
+profiling, accounting reconciliation, a compound query engine, SQLite
+persistence, and matplotlib plotting.
 
-These are ported faithfully from the Linear A Research Workbench's analytical
-code and checked against shared golden fixtures
-(`tests/fixtures/golden/algorithms.json`) so the Python port can't silently
-diverge, with property tests mirroring the workbench's invariants.
+The statistical and structural algorithms mirror the Linear A Research
+Workbench and are verified against shared golden fixtures
+(`tests/fixtures/golden/algorithms.json`).
 
-> **Exploratory material.** Linear A is undeciphered: the cross-linguistic and
-> decipherment-adjacent methods here surface *evidence to weigh*, never readings
-> or translations. The full picture of what pyaegean can and cannot claim is on
-> the **[Limitations](Limitations)** page.
+> **Scope note.** Linear A and Cypro-Minoan are undeciphered. Statistical,
+> distributional, and cross-script methods over those corpora generate
+> exploratory leads and rank candidates; they do not establish readings or
+> translations. See [Limitations](Limitations).
 
-Everything below is runnable. The examples were executed against the installed
-package on the real bundled corpora (`lineara`, 1,721 inscriptions; `damos`,
-the fetched Linear B corpus) and show the **actual** output.
+All examples below were executed against the bundled `lineara` corpus (1,721
+inscriptions) and the fetched `damos` Linear B corpus.
 
 ---
 
-## Which analysis → which command
-
-Most analyses have both a Python function and a `aegean ...` shell command.
-A few of the newer/lower-level ones are Python-only. This table is the map.
+## Analysis map (Python and CLI)
 
 | Analysis | Python | CLI |
 | --- | --- | --- |
 | Phonetic distance | `phonetic_distance`, `extract_root` | `aegean analyze distance` |
 | Per-position alignment | `align_phonetic` | `aegean analyze align` |
-| Word-sequence alignment | `align_sequences` |— |
+| Word-sequence alignment | `align_sequences` | — |
 | Cross-script compare | `phonetic_compare`, `romanize_greek` | `aegean analyze compare` |
 | Cross-script ranking | `nearest` | `aegean analyze nearest` |
 | Word-pair association | `chi_squared_2x2`, `log_likelihood_ratio_2x2`, `fishers_exact`, `pmi_interval` | `aegean analyze assoc` |
 | Co-occurring words | `build_cooccurrence_map` | `aegean analyze cooccur` |
 | Dispersion (Gries' DP) | `dispersion`, `dispersions` | `aegean dispersion` |
 | Keyness (G² + log-ratio) | `keyness` | `aegean keyness` |
-| Bootstrap CI | `bootstrap_ci`, `bootstrap_counts_ci` |— |
-| Paired significance (A vs B) | `mcnemar`, `paired_bootstrap` |— |
-| Monte-Carlo null models | `monte_carlo_p` |— |
-| Vocabulary richness / info | `chao1`, `mattr`, `fit_heaps`, `fit_zipf_mandelbrot_mle`, `shannon_entropy`, `miller_madow_entropy` |— |
+| Bootstrap CI | `bootstrap_ci`, `bootstrap_counts_ci` | — |
+| Paired significance (A vs B) | `mcnemar`, `paired_bootstrap` | — |
+| Monte-Carlo null models | `monte_carlo_p` | — |
+| Vocabulary richness / entropy | `chao1`, `mattr`, `fit_heaps`, `fit_zipf_mandelbrot_mle`, `shannon_entropy`, `miller_madow_entropy` | — |
 | Morphological clusters | `find_morphological_clusters` | `aegean analyze clusters` |
-| Morpheme segmentation | `segment`, `candidate_morphs` |— |
-| Sign embeddings | `sign_embeddings` |— |
-| Brown sign-class induction | `induce_classes` |— |
-| Cross-script alignment (measured null) | `align_scripts`, `rank_known_pairs`, `recover_identity` |— |
-| Affix productivity / edge bias | `baayen_productivity`, `affix_edge_bias`, `successor_variety` |— |
-| Positional bias | `positional_bias` |— |
-| Sign-bigram PMI | `sign_bigram_pmi`, `sign_bigram_pmis` |— |
-| Graphotactic surprisal | `train_sign_bigram_model`, `word_surprisal` |— |
-| Multivariate (CA / UPGMA / communities) | `correspondence_analysis`, `upgma_with_bootstrap`, `label_propagation` |— |
-| Linear A vs Linear B divergence | `build_lb_divergence`, `spearman_rho` |— |
+| Morpheme segmentation | `segment`, `candidate_morphs` | — |
+| Sign embeddings | `sign_embeddings` | — |
+| Brown sign-class induction | `induce_classes` | — |
+| Cross-script alignment (measured null) | `align_scripts`, `rank_known_pairs`, `recover_identity` | — |
+| Affix productivity / edge bias | `baayen_productivity`, `affix_edge_bias`, `successor_variety` | — |
+| Positional bias | `positional_bias` | — |
+| Sign-bigram PMI | `sign_bigram_pmi`, `sign_bigram_pmis` | — |
+| Graphotactic surprisal | `train_sign_bigram_model`, `word_surprisal` | — |
+| Multivariate (CA / UPGMA / communities) | `correspondence_analysis`, `upgma_with_bootstrap`, `label_propagation` | — |
+| Linear A vs Linear B divergence | `build_lb_divergence`, `spearman_rho` | — |
 | Tablet structure | `classify_structure`, `classify_corpus` | `aegean analyze structure` |
 | Scribal hands | `scribal_hands`, `hand_keyness` | `aegean analyze hands` |
-| Document-type / dossier / metrology profile | `document_type_profile`, `account_dossiers`, `metrology_profile` |— |
-| Commodity / ideogram line stats | `line_cooccurrence_pmi`, `ideogram_group_exclusivity` |— |
+| Document-type / dossier / metrology profile | `document_type_profile`, `account_dossiers`, `metrology_profile` | — |
+| Commodity / ideogram line stats | `line_cooccurrence_pmi`, `ideogram_group_exclusivity` | — |
 | Accounting balance | `balance_check`, `checkable_accounts` | `aegean balance` |
 | Sign-pattern search | `word_matches_sign_pattern` | `aegean search` |
 | Compound query | `run_query`, `FilterRow` | `aegean query` |
 | SQLite persistence + FTS | `db.to_sqlite`, `db.search`, `Corpus.from_sql` | `aegean db build` / `aegean db search` |
 | Figures | `aegean.viz.*` | `aegean plot` |
 
-Reporting commands take `--json` for machine-readable output. File-writing
-commands such as `db build` and `plot` use `-o` instead. The full CLI reference
-is on the **[CLI](CLI)** page.
+Reporting commands accept `--json`; file-writing commands (`db build`, `plot`)
+use `-o`. See [CLI](CLI) for complete flag documentation.
 
 ---
 
-## Phonetic distance & classes
+## Phonetic distance and classes
 
-A weighted Levenshtein over phonetic strings, normalized to `[0, 1]`. Vowel↔vowel
-substitutions are cheap (0.3), same articulatory-class consonants moderate (0.5),
-everything else full cost (1).
+`phonetic_distance` computes a weighted Levenshtein distance over phonetic
+strings normalized to `[0, 1]`: vowel-to-vowel substitutions cost `0.3`,
+same-articulatory-class consonant substitutions cost `0.5`, and all other
+substitutions or indels cost `1.0`.
 
 ```python
 from aegean.analysis import phonetic_distance, extract_root
 phonetic_distance("kuro", "kuro")     # 0.0
-phonetic_distance("kuro", "karo")     # 0.075   (one vowel swap / 4)
-phonetic_distance("kuro", "kulo")     # 0.125   (r↔l, same class / 4)
-extract_root("KU-RO")                 # 'kr'     (consonant skeleton)
+phonetic_distance("kuro", "karo")     # 0.075 (one vowel swap / 4)
+phonetic_distance("kuro", "kulo")     # 0.125 (r↔l, same class / 4)
+extract_root("KU-RO")                 # 'kr'  (consonant skeleton)
 ```
 
-From the shell (note: the CLI takes transliterations with hyphens, which it
-expands to phonemes: the number can differ from the raw-string call above):
+The CLI converts hyphenated transliterations into phonetic strings before
+scoring, so CLI and raw-string distances can differ when transliteration expands
+a sign:
 
 ```bash
 aegean analyze distance KU-RO KA-RO
@@ -96,8 +91,7 @@ aegean analyze distance kuro kulo --json
 # { "word1": "kuro", "word2": "kulo", "distance": 0.125 }
 ```
 
-Which phonemes count as "same class" is a linguistic judgement, exposed as a
-configurable scheme:
+Articulatory class membership is configurable via `PhoneticScheme`:
 
 ```python
 from aegean.analysis import (
@@ -111,14 +105,14 @@ cl = build_phonetic_classes(CONSERVATIVE_PHONETIC_SCHEME)
 
 ## Alignment
 
-Per-phoneme alignment classifies each position as one of these operations:
+Per-phoneme alignment tags each aligned position with one operation:
 
 | `op` | Meaning |
 | --- | --- |
-| `match` | Same phoneme |
-| `sub-vowel` | Vowel substituted for a vowel |
-| `sub-class` | Consonant substituted within the same articulatory class |
-| `sub-far` | Substitution across classes (full cost) |
+| `match` | Identical phoneme |
+| `sub-vowel` | Vowel-to-vowel substitution |
+| `sub-class` | Consonant substitution within one articulatory class |
+| `sub-far` | Cross-class substitution (full cost) |
 | `ins` | Insertion (gap in word A) |
 | `del` | Deletion (gap in word B) |
 
@@ -134,8 +128,8 @@ aegean analyze align ka ko
 #  a  o  sub-vowel
 ```
 
-Word-level multiple-sequence alignment (progressive Needleman–Wunsch) lines up
-whole inscriptions:
+Progressive Needleman–Wunsch (`align_sequences`) aligns multiple word sequences
+across inscriptions:
 
 ```python
 from aegean.analysis import align_sequences
@@ -145,27 +139,22 @@ align_sequences([["A-B", "X-Y", "C-D"], ["A-B", "Z-Z", "C-D"]])
 
 ## Cross-script comparison
 
-The distance and alignment above work on phoneme strings; `aegean.analysis.compare`
-feeds them words from *different scripts* by romanizing each to a common Latin
-phoneme alphabet. The deciphered syllabaries already do this
-(`word_to_phonetic`); the new piece is `romanize_greek`, so a Linear B word and
-its alphabetic-Greek descendant (or a Cypriot and a Greek form) can be lined
-up by **sound**. The scripts that can be put on the common alphabet are
-`PHONEME_SCRIPTS == ('greek', 'lineara', 'linearb', 'cypriot')`.
+`aegean.analysis.compare` compares words across scripts by projecting each into
+a shared Latin phoneme alphabet (`PHONEME_SCRIPTS == ('greek', 'lineara',
+'linearb', 'cypriot')`), using `word_to_phonetic` for syllabaries and
+`romanize_greek` for alphabetic Greek.
 
 ```python
 from aegean.analysis import phonetic_compare, nearest, romanize_greek
 
-romanize_greek("βασιλεύς")                       # 'basileus'  (accents/breathings dropped)
+romanize_greek("βασιλεύς")                       # 'basileus' (accents and breathings stripped)
 cmp = phonetic_compare("qa-si-re-u", "linearb", "βασιλεύς", "greek", fold_aspiration=True)
 cmp.similarity                                   # 0.5625
-[(c.a, c.b, c.op) for c in cmp.alignment][:2]    # [('k', '', 'del'), ('w', 'b', 'sub-far')] — the qʷ→b reflex
+[(c.a, c.b, c.op) for c in cmp.alignment][:2]    # [('k', '', 'del'), ('w', 'b', 'sub-far')]
 
-# triage: which Greek words sound closest to a Linear B form?
 nearest("qa-si-re-u", "linearb",
         ["ποιμήν", "βασιλεύς", "πατήρ", "θεός"], "greek", fold_aspiration=True)
 # [('βασιλεύς', 0.4375), ('πατήρ', 0.6625), ('ποιμήν', 0.7), ('θεός', 0.7875)]
-#  → the true cognate ranks first
 ```
 
 ```bash
@@ -182,39 +171,35 @@ aegean analyze compare po-me ποιμήν --fold-aspiration
 aegean analyze nearest qa-si-re-u greek --fold-aspiration --top 5
 ```
 
-The `compare`/`nearest` commands default to `--script-a linearb` and (for
-`compare`) `--script-b greek`; pass `--script-a`/`--script-b` to change them.
+CLI `compare` and `nearest` default to `--script-a linearb` (and `--script-b
+greek` for `compare`).
 
-Two cautions stack here. The distance metric's phoneme classes are already a
-linguistic judgement (above); on top of that, **syllabic spelling is defective**:
-Linear B and Cypriot drop word-final consonants, omit cluster members, and
-don't write aspiration or voicing, so a Greek form looks longer than its
-syllabic spelling and the absolute distance is inflated. The reliable signal is
-the **ranking** (`nearest`), and an alignment shows a *hypothesised*
-correspondence, not a sound law. `fold_aspiration` (θ/φ/χ → t/p/k) meets the
-syllabaries' aspiration-blind orthography halfway. See [Limitations](Limitations).
+Syllabic orthography omits word-final consonants, simplifies consonant clusters,
+and does not mark aspiration or voicing, which inflates absolute edit distance
+against alphabetic Greek. Relative ranking (`nearest`) is more informative than
+raw distance, and `fold_aspiration=True` (`θ/φ/χ → t/p/k`) partially compensates
+for aspiration-blind syllabic spelling.
 
 ## Word-pair association
 
-Document-level association between two words across N documents (the 2×2 table
-counts documents containing both, each alone, and neither). The exact special
-functions come from the standard-library `math` module, so there are no
-third-party dependencies.
+Document-level 2×2 association statistics count documents containing both words,
+each alone, and neither. All functions use Python's standard library `math`
+module with no third-party dependencies.
 
 ```python
 from aegean.analysis import (
     chi_squared_2x2, log_likelihood_ratio_2x2, chi_squared_p_value,
     fishers_exact, wilson_interval, pmi_interval,
 )
-chi_squared_2x2(5, 10, 10, 100)          # 15.123  (Yates-corrected)
-log_likelihood_ratio_2x2(5, 10, 10, 100) # 12.533  (G², Dunning 1993)
+chi_squared_2x2(5, 10, 10, 100)          # 15.123 (Yates-corrected)
+log_likelihood_ratio_2x2(5, 10, 10, 100) # 12.533 (G², Dunning 1993)
 chi_squared_p_value(3.841)               # 0.05
 fishers_exact(5, 5, 5, 10)               # 0.007937 (two-sided)
-wilson_interval(5, 10)                    # (0.2366, 0.7634) 95% CI
+wilson_interval(5, 10)                   # (0.2366, 0.7634) 95% CI
 pmi_interval(5, 10, 10, 100)             # (1.1072, 3.4822)
 ```
 
-On a real corpus, the `assoc` command builds the table for you:
+CLI association and co-occurrence commands:
 
 ```bash
 aegean analyze assoc lineara KU-RO KI-RO
@@ -224,14 +209,7 @@ aegean analyze assoc lineara KU-RO KI-RO
 # log_likelihood            23.94
 # fisher_p                  1.595e-06
 # pmi_interval              [3.1720137984039996, 5.621837690118523]
-```
 
-(The bounded scores are rounded for the table; `pmi_interval` prints at full
-precision, so a reader can carry the exact interval into their own notes.)
-
-To see *what* a word keeps company with, ranked by shared documents:
-
-```bash
 aegean analyze cooccur lineara KU-RO --top 5
 # KI-RO       5 shared docs
 # *306-TU     4
@@ -242,22 +220,18 @@ aegean analyze cooccur lineara KU-RO --top 5
 
 ## Corpus statistics: dispersion, keyness, bootstrap
 
-Where association scores one word *pair*, these compare **whole corpora and
-subsets**: pure stdlib, working over any loadable corpus (`lineara`, `damos`,
-a `filter()` subset, or a plain document list). In plain terms: *dispersion*
-asks "is this word everywhere, or does it live in a few documents?"; *keyness*
-asks "what vocabulary makes this group of texts different from that one?"; the
-*bootstrap* asks "how sure can I be of this number, given how few documents
-there are?"
+These pure-stdlib functions operate over whole corpora, `filter()` subsets, or
+plain lists of `Document` objects.
 
-**Dispersion**: Gries' deviation of proportions (DP; Gries 2008, normalized
-per Lijffijt & Gries 2012). 0 = spread exactly as document sizes predict;
-toward 1 = concentrated in few documents. The `Dispersion` record carries
-`item, frequency, range, parts, dp, dp_norm`:
+**Dispersion** computes Gries' deviation of proportions (DP; Gries 2008,
+normalized per Lijffijt & Gries 2012). Values near 0 indicate distribution
+proportional to document lengths; values near 1 indicate concentration in a
+small number of documents. `Dispersion` fields are `item`, `frequency`, `range`,
+`parts`, `dp`, and `dp_norm`:
 
 ```python
-from aegean.analysis import dispersion, dispersions
 import aegean
+from aegean.analysis import dispersion, dispersions
 
 c = aegean.load("lineara")
 dispersion(c, "KU-RO")
@@ -275,16 +249,15 @@ aegean dispersion lineara --top 5
 # ...
 ```
 
-A frequent word with *high* `dp_norm` is the interesting case on Aegean
-material: formulaic or genre/site-bound vocabulary rather than corpus-wide
-language.
+A high-frequency word with high `dp_norm` typically reflects formulaic,
+genre-specific, or site-bound vocabulary.
 
-**Keyness**: which items are characteristic of a target (sub)corpus against a
-reference: Dunning's log-likelihood **G²** for significance (Rayson & Garside
-2000) plus Hardie's (2014) **log-ratio** for effect size (each point ≈ one
-doubling of relative frequency; positive = overused in the target). The
-`KeynessRow` carries `item, target_count, target_total, reference_count,
-reference_total, log_likelihood, log_ratio, p_value`:
+**Keyness** identifies items over- or under-represented in a target subcorpus
+compared with a reference using Dunning's log-likelihood G² (Rayson & Garside
+2000) and Hardie's (2014) log-ratio effect size (each +1.0 represents roughly a
+doubling of relative frequency). `KeynessRow` carries `item`, `target_count`,
+`target_total`, `reference_count`, `reference_total`, `log_likelihood`,
+`log_ratio`, and `p_value`:
 
 ```python
 from aegean.analysis import keyness
@@ -308,15 +281,15 @@ aegean keyness lineara --site "Haghia Triada" --top 5
 # A-TA-I-*301-WA-JA  0/704    11/677     15.78  -4.58      7.1e-05
 ```
 
-`aegean keyness` can compare a subset to the rest of its own corpus
-(`--site/--period/--scribe/--support`) or to a second corpus (`--reference`),
-and `--signs` keys individual signs instead of words.
+`aegean keyness` compares either a metadata slice (`--site`, `--period`,
+`--scribe`, `--support`) against the remainder of its corpus, or against an
+external `--reference` corpus; `--signs` compares signs rather than words.
 
-**Bootstrap confidence intervals**: a percentile interval for *any* corpus
-statistic, resampling documents with replacement (Efron & Tibshirani 1993);
-documents are the resampling unit because tokens within a tablet are not
-independent. Deterministic by default (`seed=0`). The `BootstrapCI` carries
-`estimate, low, high, level, n_resamples`:
+**Bootstrap confidence intervals** (`bootstrap_ci`) compute percentile intervals
+for any corpus statistic by resampling documents with replacement (Efron &
+Tibshirani 1993), respecting within-document token dependence. Deterministic by
+default (`seed=0`). `BootstrapCI` holds `estimate`, `low`, `high`, `level`, and
+`n_resamples`:
 
 ```python
 from aegean.analysis import bootstrap_ci
@@ -330,19 +303,18 @@ ci = bootstrap_ci(c, mean_words)
 # (0.802, 0.718, 0.891, 0.95, 999)
 ```
 
-A scholarly caution: on small or fragmentary corpora a significant G² flags an
-imbalance worth *inspecting*, not a proven fact about the language; read
-significance (G², p) together with effect size (log-ratio) and dispersion.
-See [Limitations](Limitations).
+On small or fragmentary corpora, read G² and p-values alongside log-ratio effect
+size and dispersion.
 
 ### Explicit word-count populations
 
 `Corpus.word_frequencies()` defaults to exact surface spelling and token counts.
-Select `view="normalized"` for NFC, lowercase, and final-sigma folding while
-preserving diacritics and iota subscript, or `view="lemma"` for existing lemma
-annotations. No analysis is run; missing lemmas are excluded and reported.
-`count_unit="document"` counts each document once per word. A `statuses` filter
-requires both the whole token and every typed editorial segment to qualify.
+Pass `view="normalized"` for NFC, lowercase, and final-sigma folding while
+retaining diacritics and iota subscript, or `view="lemma"` to count existing
+lemma annotations (without running an analyzer; tokens lacking lemmas are
+excluded and counted in metadata). `count_unit="document"` counts document
+frequency rather than token frequency. Filtering by `statuses` requires both the
+token status and every typed editorial segment to qualify.
 
 ```python
 sample = aegean.io.from_text("Λόγος λόγος λόγος.")
@@ -357,24 +329,20 @@ print(counts.cite())                              # source and counting choices
 ```
 
 The list-compatible result retains its denominator, exclusions, normalization,
-reading-status selection, and lemma-source labels in `metadata`. Those labels
-describe the supplied annotations, not verified accuracy. The same choices are
-available through `aegean stats --view ... --count-unit ... --statuses ...`;
-add `--details --json` to retain the counting metadata alongside the rows.
-Dispersion and keyness above continue to use their documented surface-word or
-sign populations.
+status selection, and lemma-source labels in `metadata`. On the CLI,
+`aegean stats --view ... --count-unit ... --statuses ... --details --json`
+exposes the same controls. `dispersion` and `keyness` continue to operate on
+surface words or signs.
 
-## Paired significance: does system A differ from system B?
+## Paired significance tests
 
-The bootstrap above puts a CI on *one* system's score; these two tests answer the
-complementary question, *do two systems differ significantly on the same items?*,
-over gold-aligned per-item results. Pure stdlib, deterministic by seed.
+To test whether two systems differ on the same aligned item set, use `mcnemar`
+or `paired_bootstrap` (both stdlib-only and deterministic by seed).
 
-**McNemar's test** over two systems' binary per-item correctness. Only the
-discordant items carry signal (`b` = A-right/B-wrong, `c` = A-wrong/B-right); a
-small `p_value` means the systems differ where they disagree. For few discordant
-items the exact two-sided binomial is used, otherwise a continuity-corrected
-chi-square:
+**McNemar's test** compares binary per-item correctness on discordant items
+(`b` = A correct / B wrong, `c` = A wrong / B correct), using the exact
+two-sided binomial test for small discordant counts and continuity-corrected
+chi-square otherwise:
 
 ```python
 from aegean.analysis import mcnemar
@@ -382,37 +350,32 @@ r = mcnemar([True, True, False, True], [True, False, False, False])
 r.b, r.c, r.method, round(r.p_value, 4)     # (2, 0, 'exact', 0.5)
 ```
 
-**Paired bootstrap** over the per-item score *differences* `A − B` (any numbers:
-0/1 accuracy, per-sentence LAS, a similarity). It returns the mean difference, a
-percentile CI, and the fraction of resamples favouring each system:
+**Paired bootstrap** resamples per-item score differences `A − B` for any real
+metric (accuracy, per-sentence LAS, similarity) and returns the mean difference,
+percentile CI, and resample win fractions:
 
 ```python
 from aegean.analysis import paired_bootstrap
 r = paired_bootstrap([1, 1, 1, 1, 0, 1], [0, 1, 0, 1, 0, 0], seed=1)
-round(r.mean_difference, 3), round(r.frac_a, 2)   # (0.5, 0.99)   ← A scores higher
-(round(r.low, 2), round(r.high, 2))               # the 95% band on the mean difference
+round(r.mean_difference, 3), round(r.frac_a, 2)   # (0.5, 0.99)
+(round(r.low, 2), round(r.high, 2))               # 95% CI on mean difference
 ```
 
-`McNemarResult` = `(b, c, statistic, p_value, method)`; `PairedBootstrapResult` =
-`(mean_difference, low, high, level, n_resamples, frac_a, frac_b)`. Both treat
-items as the exchangeable unit and assume the systems ran on the same items in the
-same order. They quantify whether a gap is more than sampling noise, nothing about
-whether the items are representative. On small Aegean evaluation sets read the
-p-value and CI together with the effect size (the mean difference); a comparison
-over an **undeciphered** script's putative readings is exploratory, the test can
-say two heuristics disagree, never that either is correct.
+`McNemarResult` holds `(b, c, statistic, p_value, method)`;
+`PairedBootstrapResult` holds `(mean_difference, low, high, level, n_resamples,
+frac_a, frac_b)`. Both assume paired items in matching order and measure
+sampling variance only, not dataset representativeness.
 
 ## Monte-Carlo null models
 
-Do not report an undeciphered-script statistic as a bare number. Pair it with an
-explicit *null* and a p-value, so a reader knows whether the value is more than
-randomness alone would produce. `monte_carlo_p`
-scores any structure statistic (a `Callable[[Sequence[str]], float]` over a
-sign-hyphen-sign word list, larger = more "structured") against a seeded null:
+`monte_carlo_p` tests any structure statistic
+(`Callable[[Sequence[str]], float]` over hyphenated sign-sequence words, larger
+= more structured) against a seeded null distribution:
 
 ```python
+import statistics
+import aegean
 from aegean.analysis import monte_carlo_p, train_sign_bigram_model, word_surprisal
-import aegean, statistics
 
 c = aegean.load("lineara")
 words = [t.text for d in c.documents for t in d.tokens if t.kind.name == "WORD" and "-" in t.text]
@@ -420,54 +383,45 @@ model = train_sign_bigram_model(c.word_frequencies())
 stat = lambda ws: statistics.mean(word_surprisal(model, w).mean for w in ws)
 
 res = monte_carlo_p(stat(words), stat, words, null="within_word", n=999, seed=0)
-res.observed, round(res.p_value, 4), res.null    # (…, …, 'within_word')
+res.observed, round(res.p_value, 4), res.null    # (..., ..., 'within_word')
 ```
 
-`MonteCarloResult` = `(observed, p_value, null_mean, null_low, null_high, level, n,
-null)`. The p-value is the add-one upper-tail estimate `(1 + #{null ≥ observed}) /
-(1 + n)` (never exactly 0, valid for finite `n`). Two nulls, each with documented,
-explicit invariants:
+`MonteCarloResult` holds `(observed, p_value, null_mean, null_low, null_high,
+level, n, null)`. The upper-tail p-value is `(1 + #{null ≥ observed}) / (1 + n)`.
 
-| `null` | preserves | destroys |
+| `null` | Preserves | Destroys |
 | --- | --- | --- |
-| `within_word` | per-word length and the corpus-wide unigram-sign counts | sign *order* and within-word co-occurrence |
-| `reshuffle` | every word intact, and the per-length word counts | a word's *position* in the list |
+| `within_word` | Per-word length and corpus-wide unigram sign counts | Sign order and within-word co-occurrence |
+| `reshuffle` | Every word intact and per-length word counts | Word position in the list |
 
-Use `within_word` to ask whether the sign *ordering* is more than the unigram
-frequencies and word lengths force; `reshuffle` for statistics that read the
-arrangement of whole words. **Exploratory.** A small p-value says the statistic
-departs from the stated null, never that a morpheme, reading, or interpretation is
-confirmed. Honest reporting names the null, the seed, and `n` alongside the
-p-value.
+Report the null model, seed, and `n` alongside the p-value. A small p-value
+shows departure from the stated null, not confirmation of a morpheme or reading.
 
-## Vocabulary richness & information
+## Vocabulary richness and information
 
-Estimators that work over a **count vector** (token counts per type), so they
-apply to any corpus or subset. All pure stdlib.
+Pure-stdlib estimators over type-count vectors:
 
-| Function | What it answers |
+| Function | Quantity |
 | --- | --- |
 | `shannon_entropy(counts)` | Bits per token under the observed distribution |
-| `miller_madow_entropy(counts)` | Entropy with the small-sample (Miller–Madow) correction |
-| `chao1(s_obs, f1, f2)` | How many types exist *including unseen ones* (lower-bound) |
-| `mattr(tokens, window)` | Moving-average type–token ratio (length-robust) |
+| `miller_madow_entropy(counts)` | Entropy with Miller–Madow small-sample correction |
+| `chao1(s_obs, f1, f2)` | Lower-bound estimate of total vocabulary including unseen types |
+| `mattr(tokens, window)` | Moving-average type–token ratio (independent of text length) |
 | `fit_heaps(points)` | Heaps' law fit (vocabulary growth vs tokens) |
-| `fit_zipf_mandelbrot_mle(freqs)` | Zipf–Mandelbrot rank–frequency fit |
-| `spearman_rho(xs, ys)` | Rank correlation between two series |
+| `fit_zipf_mandelbrot_mle(freqs)` | Zipf–Mandelbrot rank–frequency MLE fit |
+| `spearman_rho(xs, ys)` | Spearman rank correlation |
 
 ```python
 from aegean.analysis import (
     shannon_entropy, miller_madow_entropy, chao1, mattr,
     fit_zipf_mandelbrot_mle, spearman_rho,
 )
-shannon_entropy([10, 5, 5, 1, 1])         # 1.894
-miller_madow_entropy([10, 5, 5, 1, 1])    # 2.0252
-spearman_rho([1, 2, 3, 4, 5], [2, 1, 4, 3, 5])   # 0.8
+shannon_entropy([10, 5, 5, 1, 1])                 # 1.894
+miller_madow_entropy([10, 5, 5, 1, 1])            # 2.0252
+spearman_rho([1, 2, 3, 4, 5], [2, 1, 4, 3, 5])    # 0.8
 ```
 
-`chao1` on the real Linear A word vocabulary (995 observed types, 835 hapaxes,
-91 dis-legomena) estimates how much vocabulary the corpus has *not yet shown*:
-a stark reminder of how fragmentary the material is:
+`chao1` on Linear A words (995 observed types, 835 hapaxes, 91 dis-legomena):
 
 ```python
 from collections import Counter
@@ -478,13 +432,13 @@ chao1(len(vals), sum(v == 1 for v in vals), sum(v == 2 for v in vals))
 ```
 
 `fit_zipf_mandelbrot_mle` returns `ZipfMandelbrotFit(s, beta, ks, r2_log,
-log_z)`; `fit_heaps` returns `HeapsFit(k, beta, r2)`. Treat `unseen` and the
-fitted exponents as descriptive of *this surviving sample*, not the lost whole.
+log_z)`; `fit_heaps` returns `HeapsFit(k, beta, r2)`. All fitted parameters
+describe the surviving sample.
 
 ## Morphological clustering
 
-Heuristic lemmatization for an undeciphered script: find suffixes productive
-across many words, then group words sharing a stem via a productive suffix.
+`find_morphological_clusters` identifies suffixes occurring across multiple
+distinct words and groups words sharing a stem:
 
 ```python
 from aegean.analysis import find_morphological_clusters
@@ -510,95 +464,88 @@ aegean analyze clusters lineara --top 4
 
 ## Morpheme segmentation (Harris)
 
-Where `find_morphological_clusters` groups words by a shared productive suffix,
-`segment` cuts each word at the local peaks of its **successor- and
-predecessor-variety** curves (Harris's distributional boundary signal, forward and
-backward, the two cut sets unioned). The cut points are read off the whole
-vocabulary at once.
+`segment` cuts each word at local peaks of forward successor variety and
+backward predecessor variety (Harris's distributional boundary criterion),
+taking the union of both cut sets across the vocabulary:
 
 ```python
 from aegean.analysis import segment, candidate_morphs
 wf = [w for w, _ in c.word_frequencies()]
 
 seg = segment(["A-TA-NA-JE", "A-TA-DE"])[0]
-seg.word, seg.cuts, seg.pieces     # the boundary offsets and the resulting morphs
+seg.word, seg.cuts, seg.pieces
 
-# the recurring word-final morphs, ranked by how many distinct words bear them:
 candidate_morphs(wf, min_count=5)[:5]
 # [('TE', 37), ('NA', 36), ('JA', 34), ('RE', 34), ('TI', 29)]
 ```
 
-A `Segmentation` = `(word, units, cuts, pieces)`, where `cuts` are boundary offsets
-into `units` and `pieces` are the resulting morphs (joined the way the word was).
-`candidate_morphs(words, *, min_count=2)` counts each word-final morph by the number
-of *distinct* word types ending in it (so a repeated word cannot inflate it).
-**Exploratory:** the cuts are distributional hypotheses, and on hapax-heavy
-undeciphered corpora the variety signal is thin. A high-count morph is a *candidate*
-productive suffix to inspect, never a confirmed morpheme or a meaning.
+`Segmentation` holds `(word, units, cuts, pieces)`. `candidate_morphs(words, *,
+min_count=2)` counts distinct word types ending in each word-final morph so
+high-frequency words do not inflate the score. On hapax-heavy corpora the
+variety signal is sparse; high-count morphs are candidate suffixes to inspect.
 
 ## Sign embeddings
 
-A dense distributional vector per sign, learned from sign adjacency *within words*:
-a (sign × context) co-occurrence table, PPMI-reweighted, reduced by a deterministic
-truncated SVD and L2-normalized, so the nearest neighbours read as cosine
-similarity. No numpy/scipy.
+`sign_embeddings` builds a dense distributional vector per sign from
+within-word adjacency: a sign-by-context co-occurrence matrix, PPMI-weighted,
+reduced by deterministic truncated SVD, and L2-normalized (no `numpy` or
+`scipy`).
 
 ```python
 from aegean.analysis import sign_embeddings
-emb = sign_embeddings(c)                 # dim=50, window=1 by default
-emb.dim, len(emb.vocab)                  # (50, 162)
-[s for s, _ in emb.neighbours("KU", k=3)]   # the signs most similar in distribution
+emb = sign_embeddings(c)                    # dim=50, window=1 by default
+emb.dim, len(emb.vocab)                     # (50, 162)
+[s for s, _ in emb.neighbours("KU", k=3)]
 ```
 
-`SignEmbeddings` carries `vocab`, `vectors`, `dim`, and `window`; `neighbours(sign,
-k=…)` ranks the rest by cosine similarity. **Exploratory:** the vectors encode
-distributional context, not phonetic or semantic value, and on the small Aegean
-corpora the geometry is noisy. Trust only the strongest neighbours, and corroborate
-before reading anything into them.
+`SignEmbeddings` exposes `vocab`, `vectors`, `dim`, `window`, and
+`neighbours(sign, k=...)` ranked by cosine similarity. Vectors capture
+distributional context rather than phonetic or semantic identity, and small
+corpora produce noisy neighborhoods.
 
 ## Brown sign-class induction
 
-`induce_classes` groups a script's signs into distributional **classes** by Brown
-clustering: it seeds one class per sign, then greedily merges the pair whose merge
-gives up the least average mutual information of the class-bigram model, until
-`n_classes` remain (Brown et al. 1992). It is aimed at the undeciphered material
-(especially Cypro-Minoan), where a vowel/consonant or open/closed split, if one
-exists, should surface as shared adjacency behaviour.
+`induce_classes` partitions signs into `n_classes` distributional clusters via
+Brown clustering (Brown et al. 1992), greedily merging the class pair with the
+smallest loss in average bigram mutual information:
 
 ```python
 from aegean.analysis import induce_classes
 sc = induce_classes(c, n_classes=8)
 len(sc)                  # 8
-sc.classes()[0][:5]      # the members of the first class, sign-sorted
-sc.class_of("KU")        # the integer class id of a sign (-1 if never attested)
-sc.report                # the quality numbers (mutual information, perplexity) and the corpus size
+sc.classes()[0][:5]      # members of class 0, sorted
+sc.class_of("KU")        # integer class id (-1 if unattested)
+sc.report                # mutual information, perplexity, and corpus size
 ```
 
-A `SignClasses` exposes `class_of(sign)`, `classes()`, and a `report`.
-**Exploratory:** signs share a class because they occur in the same contexts, a
-candidate shared grammatical or phonotactic role, **never** a phonetic reading. On
-the small Aegean corpora most sign bigrams are seen once or never, so the classing
-overfits; the attached `report` carries the corpus size so the classes are read as
-leads, not facts.
+`SignClasses` exposes `class_of(sign)`, `classes()`, and `report`. Shared class
+membership reflects shared adjacency contexts rather than phonetic identity, and
+sparse bigram counts on small corpora can overfit.
 
 ## Cross-script alignment, and the null it measured
 
-The most useful result in this part of the toolkit is a negative one. `align_scripts`
-learns the orthogonal rotation (the classic Procrustes problem) that best maps one
-script's [sign embeddings](#sign-embeddings) onto another's, seeded by the signs the two
-scripts share by transliteration value, and can then rank, for each source sign, its
-nearest target signs. Run as a Linear A to Linear B correspondence generator and
-**calibrated by leave-one-out on the 53 signs the two scripts already share**, it recovers
-**nothing**: top-1 recovery 0.000, top-5 0.094 (chance is 5/73 = 0.068), median rank 26 of
-73 (chance median 37). The same machinery aligned to a space to *itself* recovers 90.1% of
-signs at rank 1, so the failure is not broken code: distributional embedding alignment
-carries **no recoverable Linear A to Linear B signal at this corpus scale**. (Measured
-2026-07-11 on the bundled Linear A vs the syllabogram-restricted DAMOS Linear B; full
-protocol and rank distribution in `training/results/procrustes-null-2026-07-11.json`.)
+`align_scripts` computes the orthogonal Procrustes rotation mapping one script's
+[sign embeddings](#sign-embeddings) onto another's using shared-label anchors,
+and ranks candidate target signs for each source sign.
 
-So the module ships as the instrument that measured that null. The two calibration checks
-are the point; the ranked-hypothesis API is there only for re-running the measurement with
-different embeddings, a larger corpus, or a different seed dictionary.
+Calibrated by leave-one-out over the 53 signs shared between Linear A and Linear
+B (measured 2026-07-11 on bundled `lineara` vs syllabogram-restricted DAMOS
+Linear B; protocol and full rank distribution in
+`training/results/procrustes-null-2026-07-11.json`), the method recovers **no
+signal**:
+
+- Top-1 recovery: `0.000`
+- Top-5 recovery: `0.094` (chance `5/73 = 0.068`)
+- Median rank: `26` of `73` (chance median `37`)
+- Self-alignment sanity check (`recover_identity` on Linear A): `90.1%` top-1
+  recovery (the remaining 16 signs are hapax `*NNN` signs sharing identical
+  contexts)
+
+Distributional embedding alignment carries no recoverable Linear A to Linear B
+correspondence at this corpus scale. The calibration functions
+(`recover_identity`, `rank_known_pairs`) and ranked-hypothesis API
+(`align_scripts(...).hypotheses()`) remain available to re-test the method on
+alternative embeddings, larger corpora, or different seed anchors.
 
 ```python
 import aegean
@@ -607,62 +554,49 @@ from aegean.analysis import (
 )
 
 la = sign_embeddings(aegean.load("lineara"))
-
-# Calibration 1 - the sanity floor. Does the machinery recover a space aligned to itself?
-# High, though not a clean 1.0: 16 distributionally identical signs (hapax *NNN signs that
-# share one context) tie and resolve to a sibling.
 recover_identity(la, anchor_fraction=1.0).top1_recovery      # 0.90 on Linear A
 
-# Calibration 2 - the headline null. lb is the Linear B syllabogram embedding (see the
-# evidence file for the DAMOS restriction). Where does each known pair's true target land?
+# lb is the syllabogram-restricted DAMOS Linear B embedding (see evidence JSON)
 rep = rank_known_pairs(la, lb, shared_label_anchors(la, lb))
-rep.top1, rep.median_rank, rep.chance_median                 # 0.0, 26.0, 37.0  -> no signal
+rep.top1, rep.median_rank, rep.chance_median                 # 0.0, 26.0, 37.0
 ```
 
-**Exploratory, and read the calibration first.** An alignment score is a geometry
-statistic (similar distributional position in two tiny corpora), not a phonetic reading of a
-sign. The ranked hypotheses (`align_scripts(...).hypotheses()`) exist only so the same
-calibration can be re-run on new data; on the bundled corpora the answer is the null above,
-and no hypothesis it emits is a decipherment lead.
+## Affix productivity, edge bias, and successor variety
 
-## Affix productivity, edge bias & successor variety
-
-Lower-level morphology helpers that take a `(word, count)` frequency list. They
-quantify *where* and *how productively* substrings attach, without committing
-to any morpheme being "real."
+Low-level morphological statistics over `(word, count)` frequency lists:
 
 ```python
 from aegean.analysis import affix_edge_bias, baayen_productivity, successor_variety
 
 wf = c.word_frequencies()
 
-# Which final signs are over-represented at the word edge vs the interior (G²)?
+# Final signs over-represented at word edge vs interior (G²)
 [(r.affix, r.edge_count, round(r.g2, 1)) for r in affix_edge_bias(wf, affix_len=1, mode="suffix")[:5]]
 # [('RO', 78, 103.1), ('VS', 30, 43.5), ('RA₂', 39, 43.0), ('NE', 35, 26.9), ('TE', 56, 22.0)]
 
-# Baayen's P (productivity = hapaxes / total) for two-sign suffixes:
+# Baayen's P (hapaxes / total) for two-sign suffixes
 [(p.affix, p.count, p.distinct, p.hapax, round(p.productivity, 3))
  for p in baayen_productivity(wf, affix_len=2, mode="suffix")[:3]]
 # [('DA-RA', 5, 5, 5, 1.0), ('NA-TE', 4, 4, 4, 1.0), ('RI-JA', 4, 4, 4, 1.0)]
 
-# Successor variety: stems whose next-sign choices branch much more than their parent's
+# Stems whose next-sign branching exceeds their parent stem's branching
 sv = successor_variety([w for w, _ in wf])
 sv.total                                                     # 33
 [(r.stem, r.variety, r.parent_variety, round(r.ratio, 2)) for r in sv.rows[:3]]
 # [('TA-NA', 6, 19, 4.38), ('A-RA', 5, 40, 3.65), ('A-RE', 5, 40, 3.65)]
 ```
 
-`EdgeBiasRow` = `(affix, edge_count, interior, g2)`; `Productivity` =
-`(affix, count, distinct, hapax, productivity)`; `SuccessorRow` =
-`(stem, variety, parent_variety, ratio)`. Pass `mode="prefix"` to look at the
-front of the word instead.
+Result records: `EdgeBiasRow(affix, edge_count, interior, g2)`,
+`Productivity(affix, count, distinct, hapax, productivity)`, and
+`SuccessorRow(stem, variety, parent_variety, ratio)`. Pass `mode="prefix"` for
+word-initial affixes.
 
 ## Positional bias
 
-Where in the inscription does a word tend to sit: initial, medial, or final?
-Takes inscriptions as sign/word sequences and scores each word's positional
-skew with a G² against the overall distribution. `PositionalRow` =
-`(word, count, initial, medial, final, dominant, g2)`.
+`positional_bias` scores whether each word appears preferentially in initial,
+medial, or final inscription position using G² against the corpus positional
+distribution. `PositionalRow` holds `(word, count, initial, medial, final,
+dominant, g2)`:
 
 ```python
 from aegean.analysis import positional_bias
@@ -673,44 +607,42 @@ rows = positional_bias(seqs, min_count=2)
 
 ## Sign-bigram PMI
 
-Pointwise mutual information for adjacent sign pairs: which signs "want" to sit
-next to each other, beyond chance.
+Pointwise mutual information for adjacent sign pairs:
 
 ```python
 from aegean.analysis import sign_bigram_pmi, sign_bigram_pmis
-sign_bigram_pmi(5, 10, 10, 100)          # one pair, from raw counts
-pmis = sign_bigram_pmis(c.word_frequencies())   # {(left, right): pmi} over the whole corpus
+sign_bigram_pmi(5, 10, 10, 100)
+pmis = sign_bigram_pmis(c.word_frequencies())   # {(left, right): pmi}
 sorted(pmis.items(), key=lambda kv: -kv[1])[:3]
-# [(('*307+*387', 'GRA+QE'), 11.38), (('CYP+D', '*304+PA'), 11.38), ...]
+# [(('*307+*387', 'GRA+QE'), 11.38), (('CYP+D', '*304+PA'), 11.38), (('HIDE+[?]', '*328'), 11.38)]
 ```
 
 ## Graphotactic surprisal
 
-A Witten–Bell smoothed sign-bigram model with leave-one-out scoring: how
-*surprising* is each sign given the one before it, in bits. High total surprisal
-flags a spelling that doesn't fit the corpus's usual sign sequencing.
+A Witten–Bell smoothed sign-bigram model with leave-one-out scoring measures
+each sign transition in bits. High total surprisal flags spellings that depart
+from common corpus transitions:
 
 ```python
 from aegean.analysis import train_sign_bigram_model, word_surprisal
 model = train_sign_bigram_model(c.word_frequencies())
 ws = word_surprisal(model, "KU-RO")
-round(ws.mean, 3)                                  # 2.158  (mean bits/step)
+round(ws.mean, 3)                                  # 2.158 bits/step
 [(s.from_, s.to, round(s.bits, 2)) for s in ws.steps]
 # [('^', 'KU', 4.03), ('KU', 'RO', 2.06), ('RO', '$', 0.39)]
 ```
 
-`^` and `$` are word-start and word-end. `WordSurprisal` = `(mean, steps)`;
-each `SurprisalStep` = `(from_, to, bits)`.
+`^` and `$` mark word start and word end. `WordSurprisal` holds `(mean, steps)`;
+each `SurprisalStep` holds `(from_, to, bits)`.
 
 ## Multivariate methods
 
-Three from-scratch (no numpy/scipy) multivariate tools for grouping inscriptions
-or signs. All deterministic given a seed.
+Three pure-Python (no `numpy`/`scipy`) multivariate methods, all deterministic
+for a given seed:
 
-**Correspondence analysis**: a 2-D map of rows (e.g. tablets) and columns
-(e.g. commodities) from a contingency table, so associated items land near each
-other. Returns `CAResult(rows, cols, inertia, total_inertia)` with each point a
-`CAPoint(label, x, y, mass)`:
+**Correspondence analysis** projects rows and columns of a contingency table
+into 2-D coordinates (`CAResult(rows, cols, inertia, total_inertia)`, each point
+`CAPoint(label, x, y, mass)`):
 
 ```python
 from aegean.analysis import correspondence_analysis
@@ -719,14 +651,13 @@ ca = correspondence_analysis(
     [[10, 2, 0], [8, 1, 1], [0, 5, 9]],
 )
 round(ca.total_inertia, 4)                              # 0.6845
-[(p.label, round(p.x, 3)) for p in ca.rows]            # [('HT1', -0.711), ('HT2', -0.589), ('ZA1', 1.03)]
-[(p.label, round(p.x, 3)) for p in ca.cols]            # [('GRA', -0.798), ('VIN', 0.477), ('OLE', 1.055)]
+[(p.label, round(p.x, 3)) for p in ca.rows]             # [('HT1', -0.711), ('HT2', -0.589), ('ZA1', 1.03)]
+[(p.label, round(p.x, 3)) for p in ca.cols]             # [('GRA', -0.798), ('VIN', 0.477), ('OLE', 1.055)]
 ```
 
-**UPGMA clustering with bootstrap support**: a dendrogram over items described
-by feature maps, with branch-support values from resampling. Returns
-`DendroResult(labels, merges, order)`; each `DendroMerge` =
-`(a, b, height, members, support)`:
+**UPGMA clustering with bootstrap support** constructs a dendrogram over
+feature-map items with branch support from resampling (`DendroResult(labels,
+merges, order)`; `DendroMerge(a, b, height, members, support)`):
 
 ```python
 from aegean.analysis import upgma_with_bootstrap
@@ -735,11 +666,10 @@ items = [("A", {"x": 1.0, "y": 0.0}), ("B", {"x": 0.9, "y": 0.1}),
 d = upgma_with_bootstrap(items, iters=50, seed=42)
 [(m.a, m.b, round(m.height, 3), round(m.support, 2)) for m in d.merges]
 # [(0, 1, 0.006, 0.78), (2, 3, 0.006, 0.56), (4, 5, 0.89, 1.0)]
-#  → {A,B} and {C,D} cluster first, then join; the final split has full support
 ```
 
-**Label propagation**: community detection on a weighted graph of nodes/edges,
-returning a `{node: community_id}` map:
+**Label propagation** detects communities on a weighted graph and returns
+`{node: community_id}`:
 
 ```python
 from aegean.analysis import label_propagation
@@ -749,80 +679,80 @@ label_propagation(["a", "b", "c", "d"], [("a", "b", 1.0), ("c", "d", 1.0)])
 
 ## Linear A vs Linear B sign-frequency divergence
 
-A speculative diagnostic: assuming the conventional sign values, which sound
-values are written far more (or less) often in Linear A than in deciphered
-Linear B? `linear_a_sign_value_counts` tallies sign values on the Linear A side;
-`parse_damos_frequencies` builds the Linear B side from a DAMOS frequency
-payload; `build_lb_divergence` joins them on shared values, most divergent first.
+Assuming the conventional Linear B sound values for Linear A signs,
+`build_lb_divergence` compares relative sign frequencies between Linear A and
+DAMOS Linear B (including `kwa/kwe/dza/dze/dzo` alignment).
+`linear_a_sign_value_counts` tallies Linear A lexical words (retaining `NI` as a
+syllabogram inside hyphenated words), and `parse_damos_frequencies` parses a
+DAMOS frequency payload:
 
 ```python
 from aegean.analysis import (
     linear_a_sign_value_counts, parse_damos_frequencies, build_lb_divergence,
 )
 la = linear_a_sign_value_counts(aegean.load("lineara").word_frequencies())
-la.total_signs                          # 3553
-la.by_value["ku"]                       # LaValueCount(count=124, labels=['KU'])
+la.total_signs                          # 3746
+la.by_value["ku"]                       # LaValueCount(count=135, labels=['KU'])
 
-# lb = parse_damos_frequencies(damos_frequency_payload)   # a damos-corpus.json frequency dict
+# lb = parse_damos_frequencies(damos_frequency_payload)
 # rows = build_lb_divergence(la, lb)
-# each row: DivergenceRow(value, labels, la_count, lb_count, la_per_1000, lb_per_1000, log_ratio)
+# DivergenceRow(value, labels, la_count, lb_count, la_per_1000, lb_per_1000, log_ratio)
 ```
 
-> The join **assumes the conventional sign values: that is the hypothesis, not a
-> result.** Rates are add-half smoothed before the log₂ ratio, and only values
-> attested on both sides are returned. See [Limitations](Limitations).
+> **Circularity caveat.** The join assumes the conventional Linear B sign
+> values. Rates use add-half smoothing before the log₂ ratio, and only values
+> attested in both scripts are returned.
 
 ## Tablet-structure classification
 
-Heuristic genre classification by content shape. The five categories are fixed
+Heuristic classification by token-stream shape over five fixed categories
 (`CATEGORIES`):
 
-| key | label | rule of thumb |
+| Key | Label | Rule |
 | --- | --- | --- |
-| `accounting` | Accounting | Numerals and/or KU-RO total markers |
-| `libation` | Libation | Known libation-formula words |
-| `list` | Lists | Multiple separators, no numerals |
-| `text` | Text / Other | Extended text without numerals |
+| `accounting` | Accounting | Total marker (`KU-RO`, `KU-RA`, `PO-TO-KU-RO`), or numerals/fractions with > 2 multi-sign words |
+| `libation` | Libation | Any of the 14 attested libation-formula words |
+| `list` | Lists | More than 3 separator marks and no numerals |
+| `text` | Text / Other | More than 4 multi-sign words and no numerals |
 | `other` | Unclassified | Short or ambiguous inscriptions |
 
 ```python
 from aegean.analysis import classify_structure, classify_corpus
 classify_structure(c.get("HT13"))         # 'accounting'
 {k: len(v) for k, v in classify_corpus(c).items()}
-# {'accounting': 134, 'libation': 18, 'list': 6, 'text': 1, 'other': 1562}
+# {'accounting': 137, 'libation': 25, 'list': 5, 'text': 1, 'other': 1553}
 ```
 
 ```bash
 aegean analyze structure lineara
-# accounting  134
-# libation     18
-# list          6
+# accounting  137
+# libation     25
+# list          5
 # text          1
-# other      1562
+# other      1553
 
 aegean analyze structure lineara HT13      # one document → 'accounting'
 ```
 
 ## Scribal-hand analysis
 
-For a corpus that records a hand per document (DAMOS's `meta.scribe`, and the
-Linear A corpus's ~100 attributed hands), `scribal_hands` profiles each one and
-`hand_keyness` finds what is characteristic of a hand versus all the others.
-`HandProfile` = `(hand, doc_count, token_count, word_count, sites, periods,
-top_words)`.
+For any corpus populating `meta.scribe` (such as DAMOS or the bundled Linear A
+corpus), `scribal_hands` builds a `HandProfile(hand, doc_count, token_count,
+word_count, sites, periods, top_words)` per hand, and `hand_keyness` computes
+one hand's log-likelihood keyness against the remainder of the corpus:
 
 ```python
 from aegean.analysis import scribal_hands, hand_keyness
 d = aegean.load("damos")
 
-for h in scribal_hands(d, min_docs=10)[:3]:        # busiest hands first
+for h in scribal_hands(d, min_docs=10)[:3]:
     print(h.hand, h.doc_count, list(h.sites)[:2], [w for w, _ in h.top_words[:3]])
 # 117 684 ['Knossos'] ['ku-ta-to', 'ru-ki-to', 'pa-i-to']
 # 1   227 ['Pylos']   ['pe-mo', 'e-ke', 'pa-ro']
 # 103 212 ['Knossos'] ['ko-wo', 'ko-wa', 'o-pi']
 
-[r.item for r in hand_keyness(d, "117")[:6]]       # what hand 117 writes more than the rest
-# ['ku-ta-to', 'ru-ki-to', 'ra-to', 'u-ta-jo-jo', 'u-ta-jo', 'pa-i-to']  (Knossos place-names)
+[r.item for r in hand_keyness(d, "117")[:6]]
+# ['ku-ta-to', 'ru-ki-to', 'ra-to', 'u-ta-jo-jo', 'u-ta-jo', 'pa-i-to']
 ```
 
 ```bash
@@ -833,17 +763,15 @@ aegean analyze hands damos --min-docs 50 --top 5
 # 103   212      2741    ko-wo, ko-wa, o-pi, tu-na-no, pa-we-a
 # ...
 
-aegean analyze hands damos --hand 117          # keyness for one hand (add --signs to key signs)
+aegean analyze hands damos --hand 117          # keyness for one hand (--signs for signs)
 ```
 
-Per-hand dispersion is just the standard helper over the hand's slice:
-`dispersion(d.filter(scribe="117"), "some-word")`.
+Compute per-hand dispersion on a filtered slice:
+`dispersion(d.filter(scribe="117"), "ku-ta-to")`.
 
 ## Corpus profiling: document types, dossiers, metrology
 
-Three higher-level "describe this corpus" profilers, all taking a loaded corpus.
-
-**Document types**: counts and shape per support/object type
+**Document types** summarizes support counts and token shape
 (`DocumentTypeProfile(type, count, share_pct, words_per_doc, numerals_pct,
 top_sites)`):
 
@@ -854,21 +782,20 @@ from aegean.analysis import document_type_profile
 #  ('Stone vessel', 107, 6.2), ('Clay vessel', 76, 4.4)]
 ```
 
-**Account dossiers**: for each word that heads accounting entries, gather every
-entry, its value, commodity, site, and co-listed words (`Dossier(word, entries,
+**Account dossiers** aggregates every entry headed by a given lexical word, its
+values, commodities, sites, and co-listed words (`Dossier(word, entries,
 entry_count, tablet_count, total_value, commodities, sites, co_listed)`):
 
 ```python
 from aegean.analysis import account_dossiers
 doss = account_dossiers(c)
-len(doss)                                                    # 427
+len(doss)                                                    # 448
 [(x.word, x.tablet_count, x.total_value) for x in doss[:3]]
 # [('SA-RA₂', 15, 1354.75), ('KU-PA₃-NU', 7, 118.0), ('DA-RE', 6, 97.5)]
 ```
 
-**Metrology profile**: the numeral/fraction system in use: how many numerals
-and fractions, which fraction values appear and how often, and a per-commodity
-breakdown (`MetrologyProfile(fraction_rows, commodity_profiles, numeral_tokens,
+**Metrology profile** summarizes integer numerals, fractions, and per-commodity
+entries (`MetrologyProfile(fraction_rows, commodity_profiles, numeral_tokens,
 fraction_tokens, integer_tokens, distinct_fraction_values)`):
 
 ```python
@@ -881,33 +808,32 @@ mp.numeral_tokens, mp.fraction_tokens, mp.distinct_fraction_values    # (1621, 3
 # [('OLE', 'olive oil', 106), ('GRA', 'grain / wheat', 86), ('CYP', 'cyperus (sedge / spice)', 61)]
 ```
 
-## Commodity & ideogram line statistics
+## Commodity and ideogram line statistics
 
-Statistics over the *lines* of accounting tablets (use `account_lines(doc)` to
-get a tablet's line-token sequences).
+Line-level association and exclusivity over accounting tablet lines
+(`account_lines(doc)`):
 
 ```python
 from aegean.analysis import account_lines, line_cooccurrence_pmi, ideogram_group_exclusivity
 lines = [ln for doc in c.documents for ln in account_lines(doc)]
 
-# Which words share a line with the GRA ideogram more than chance (PMI)?
 line_cooccurrence_pmi(lines, "GRA", min_joint=2)[:3]
 # [('I-QA-*118', 5.168), ('DA-ME', 4.168), ('KU-PA', 4.168)]
 
-# Which words appear (almost) exclusively under one commodity group?
 # ExclusivityRow(group, gloss, word, count, word_total, exclusivity)
 ex = ideogram_group_exclusivity(lines)
 [(r.group, r.word, round(r.exclusivity, 2)) for r in ex[:3]]
 # [('GRA', 'DA-ME', 1.0), ('GRA', 'I-QA-*118', 1.0), ('GRA', 'KU-NI-SU', 1.0)]
 ```
 
-## Accounting reconciliation (KU-RO / TO-SO balance)
+## Accounting reconciliation (`KU-RO` / `TO-SO` balance)
 
-Does a tablet's stated total (KU-RO / TO-SO) match the sum of its listed items?
-`balance_check` returns one `BalanceCheck` per total marker
-(`stated_total, computed_sum, item_count, difference, balances, marker,
-total_line_index, exact_difference`), with an `exact_balances` property.
-`checkable_accounts` selects intact accounts with at least one qualifying total.
+`balance_check` compares a tablet's stated total (`KU-RO`, `KU-RA`,
+`PO-TO-KU-RO`, `TO-SO`, `TO-SA`, `TO-SO-DE`) against the sum of preceding line
+items, returning one `BalanceCheck(stated_total, computed_sum, item_count,
+difference, balances, marker, total_line_index, exact_difference)` per total
+line plus an `exact_balances` property. `checkable_accounts` filters for intact
+tablets with at least one qualifying total.
 
 ```python
 from aegean.analysis import balance_check, checkable_accounts
@@ -930,25 +856,19 @@ aegean balance lineara
 # ...
 ```
 
-`balance_check(..., exact=True)` and `aegean balance --exact` compare rational
-written quantities without an allowance. The default `balances` retains its
-legacy floating-point cutoff of `1e-6`. Account eligibility is a separate
-selection: intact text and at least one total within
-`max(1, tolerance * abs(stated_total))`, with `tolerance=0.10` by default.
-Even `tolerance=0` retains the absolute-one allowance; use `exact=True` for exact
-eligibility. CLI JSON also records `exact_difference`, `exact_balances`,
-`within_tolerance`, and the selected eligibility policy. For HT13 the rational
-difference is `"1/2"`: it fails exact arithmetic but qualifies under the default
-teaching tolerance. Neither outcome verifies its readings or metrology.
-
-> Section-splitting on undeciphered tablets is heuristic, so a non-zero `diff`
-> can be a damaged line or a mis-segmented item, not an ancient scribal error.
-> Read these as leads, not verdicts. See [Limitations](Limitations).
+`balance_check(..., exact=True)` and `aegean balance --exact` compare exact
+rational written quantities; the default `balances` uses a `1e-6` float cutoff.
+Eligibility (`checkable_accounts`) requires intact text and at least one total
+within `max(1, tolerance * abs(stated_total))` (default `tolerance=0.10`; pass
+`exact=True` for exact eligibility). CLI JSON includes `exact_difference`,
+`exact_balances`, `within_tolerance`, and the active eligibility policy. Because
+section splitting on undeciphered tablets is heuristic, a non-zero difference
+can reflect line damage or mis-segmentation.
 
 ## Sign-pattern search
 
-Wildcard matching over a word's sign sequence (`*` = exactly one sign, `**` =
-zero or more). `SIGN_PATTERN_HELP` carries the live syntax string.
+Wildcard matching over hyphenated sign sequences (`*` = one sign, `**` = zero or
+more signs; syntax summary in `SIGN_PATTERN_HELP`):
 
 ```python
 from aegean.analysis import word_matches_sign_pattern, SIGN_PATTERN_HELP
@@ -966,25 +886,24 @@ aegean search lineara "KU-*-RO"
 
 ## Query engine
 
-A compound predicate engine over the corpus: an inscription/word field registry,
-AND/OR/NOT combination, and inscription- or word-output modes. Call it as the
-`corpus.query(filters, output=...)` method or the standalone
-`run_query(corpus, filters)`. With `output="words"`, the default
-`count_unit="document"` counts distinct inscriptions containing each word.
-Pass `count_unit="token"` for token frequency. Explicit `view` and `statuses`
-select the same lexical population as `corpus.word_frequencies()`; omitted
-`view` retains legacy case-insensitive predicates and separate surface keys.
-`result.metadata` records the comparison policy, denominator, and exclusions.
+`corpus.query(filters, output=...)` and `run_query(corpus, filters)` combine
+inscription- and word-level predicates with `and`, `or`, and negation. With
+`output="words"`, the default `count_unit="document"` counts distinct
+inscriptions containing each word; pass `count_unit="token"` for token
+frequency. Passing `view` or `statuses` applies the same lexical population
+rules as `corpus.word_frequencies()`; omitting `view` keeps legacy
+case-insensitive matching and distinct surface keys. `result.metadata` records
+the comparison policy, denominator, and exclusions.
 
 ```python
 from aegean.analysis import FilterRow, run_query, summarize_filters
 filters = [
-    FilterRow("id-contains", "HT"),                      # HT tablets (site code is the id prefix)
-    FilterRow("word-suffix", "RO", connector="and"),     # …with a word ending in -RO
+    FilterRow("id-contains", "HT"),
+    FilterRow("word-suffix", "RO", connector="and"),
 ]
 res = run_query(c, filters, output="inscriptions")
-summarize_filters(filters)        # 'Inscription ID contains: HT · Word ends with: RO'
-len(res.inscriptions)             # 49
+summarize_filters(filters)             # 'Inscription ID contains: HT · Word ends with: RO'
+len(res.inscriptions)                  # 49
 [d.id for d in res.inscriptions][:5]   # ['HT1', 'HT9a', 'HT9b', 'HT11a', 'HT11b']
 
 run_query(c, [FilterRow("word-sign-pattern", "KU-*-RO")], output="words").words
@@ -1000,13 +919,13 @@ aegean query lineara --where id-contains=HT --where word-suffix=RO --limit 5
 # HT1    Haghia Triada  6
 # HT9a   Haghia Triada  9
 # ...
-# (prefix a field with ! to negate, or or: to OR it; --output-kind words for word output)
-aegean query lineara --fields          # list the queryable fields and exit
-# Explicit word views and counts: --view surface|normalized|lemma,
-# --count-unit document|token, and --statuses certain,uncertain,...
+# Prefix a field with ! to negate or or: to OR; --output-kind words for word counts
+aegean query lineara --fields
+# Optional lexical controls: --view surface|normalized|lemma,
+# --count-unit document|token, --statuses certain,uncertain,...
 ```
 
-The full field registry (`FIELDS`):
+Field registry (`FIELDS`):
 
 | Field | Scope | Kind |
 | --- | --- | --- |
@@ -1027,125 +946,101 @@ The full field registry (`FIELDS`):
 | `word-cooccurs-with` | word | word |
 | `word-sign-pattern` | word | text (wildcard sign pattern) |
 
-`FilterRow(field, value, connector=...)` where `connector` is `"and"` / `"or"`;
-prefix nothing for the default. `summarize_filters(...)` renders a one-line label.
+`FilterRow(field, value, connector="and"|"or", negate=False)` defines one
+predicate; `summarize_filters(...)` formats a single-line summary.
 
 ## Visualization (`aegean.viz`, the `[viz]` extra)
 
-One-line matplotlib figures over the corpus model and the analysis layer:
-conveniences, not a plotting framework. Each returns the `Axes` (compose with
-`ax=`, save with `.figure.savefig(...)`); `import aegean` stays
-dependency-free (matplotlib loads only inside the calls; install with
-`pip install 'pyaegean[viz]'`).
+Matplotlib helpers (`pip install 'pyaegean[viz]'`, imported lazily) return a
+matplotlib `Axes` object (compose with `ax=`, save via `.figure.savefig(...)`):
 
 ```python
 import aegean
 from aegean import viz
 
 c = aegean.load("damos")
-viz.plot_sign_frequencies(c, top=20)              # frequency bars (words or signs)
-viz.plot_dispersion(c)                            # frequency vs Gries' DP scatter
-viz.plot_keyness(c.filter(site="Pylos"),          # diverging log-ratio bars, G² labels
+viz.plot_sign_frequencies(c, top=20)
+viz.plot_dispersion(c)
+viz.plot_keyness(c.filter(site="Pylos"),
                  [d for d in c.documents if d.meta.site != "Pylos"])
-viz.plot_collocation_network(aegean.load("lineara"), "KU-RO")   # ego network (exploratory)
-viz.plot_balance(aegean.load("lineara"))          # stated totals vs computed sums
+viz.plot_collocation_network(aegean.load("lineara"), "KU-RO")
+viz.plot_balance(aegean.load("lineara"))
 viz.plot_scansion("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ")
 
 la = aegean.load("lineara")
-viz.plot_findspots(la)                            # find-sites, marker size by inscription count
+viz.plot_findspots(la)                            # uses bundled gazetteer; no [geo] needed
 viz.plot_timeline(la, bin_width=100)              # documents per century from meta.period
-viz.plot_sign_network(la, scope="document")       # sign/word co-occurrence graph (exploratory)
+viz.plot_sign_network(la, scope="document")       # sign/word co-occurrence graph
 ```
 
-The scansion grid draws each syllable with its quantity (— ˘ ×), foot
-boundaries, and the caesura (‖); the balance view puts every checked KU-RO /
-TO-SO total on a stated-vs-computed diagonal so discrepancies stand out (with
-the same heuristic-sections caveat as `balance_check`). `plot_findspots` reads
-the bundled gazetteer directly, so a map needs no `[geo]` extra, and drops sites
-the gazetteer doesn't hold; `plot_timeline` states on the figure what fraction of
-documents carried a date it could not read, rather than dropping them quietly.
-From the shell:
-`aegean plot freq|dispersion|keyness|network|balance|scansion|findspots|timeline|signnet … -o out.png`.
-(`viz.plot_correspondence_analysis` is Python-only, with no `aegean plot` kind.)
+`plot_scansion` renders syllable quantities (`— ˘ ×`), foot boundaries, and the
+caesura (`‖`). `plot_balance` plots stated totals against computed sums on the
+diagonal. `plot_findspots` reads the bundled gazetteer directly without `[geo]`.
+`plot_timeline` reports on the figure the share of documents whose dates could
+not be parsed.
+
+CLI equivalent:
+`aegean plot freq|dispersion|keyness|network|balance|scansion|findspots|timeline|signnet ... -o out.png`
+(`viz.plot_correspondence_analysis` is Python-only).
 
 ## Caching expensive analyses (opt-in)
 
-Some analyses are pure but slow: morphological clustering over the whole
-vocabulary, repeated dispersion/keyness sweeps, large queries. `aegean.cache` is
-an **off-by-default** persistent cache that memoises them to a local sqlite file,
-keyed on a content fingerprint of the inputs, so re-running the same analysis on
-the same corpus is served from disk. Disabled (the default), it's a transparent
-passthrough: it never changes a result, only how fast it arrives. No new
-dependency: `sqlite3` and a typed JSON codec (`AEGEAN-CACHE-V2`) are stdlib-only.
+`aegean.cache` is an off-by-default persistent SQLite cache (`sqlite3` +
+typed JSON codec `AEGEAN-CACHE-V2`, zero external dependencies) keyed on input
+content fingerprints. When disabled, calls pass straight through.
 
 ```python
 import aegean
 
-aegean.cache.enable()                              # opt in (or PYAEGEAN_ANALYSIS_CACHE=1)
-aegean.cache.stats()                               # {'enabled': True, 'path': …, 'entries': 0}
+aegean.cache.enable()                              # or set PYAEGEAN_ANALYSIS_CACHE=1
+aegean.cache.stats()                               # {'enabled': True, 'path': ..., 'entries': 0}
 aegean.analysis.find_morphological_clusters(
-    aegean.load("lineara").word_frequencies())     # computed once, then from disk
-aegean.cache.stats()                               # {'enabled': True, 'entries': 1, 'path': …}
-aegean.cache.clear()                               # wipe it → entries back to 0
+    aegean.load("lineara").word_frequencies())
+aegean.cache.stats()                               # {'enabled': True, 'entries': 1, 'path': ...}
+aegean.cache.clear()                               # resets entries to 0
 ```
 
-It pays off when recompute costs much more than a pass over the corpus (the
-fingerprint): clustering, or the same sweep repeated across a session. The
-cache key embeds a format + per-function version, so a library upgrade never
-returns a stale result; a corrupt, legacy, or schema-changed entry is treated
-as a miss and recomputed without running arbitrary code. From the shell,
-`aegean cache` shows the state and `aegean cache --clear` wipes it (enable it
-per shell with `PYAEGEAN_ANALYSIS_CACHE=1`).
+Cache keys embed format and per-function versions so upgrades invalidate stale
+entries automatically, and corrupt or schema-changed entries recompute as misses
+without executing code. CLI inspection: `aegean cache` and
+`aegean cache --clear`.
 
-```bash
-aegean cache
-# analysis cache: off — set PYAEGEAN_ANALYSIS_CACHE=1 (or a path) to enable
-```
-
-`Corpus.fingerprint()` is the content hash the cache keys on (also useful on its
-own to tell whether two corpora (or a corpus and a filtered subset) have the
-same analysable content):
+`Corpus.fingerprint()` computes the underlying SHA-256 content hash:
 
 ```python
 aegean.load("lineara").fingerprint()[:16]          # 'f2619ca5089e533a'
 ```
 
-## SQLite persistence & full-text search (`aegean.db`)
+## SQLite persistence and full-text search (`aegean.db`)
 
-A corpus can be persisted to a queryable SQLite database (stdlib `sqlite3`
-only, no new dependency) and reloaded losslessly. Existing databases are replaced
-in a SQLite transaction; WAL readers retain their previous snapshot until their
-transaction ends. A busy writer or blocking reader can cause a lock error:
-finish the blocking transaction and retry. Failed replacement leaves the
-existing database intact.
+`aegean.db` persists any corpus losslessly to a stdlib `sqlite3` database with
+FTS5 search. Overwrites run in a single SQLite transaction; WAL readers keep
+their previous snapshot until their transaction completes, and failed writes
+leave the prior database intact.
 
 ```python
 from aegean import db, Corpus
 
-db.to_sqlite(c, "corpus.db")                # documents + tokens as rows, with an FTS5 index
-again = Corpus.from_sql("corpus.db")        # round-trips: len(again) == 1721
-db.search("corpus.db", "KU-RO")             # whole-token search → [(doc_id, position, text), ...]
-# first hit: ('HT9a', 25, 'KU-RO')   — 37 hits across the corpus
-# db.search("corpus.db", "KU-RO", mode="substring") returns 39 (also matches PO-TO-KU-RO)
+db.to_sqlite(c, "corpus.db")                # documents + tokens + FTS5 index
+again = Corpus.from_sql("corpus.db")        # len(again) == 1721
+db.search("corpus.db", "KU-RO")             # whole-token search → 37 hits; first ('HT9a', 25, 'KU-RO')
+# db.search("corpus.db", "KU-RO", mode="substring") -> 39 hits (includes PO-TO-KU-RO)
 db.build_lexical_index("corpus.db")         # optional index for fast exact surface/normalized/lemma search
-for doc in db.stream("corpus.db"):          # iterate without loading the whole corpus
+for doc in db.stream("corpus.db"):          # iterate without loading full corpus into RAM
     ...
 ```
 
-For large Greek SQLite corpora that take minutes or hours to annotate,
+For large Greek SQLite corpora,
 `db.annotate_sqlite_job("corpus.db", "annotated.db", job_dir="./job-state")`
-processes one document at a time and checkpoints after every document in a single
-SQLite transaction, so an interrupted run can pause and resume safely
-(`db.job_status("./job-state")` inspects progress; `aegean db annotate` and
-`aegean db job-status` expose the same workflow in the terminal).
+annotates one document per transaction with lease protection and resumable
+checkpoints (`db.job_status("./job-state")`, CLI `aegean db annotate` and
+`aegean db job-status`).
 
-`Corpus.to_sql` / `Corpus.from_sql` are the thin method wrappers; on the CLI,
-`aegean db build` / `aegean db index` / `aegean db search` / `aegean db annotate`
-(and `aegean export -f sqlite`):
+`Corpus.to_sql` and `Corpus.from_sql` wrap these calls. CLI commands:
 
 ```bash
-aegean db build lineara -o la.db            # wrote 1721 documents to la.db  (--no-fts to skip FTS5)
-aegean db index la.db                       # optional lexical index for exact searches
+aegean db build lineara -o la.db            # --no-fts skips FTS5
+aegean db index la.db                       # optional lexical index
 aegean db search la.db KU-RO --limit 3
 # doc    pos  text
 # HT9a   25   KU-RO
@@ -1155,21 +1050,16 @@ aegean db search la.db KU-RO --limit 3
 
 ---
 
-## Notes & limitations
+## Limitations
 
-- Everything over Linear A is **exploratory**: it surfaces patterns and ranks
-  candidates, never readings. The cross-script and Linear A↔B methods *assume*
-  the conventional sign values: that assumption is the hypothesis under test,
-  not a result.
-- Statistics on a fragmentary corpus are fragile: read significance (G², p)
-  alongside effect size (log-ratio), dispersion, and raw counts; the `chao1`
-  estimate above (≈3,800 unseen types) is a blunt reminder of how much is
-  missing.
-- Accounting/metrology results inherit the heuristic line-segmentation of
-  undeciphered tablets, so a non-balancing total may be damage or
-  mis-segmentation rather than an ancient error.
+- **Undeciphered scripts.** Methods over Linear A and Cypro-Minoan rank patterns
+  and candidates; cross-script and Linear A/B divergence methods assume
+  conventional sign values as their working input.
+- **Small and fragmentary corpora.** Read G² and p-values together with
+  log-ratio, dispersion, and raw counts (`chao1` estimates ≈ 3,831 unseen word
+  types in the bundled Linear A corpus).
+- **Heuristic accounting.** Section boundaries on administrative tablets are
+  inferred, so arithmetic discrepancies can stem from damage or layout.
 
-The consolidated account of scope and boundaries is on the
-**[Limitations](Limitations)** page. Related: [Greek NLP](Greek-NLP),
-[Meters](Meters), [Linear A](Linear-A), [CLI](CLI),
-[Getting Started](Getting-Started).
+See [Limitations](Limitations), [Greek NLP](Greek-NLP), [Meters](Meters),
+[Linear A](Linear-A), [CLI](CLI), and [Getting Started](Getting-Started).

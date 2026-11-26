@@ -1,85 +1,81 @@
 # Getting Started
 
-This guide is for people who have **never written a line of Python**, and maybe
-never opened a "terminal." If you're a working linguist, philologist, or
-epigrapher who wants to *use* pyaegean rather than develop it, you're in the right
-place. We'll go from nothing installed to your first real result. Take it one step
-at a time; nothing here can break your computer.
+This guide assumes no prior experience with Python or a terminal. If you are a
+linguist, philologist, or epigrapher who wants to use pyaegean for research,
+follow the steps below in order from a clean machine to your first result.
 
 > Already comfortable with Python and `pip`? Skip ahead to
 > [Installation](Installation) and the [Tutorial](Tutorial).
 
-> **Other ways in, if you'd rather not install Python yet.**
+> **Other ways to start without writing local Python first**
 >
-> - **In your browser, nothing to install.** The core pipeline runs as
->   [the web demo](https://pyaegean.xyz/demo/) (Pyodide).
-> - **Straight into code.** [The getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
->   is a runnable guided tour. Work through it cell by cell on your own machine, or
->   free in the cloud ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)).
-> - **In the terminal.** Once you're installed (Steps 1–4),
->   `pip install "pyaegean[cli]"` adds **`aegean quickstart`**, a guided first five
->   minutes (eight short steps, seven of them running a real command live on the
->   bundled data, all offline). See [the CLI page](CLI#the-guided-tour-aegean-quickstart)
->   for what it covers. For an app-like way in, `pip install "pyaegean[tui]"` adds
->   **`aegean tui`**, a full-screen terminal cockpit to browse a corpus, run the live
->   Greek workbench, and manage the data store, all offline and mouse-or-keyboard
->   driven ([the TUI page](TUI)).
+> - **In your browser.** The core pipeline runs client-side in
+>   [the web demo](https://pyaegean.xyz/demo/) (Pyodide) with nothing installed.
+> - **In a notebook.** [The getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+>   is a runnable guided tour you can step through locally or in the cloud
+>   ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)).
+> - **In the terminal.** After Steps 1–4, `pip install "pyaegean[cli]"` adds
+>   **`aegean quickstart`**, an eight-step offline walkthrough that runs seven
+>   live commands on the bundled data (see
+>   [CLI → quickstart](CLI#guided-tour-aegean-quickstart)). Adding
+>   `pip install "pyaegean[tui]"` installs **`aegean tui`**, a 9-screen terminal
+>   UI for browsing corpora, running the Greek and Biblical workbenches,
+>   reviewing annotations (`aegean tui --review`), and managing local resources
+>   ([TUI](TUI)).
 
-## What pyaegean is (in one breath)
+## What pyaegean does
 
-It's a free toolkit, written in the Python language, for working with Ancient
-Greek and the Aegean scripts (Linear A, Linear B, Cypriot, Cypro-Minoan). You give it Greek text or a Linear A
-inscription; it gives you back syllables, accents, metre, morphology, statistics,
-and more. You drive it by writing very short snippets of Python (usually one or
-two lines), which this documentation gives you ready to copy.
+pyaegean is a Python toolkit for Ancient Greek and the Aegean syllabic scripts
+(Linear A, Linear B, Cypriot, and Cypro-Minoan). You pass it Greek text or an
+Aegean inscription; it returns syllables, accents, scansion, morphology,
+lemmatization, accounting checks, corpus queries, and statistics. Most common
+tasks take one or two lines of Python or a single shell command.
 
 ## Step 1 — Install Python
 
-pyaegean needs **Python 3.10 or newer**.
+pyaegean requires **Python 3.10 or newer**.
 
-- **Windows / macOS:** go to [python.org/downloads](https://www.python.org/downloads/),
-  download the latest installer, and run it.
-  - **On Windows, tick the box "Add Python to PATH"** on the first screen of the
-    installer. This one checkbox saves a lot of grief later.
-- **Linux:** Python is almost certainly already installed. If not,
-  `sudo apt install python3 python3-pip python3-venv` (Debian/Ubuntu).
+- **Windows / macOS:** download and run the installer from
+  [python.org/downloads](https://www.python.org/downloads/).
+  - **Windows:** check **"Add Python to PATH"** on the first installer screen.
+- **Linux:** Python is usually preinstalled. On Debian/Ubuntu, install the
+  packaging tools if missing:
+  `sudo apt install python3 python3-pip python3-venv`.
 
-To confirm it worked, open a terminal (next step) and type `python --version`
-(on macOS/Linux you may need `python3 --version`). You should see something like
+Verify the install in a terminal (Step 2) with `python --version` (or
+`python3 --version` on macOS/Linux). You should see a version such as
 `Python 3.12.4`.
 
 ## Step 2 — Open a terminal
 
-A "terminal" is just a window where you type commands instead of clicking.
+A terminal is a window where you run text commands directly.
 
-- **Windows:** press the Start key, type **Windows Terminal** (or just
-  **Terminal**), and open it; a PowerShell tab appears. It's the default on
-  Windows 11 and free from the Microsoft Store on Windows 10, and it renders
-  Greek (and the Aegean scripts) far better than the legacy console window.
+- **Windows:** press Start, type **Windows Terminal** (or **Terminal**), and
+  open it to start a PowerShell tab. It is the default on Windows 11 and free
+  from the Microsoft Store on Windows 10, with much better Unicode support for
+  Greek and Aegean scripts than the legacy console window.
 - **macOS:** press ⌘+Space, type **Terminal**, and open it.
 - **Linux:** open your **Terminal** app.
 
-You'll see a prompt waiting for input. That's all a terminal is. (Later, when
-you install the command line, [Installation → Set up your terminal](Installation#set-up-your-terminal)
-has three small upgrades: Windows Terminal, fonts for the Linear A/B glyphs, and
-Tab-completion.)
+When you later install the CLI,
+[Installation → Set up your terminal](Installation#set-up-your-terminal) covers
+Aegean glyph fonts and shell tab-completion.
 
 ## Step 3 — Make a project folder with its own environment
 
-A **virtual environment** is a private sandbox for one project's packages, so
-pyaegean and its dependencies don't collide with anything else on your machine.
-It's optional but strongly recommended, and it's two commands.
+A **virtual environment** isolates one project's packages from the rest of your
+system. It is optional, strongly recommended, and takes two commands:
 
 ```bash
-# make and enter a folder for your Greek work (call it whatever you like)
+# Create and enter a project folder
 mkdir greek-work
 cd greek-work
 
-# create a virtual environment named ".venv"
+# Create a virtual environment named ".venv"
 python -m venv .venv
 ```
 
-Now **activate** it (you do this each time you come back to the project):
+Activate it each time you open a new terminal for this project:
 
 ```bash
 # Windows (PowerShell)
@@ -89,46 +85,43 @@ Now **activate** it (you do this each time you come back to the project):
 source .venv/bin/activate
 ```
 
-Your prompt will now show `(.venv)` at the start: that means the sandbox is on.
+Your prompt now begins with `(.venv)`.
 
-> **Windows note:** if PowerShell refuses to run the activate script with a
-> message about "execution policy," run this once, then try again:
+> **Windows note:** if PowerShell blocks the activation script with an
+> execution-policy error, run this once and activate again:
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 ## Step 4 — Install pyaegean
 
-With the environment active:
+With the virtual environment active:
 
 ```bash
 pip install pyaegean
 ```
 
-That's it: you now have the core library and the full Linear A corpus, working
-**offline** with zero third-party dependencies. The heavier Greek NLP backends
-(treebank lookup, dictionary glossing, and the measured **neural pipeline**, one
-`greek.use_neural_pipeline()` call away) are opt-in:
-each is fetched to a local cache the first time you turn it on, never bundled. See the
-[Greek NLP](Greek-NLP) page when you want them. If you'd rather not write Python at
-all, there's also a [command-line interface](CLI): `pip install "pyaegean[cli]"`,
-and `aegean quickstart` then gives you the guided terminal-side tour (seven real
-commands across eight steps, live on the bundled data, all offline).
+This installs the core library and the full Linear A corpus with zero
+third-party dependencies, ready for offline use. Optional Greek NLP backends
+(treebank lookup, dictionaries, and the neural pipeline via
+`greek.use_neural_pipeline()`) and downloadable corpora fetch on demand into a
+local cache. Manage them with `aegean library` (or `aegean data`) after
+installing the CLI extra (`pip install "pyaegean[cli]"`), or see
+[Greek NLP](Greek-NLP) and [Data & Provenance](Data-and-Provenance).
 
-Check it:
+Check the installation:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.67.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.72.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code
 
-There are three ways to actually run Python. For research and exploration, we
-**recommend Jupyter** (the third option), but here are all three.
+You can run Python in three ways. Jupyter (Option C) works well for research
+notes and corpus exploration.
 
 ### Option A — the interactive prompt (quickest)
 
-Type `python` (or `python3`) and press Enter. You'll get a `>>>` prompt where you
-can type one line at a time:
+Run `python` (or `python3`) to open the `>>>` prompt and enter lines directly:
 
 ```python
 >>> import aegean
@@ -141,7 +134,7 @@ Type `exit()` to leave.
 
 ### Option B — a script file
 
-Save the lines below into a file called `first.py`, then run `python first.py`:
+Save the following lines to `first.py` and run `python first.py`:
 
 ```python
 import aegean
@@ -151,56 +144,55 @@ print("Linear A inscriptions:", len(corpus))
 
 ### Option C — Jupyter (recommended for research)
 
-Jupyter gives you a notebook in your web browser where code, results, tables, and
-your own notes live together: ideal for exploring a corpus and keeping a record.
+Jupyter runs a notebook in your browser where code, tables, Greek text, and
+notes stay together:
 
 ```bash
 pip install jupyterlab
 jupyter lab
 ```
 
-Your browser opens; click **Python 3** to make a new notebook, type a snippet into
-a cell, and press **Shift+Enter** to run it. Results (including Greek text and
-tables) appear right below the cell.
+Create a **Python 3** notebook in the browser, paste code into a cell, and press
+**Shift+Enter** to run it.
 
-Rather than start from a blank notebook, you can open the ready-made
-[getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb),
-a runnable guided tour of the toolkit ([open it in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
-to run it in the cloud with nothing installed). It stands on its own and does not
-follow this page.
+You can also open the ready-made
+[getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+locally or in the cloud
+([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)).
+It is an independent tour and does not mirror this page step for step.
 
 ## Step 6 — Your first real result
 
-Paste this anywhere you can run Python (a notebook cell is nicest):
+Run these lines in Python or a notebook cell:
 
 ```python
 from aegean import greek
 
-# Type Greek without a Greek keyboard, using plain ASCII "Beta Code":
+# Type Greek in plain ASCII Beta Code:
 greek.betacode_to_unicode("mh=nin")          # 'μῆνιν'
 
-# Break a word into syllables and find its accent:
+# Syllabify a word and inspect its accent:
 greek.syllabify("ἄνθρωπος")                  # ['ἄν', 'θρω', 'πος']
 greek.accentuation("λόγος").classification    # 'paroxytone'
 
-# Scan the first line of the Odyssey:
+# Scan the opening line of the Odyssey:
 greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ").pattern
 # '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'
 ```
 
-If you saw that pattern print out, **everything is working.**
+If that scansion pattern prints, the core library is working.
 
 ## Step 7 — Find a real Greek work to read
 
-The five-line `aegean.load("greek")` sample is just a taster. For the actual canon,
-pyaegean ships an **offline discovery catalogue** of ~1,800 works: every text with a
-Greek edition in the open Perseus and First1KGreek repositories, so you can look up an
-id without leaving Python or going online:
+The bundled `aegean.load("greek")` corpus is a five-passage sample. For full
+literary texts, pyaegean bundles an **offline discovery catalogue** of 1,778
+works covering every Greek edition in the open Perseus and First1KGreek
+repositories:
 
 ```python
 from aegean import greek
 
-len(greek.catalog())                 # 1778  — the whole bundled index
+len(greek.catalog())                 # 1778
 hits = greek.catalog(author="euripides")
 len(hits)                            # 21
 hits[0]
@@ -208,7 +200,7 @@ hits[0]
 #  'greek_title': 'Κύκλωψ', 'source': 'perseus'}
 ```
 
-The same search from the shell (with `[cli]` installed), as a tidy table:
+From the shell (with `[cli]` installed):
 
 ```bash
 aegean greek catalog --author plato --limit 5
@@ -222,16 +214,16 @@ aegean greek catalog --author plato --limit 5
 # └────────────────┴────────┴───────────┴────────────────────┴─────────┘
 ```
 
-Pass any `id` you find straight to `greek.load_work("tlg0059.tlg002", ref="1")`, which
-fetches the text (network on first use only, then cached). The catalogue reflects exact
-upstream coverage: it lists what the open repos hold, so authors not digitized
-upstream (Sappho, for one) are absent. See
-[Greek Works and Books](Greek-Works-and-Books) for the full guide to loading works.
+Pass any `id` to `greek.load_work("tlg0059.tlg002", ref="1")` to fetch the text
+to your local cache on first use. Coverage matches the pinned upstream
+repositories, so authors absent upstream (such as Sappho) do not appear in the
+catalogue. See [Greek Works & Books](Greek-Works-and-Books) for full loading
+options.
 
 ## Step 8 — Bring your own text
 
-Have your own passage of Greek? Turn it into a real corpus, with the full
-filter / search / analyse / export toolkit, in one call. No `Corpus` boilerplate:
+Convert your own Greek string, text file, directory, or CSV into a `Corpus` with
+`aegean.io`:
 
 ```python
 from aegean import io
@@ -242,33 +234,35 @@ len(corpus)                                         # 1
 ```
 
 `io.from_text_file("essay.txt")`, `io.from_text_dir("poems/")`, and
-`io.from_csv("rows.csv")` do the same from a file, a folder, or a spreadsheet. From the
-shell, `aegean import` writes the corpus to a `.json` or `.db` you can then feed to any
-other command:
+`io.from_csv("rows.csv")` load files, folders, and spreadsheets in the same way.
+From the shell, `aegean import` converts raw text or CSV into a `.json` or `.db`
+corpus for other CLI commands:
 
 ```bash
 aegean import myplato.txt -o myplato.json
 aegean stats myplato.json --top 5
 ```
 
-(`aegean.load(...)` and the CLI corpus argument still expect a `.json`/`.db` corpus:
-import a raw `.txt`/`.csv` first, as above.)
+`aegean.load(...)` and CLI corpus arguments expect a `.json` or `.db` corpus, so
+import raw `.txt` or `.csv` files first.
 
 ## Seeing Greek correctly
 
-Polytonic Greek (with breathings and accents) displays fine in Jupyter and in
-modern editors like VS Code. If accents look like boxes or question marks in a
-plain Windows terminal, that's just the terminal font: use Jupyter or an editor,
-or run `chcp 65001` first to switch the terminal to UTF-8. The Linear A/B
-*glyphs* (𐙂, 𐀀) are a separate matter: they need a font that covers the Aegean
-scripts, which [Installation → Set up your terminal](Installation#set-up-your-terminal)
-walks through. You never need a Greek keyboard: type in
-[Beta Code](Greek-NLP#normalization--beta-code) and convert.
+Polytonic Greek renders cleanly in Jupyter, modern editors such as VS Code, and
+Windows Terminal. If accents appear as boxes or question marks in a legacy
+Windows console, switch to Windows Terminal, set `PYTHONUTF8=1`, or run
+`chcp 65001`. Aegean syllabic glyphs (`𐙂`, `𐀀`) require fonts covering those
+Unicode blocks; [Installation → Set up your terminal](Installation#set-up-your-terminal)
+lists the free Noto Sans fonts. You do not need a Greek keyboard: type ASCII
+[Beta Code](Greek-NLP#normalization--beta-code) and convert it with
+`greek.betacode_to_unicode(...)`.
 
 ## Where to go next
 
-- **[Tutorial](Tutorial)**: two complete, guided walkthroughs that answer a real
-  research question, one in Linear A and one in Greek.
-- **[Greek NLP](Greek-NLP)**: every Greek function with runnable examples.
-- **[Linear A](Linear-A)** and **[Analysis](Analysis)**: the Aegean side.
-- **[FAQ & Troubleshooting](FAQ)**: if something didn't go to plan.
+- **[Tutorial](Tutorial)**: three guided walkthroughs covering Linear A
+  accounting, Homeric Greek analysis, and loading Perseus texts.
+- **[Greek NLP](Greek-NLP)**: full reference for Greek functions and backends.
+- **[Linear A](Linear-A)** and **[Analysis](Analysis)**: Aegean scripts and
+  quantitative tools.
+- **[FAQ & Troubleshooting](FAQ)**: answers to common install, Unicode, and data
+  issues.

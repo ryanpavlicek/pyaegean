@@ -188,22 +188,27 @@ def test_inventory_covers_the_assigned_block_exactly_once():
 
 
 # ---------------------------------------------------------------------------
-# the workbench-app 2.0.0 pin (v1.6.1 preserved in _REMOTE_HISTORY)
+# the workbench-app 2.1.0 pin (v2.0.0 & v1.6.1 preserved in _REMOTE_HISTORY)
 # ---------------------------------------------------------------------------
 
 
-def test_workbench_app_pin_is_the_2_0_0_build():
-    """2.0.0 ships security hardening, epigraphic/stat accuracy fixes, UX
-    consolidation, offline lazy-chunk precaching, and the loopback state/DAMOS
-    bridge; v1.6.1 remains pinned in _REMOTE_HISTORY."""
+def test_workbench_app_pin_is_the_2_1_0_build():
+    """2.1.0 adds multi-script Aegean mode (Linear B, Cypriot, Cypro-Minoan)
+    with self-hosted Noto Sans Aegean fonts; v2.0.0 and v1.6.1 remain pinned in
+    _REMOTE_HISTORY."""
     spec = data._REMOTE["workbench-app"]
     m = re.search(r"workbench-app-v(\d+)\.(\d+)\.(\d+)/", spec.url)
     assert m is not None
-    assert tuple(int(g) for g in m.groups()) == (2, 0, 0)
+    assert tuple(int(g) for g in m.groups()) == (2, 1, 0)
     assert spec.sha256 == (
-        "3ade03b24812a45b8e4ca2ec64a710380cbcd6afc5c842f2719886db41259e00"
+        "9cdb0e281331b4cc58663146b0b3699c25b26bc14e7e8f95495001fa50035f3a"
     )
     hist = data._REMOTE_HISTORY["workbench-app"]
+    assert any(
+        p.version == "v2.0.0"
+        and p.sha256 == "3ade03b24812a45b8e4ca2ec64a710380cbcd6afc5c842f2719886db41259e00"
+        for p in hist
+    )
     assert any(
         p.version == "v1.6.1"
         and p.sha256 == "19a27feb47a9b49a4095c571e7f1e01c68f011a119691712438273d289c19870"

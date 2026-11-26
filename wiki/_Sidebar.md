@@ -34,7 +34,7 @@
 - [CLI: Biblical & Koine Greek](CLI-Bible)
 - [CLI: AI & MCP](CLI-AI)
 - [TUI](TUI)
-- [MCP server](MCP)
+- [MCP Server](MCP)
 - [AI Layer](AI-Layer)
 
 **Evaluation & Quality**

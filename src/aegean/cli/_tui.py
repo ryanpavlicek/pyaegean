@@ -8,6 +8,8 @@ function body, keeps ``import aegean`` and the built CLI free of Textual.
 
 from __future__ import annotations
 
+from typing import Annotated
+
 import typer
 
 from ._common import fail
@@ -17,10 +19,26 @@ def register(app: typer.Typer) -> None:
     app.command()(tui)
 
 
-def tui() -> None:
-    """Launch the interactive terminal UI: browse corpora and inspect a document,
-    the live Greek workbench (pipeline, scansion, syllables, IPA), and the local
-    data store.
+def tui(
+    review: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--review",
+            "-r",
+            help="Open directly in the annotation review screen with one or more review CSVs (pass twice to adjudicate conflicts).",
+        ),
+    ] = None,
+    corpus: Annotated[
+        str | None,
+        typer.Option(
+            "--corpus",
+            "-c",
+            help="Open directly on a corpus id or JSON/SQLite path (also supplies context for --review merges).",
+        ),
+    ] = None,
+) -> None:
+    """Launch the interactive terminal UI: browse corpora, review annotations
+    and reviewer disagreements, run the live Greek workbench, and manage local data.
 
     Needs the tui extra: pip install 'pyaegean\\[tui]'.
     """
@@ -33,4 +51,4 @@ def tui() -> None:
 
     from aegean.tui.app import run_tui
 
-    run_tui()
+    run_tui(corpus=corpus, review_paths=tuple(review or ()))

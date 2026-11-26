@@ -1,73 +1,66 @@
 # Linear B
 
-Linear B is the **deciphered** Aegean syllabary: it writes Mycenaean Greek, the earliest
-attested form of the language (roughly 1400–1200 BC, on clay tablets from Knossos, Pylos, Thebes
-and elsewhere). pyaegean reads it through the same `Script` plugin model as
-[Linear A](Linear-A): a sign inventory, transliteration to phonetics, a bridge straight into the
-[Greek track](Greek-NLP), and the script-agnostic accounting check. Because Linear B is *read*,
-the work here is verifiable rather than exploratory; when you ask for the Greek behind a
-Mycenaean word, you get a real, source-attested equation, not a guess.
-
-Use this page if you want to: turn a transliterated word like `PO-ME` into `ποιμήν` ("shepherd")
-and its full LSJ entry; look up any of the 211 signs with its Bennett number and sound value;
-load the **whole DAMOS corpus** (~5,900 tablets) and slice it by scribal hand, site, or object
-class; or check a tablet's stated total against its items.
+Linear B is the deciphered Aegean syllabary used to write Mycenaean Greek
+(c. 1400–1200 BC) on clay tablets and vases from Knossos, Pylos, Thebes, Mycenae,
+and Tiryns. pyaegean exposes Linear B through the same `Script` plugin interface
+as [Linear A](Linear-A): a 211-sign inventory, transliteration to phonetic Latin,
+a curated Greek-lemma bridge connecting into [Greek NLP](Greek-NLP), scribal-hand
+analysis, and accounting reconciliation.
 
 ```python
 import aegean
 from aegean.scripts.linearb import word_to_phonetic, greek_reading
 
 aegean.registered_scripts()              # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
-word_to_phonetic("QA-SI-RE-U")           # 'kwasireu'  (gʷasileus, the ancestor of βασιλεύς)
+word_to_phonetic("QA-SI-RE-U")           # 'kwasireu' (gʷasileus, ancestor of βασιλεύς)
 greek_reading("PO-ME")                   # ('ποιμήν', 'shepherd')
 ```
 
-## What you can do at a glance
+## Summary
 
 | Task | Python | CLI |
 | --- | --- | --- |
 | Look up a sign | `get_script("linearb").sign_inventory` | `aegean sign linearb KA` |
-| Transliteration → sound | `word_to_phonetic("WA-NA-KA")` |: (via `bridge`) |
+| Transliteration → sound | `word_to_phonetic("WA-NA-KA")` | via `bridge` or `analyze compare` |
 | Read a word as Greek | `greek_reading("PO-ME")` | `aegean bridge linearb po-me` |
 | Full dictionary entry | `greek_reading` → `aegean.greek.gloss(lemma)` | see [Greek NLP](Greek-NLP) |
-| Load the full corpus | `aegean.load("damos")` | `aegean info damos`, `aegean stats damos` |
+| Load the full DAMOS corpus | `aegean.load("damos")` | `aegean info damos`, `aegean stats damos` |
 | Slice by scribal hand | `corpus.filter(scribe="117")` | `aegean load damos --scribe 117` |
-| Profile every hand | `scribal_hands(corpus)` |— |
-| Check a tablet's total | `balance_check(doc)` | `aegean balance linearb` |
-| Bring your own corpus | `load_epidoc_corpus(path)` | `PYAEGEAN_LINEARB_CORPUS=…` |
+| Profile every hand | `scribal_hands(corpus)` | `aegean analyze hands damos` |
+| Check a tablet's total | `balance_check(doc)` | `aegean balance linearb` / `aegean balance damos` |
+| Open in browser workbench | `aegean.io.to_workbench_bundle(corpus)` | `aegean workbench --corpus damos` |
+| Load local EpiDoc files | `load_epidoc_corpus(path)` | `PYAEGEAN_LINEARB_CORPUS=...` |
 
 ## Sign inventory
 
-The inventory is built from the Unicode Character Database (the Linear B Syllabary and Ideograms
-blocks), so it is authoritative and freely licensed (see [Data & Provenance](Data-and-Provenance)).
-It holds **211 signs**:
+The sign inventory is generated from the Unicode Character Database (Linear B
+Syllabary and Linear B Ideograms blocks, Unicode-3.0; see
+[Data & Provenance](Data-and-Provenance)). It contains **211 signs**:
 
-| Class (`attrs.signClass`) | Count | What it is |
+| Class (`attrs.signClass`) | Count | Description |
 | --- | --- | --- |
-| `syllabogram` | 74 | A sign with a phonetic value (`ka`, `qa`, `za`…) |
-| `symbol` | 14 | Still-undeciphered signs (no settled sound) |
-| `ideogram` | 117 | Commodity/object pictograms (grain, wine, MAN, EWE…) |
+| `syllabogram` | 74 | Signs with settled phonetic values (`ka`, `qa`, `za`, ...) |
+| `symbol` | 14 | Undeciphered signs without settled sound values |
+| `ideogram` | 117 | Commodity and object ideograms (`MAN`, `EWE`, grain, wine, ...) |
 | `monogram` | 6 | Composite ligatures |
-| **total** | **211** | 123 of these are ideograms + monograms |
+| **Total** | **211** | 123 ideograms + monograms |
 
-Every sign keeps its **Bennett number** (`B077`, `B131`) and its Unicode name; ideograms (and a
-few monograms) also carry a `commodity` tag where one applies: 76 signs in all (70 ideograms +
-6 monograms).
+Every sign records its Bennett number (`B077`, `B131`) and Unicode name.
+Seventy-six signs (70 ideograms and 6 monograms) also carry a `commodity` tag.
 
 ```python
+from collections import Counter
 from aegean.core.script import get_script
 
 inv = get_script("linearb").sign_inventory
-ka = next(s for s in inv if s.label == "KA")
+ka = inv.by_label("KA")
 ka.glyph, ka.phonetic, ka.attrs["bennett"]   # ('𐀏', 'ka', 'B077')
 
-# count by class
-from collections import Counter
 Counter(s.attrs.get("signClass") for s in inv)
 # Counter({'ideogram': 117, 'syllabogram': 74, 'symbol': 14, 'monogram': 6})
 ```
 
-The same lookup is one command from the shell, in a human table or as JSON:
+CLI lookup accepts either a sign label or a single Unicode glyph:
 
 ```bash
 aegean sign linearb KA
@@ -93,13 +86,14 @@ aegean sign linearb QA --json
 # }
 ```
 
-You can also pass a single glyph instead of a label: `aegean sign linearb 𐀏` finds `KA`.
+Passing a single glyph works identically: `aegean sign linearb 𐀏` resolves to
+`KA`.
 
-### The full syllabary (sound values)
+### Full syllabary (sound values)
 
-All 74 syllabogram values pyaegean knows, exactly as `word_to_phonetic` emits them:
+All 74 syllabogram values emitted by `word_to_phonetic`:
 
-```
+```text
 a   a2  a3  au  da  de  di  do  du  dwe dwo dza dze dzo e
 i   ja  je  jo  ju  ka  ke  ki  ko  ku  kwa kwe kwi kwo ma
 me  mi  mo  mu  na  ne  ni  no  nu  nwa o   pa  pe  pi  po
@@ -107,14 +101,12 @@ pte pu  pu2 ra  ra2 ra3 re  ri  ro  ro2 ru  sa  se  si  so
 su  ta  ta2 te  ti  to  tu  twe two u   wa  we  wi  wo
 ```
 
-Note the two scholarly conventions pyaegean follows: the **labiovelar** series (`qa qe qi qo`)
-is written `kwa kwe kwi kwo`, and the **affricate** series (`za ze zo`) is written `dza dze dzo`.
-The complex/optional signs keep their digit (`a2`, `a3`, `pu2`, `ra2`, `ra3`, `ta2`, `ro2`) because
-they are distinct signs from the plain ones, not just typographic variants.
+The labiovelar series (`qa qe qi qo`) is rendered `kwa kwe kwi kwo`, and the
+`z`-series (`za ze zo`) is rendered `dza dze dzo`. Distinct complex or doublet
+signs retain their trailing digits (`a2`, `a3`, `pu2`, `ra2`, `ra3`, `ta2`,
+`ro2`).
 
-### Some commodity ideograms
-
-A handful of the 117 ideograms (the `commodity` tag names the thing counted):
+### Selected commodity ideograms
 
 | Label | Glyph | Commodity | Unicode name |
 | --- | --- | --- | --- |
@@ -127,9 +119,10 @@ A handful of the 117 ideograms (the `commodity` tag names the thing counted):
 
 ## Transliteration → phonetics
 
-`word_to_phonetic` converts a hyphenated transliteration to a phonetic Latin form. Editorial
-markers (`*`, `[`, `]`, `?`) are stripped, subscripts (`a₂`) are normalised to digits (`a2`), and
-any sign it does not recognise simply falls through lowercased.
+`word_to_phonetic` maps hyphenated Linear B transliterations to phonetic Latin.
+Editorial markers (`*`, `[`, `]`, `?`) and Leiden underdots are stripped,
+subscripts (`a₂`) are folded to ASCII digits (`a2`), and unrecognized signs pass
+through lowercased.
 
 ```python
 from aegean.scripts.linearb import word_to_phonetic
@@ -137,22 +130,24 @@ from aegean.scripts.linearb import word_to_phonetic
 word_to_phonetic("WA-NA-KA")    # 'wanaka'   (ϝάναξ, "king")
 word_to_phonetic("TI-RI-PO-DE") # 'tiripode' (τρίποδε, "two tripods")
 word_to_phonetic("WO-NO")       # 'wono'     (ϝοῖνος → οἶνος, "wine")
-word_to_phonetic("E-QE-TA")     # 'ekweta'   (the "Follower", a rank — labiovelar QE → kwe)
+word_to_phonetic("E-QE-TA")     # 'ekweta'   (labiovelar QE → kwe)
 word_to_phonetic("RA-WA-KE-TA") # 'rawaketa' (lāwāgetās, "leader of the people")
 word_to_phonetic("PU-RO")       # 'puro'     (Πύλος, "Pylos")
 ```
 
-You can test an alternative sign value without touching the data, by passing `overrides`:
+Pass `overrides` to test alternative sign values without modifying the bundled
+table:
 
 ```python
-word_to_phonetic("PA-WORD", overrides={"WORD": "x"})  # treats the sign WORD as 'x'
+word_to_phonetic("PA-WORD", overrides={"WORD": "x"})
 ```
 
-## Bridge to Greek — the `PO-ME` → shepherd lookup
+## Bridge to Greek
 
-Linear B *is* Greek, so a transliterated word resolves to its Classical Greek lemma and meaning.
-`greek_reading` returns `(lemma, gloss)`; `gloss` returns just the English. The lookup normalises
-case and subscripts for you, so `po-me`, `PO-ME` and `TU-RO₂` all work.
+`greek_reading` maps a transliterated Mycenaean word to a `(lemma, gloss)` tuple
+from the bundled lexicon; `gloss` returns only the English string. Lookups fold
+case, subscripts, and underdots, so `po-me`, `PO-ME`, and `TU-RO₂` resolve
+identically.
 
 ```python
 from aegean.scripts.linearb import greek_reading, gloss
@@ -166,11 +161,11 @@ greek_reading("KO-WA")      # ('κόρη', 'girl, daughter')
 greek_reading("WO-NO")      # ('οἶνος', 'wine')
 greek_reading("ME-RI")      # ('μέλι', 'honey')
 greek_reading("TU-RO2")     # ('τυρός', 'cheese')
-gloss("DO-E-RO")            # 'slave, servant (male)'   (δοῦλος)
-greek_reading("XX-YY")      # None  — not in the lexicon
+gloss("DO-E-RO")            # 'slave, servant (male)'
+greek_reading("XX-YY")      # None
 ```
 
-The same bridge from the shell:
+CLI equivalent:
 
 ```bash
 aegean bridge linearb po-me
@@ -187,45 +182,41 @@ aegean bridge linearb po-me --json
 # }
 ```
 
-The lexicon holds a **149-entry** core of well-established equations: a hand-curated set layered
-with entries extracted from Wiktionary's Mycenaean Greek pages (via the kaikki.org dump, CC BY-SA);
-only entries whose etymology *states* the Ancient Greek equation are taken, so every bridge is
-source-attested rather than reconstructed. A few words resolve to a compound where the Greek is
-itself two roots: e.g. `RA-WA-KE-TA` → `λαὸς + ἡγέομαι`.
+The bundled lexicon contains **149** attested equations combining a curated core
+with Wiktionary Mycenaean Greek entries (via `kaikki.org`, CC BY-SA) that
+explicitly state an Ancient Greek etymology. Compound titles resolve to their
+constituent roots where appropriate (for example, `RA-WA-KE-TA` →
+`λαὸς + ἡγέομαι`).
 
-### From a reading to the full dictionary entry
+### Full dictionary lookup
 
-The bridge stops at the lemma on purpose; for the full entry, hand that lemma to the
+Pass any returned lemma to the opt-in
 [LSJ backend](Greek-NLP#lexicon-lsj-glossing-opt-in):
 
 ```python
 import aegean
 from aegean.scripts.linearb import greek_reading
 
-aegean.greek.use_lsj()                 # opt-in; fetches a ~15 MB index to the cache on first use
+aegean.greek.use_lsj()                 # fetches a ~15 MB index to cache on first use
 lemma, _ = greek_reading("PO-ME")      # 'ποιμήν'
 aegean.greek.gloss(lemma)
 # 'ποιμήν: herdsman, whether of sheep or oxen, Od. 10.82-5, al.; opp. lord or owner (a)/nac), 4.87.'
-
-lemma2, _ = greek_reading("WA-NA-KA")  # 'ἄναξ'
-aegean.greek.gloss(lemma2)
-# 'ἄναξ: …—lord, master, …'
 ```
 
-The LSJ source carries some untransliterated beta-code, so a glyph occasionally surfaces raw: here
-`(a)/nac)` is the beta-code for `(ἄναξ)`.
+LSJ source entries occasionally retain Beta Code snippets such as `(a)/nac)` for
+`(ἄναξ)`.
 
-## The full DAMOS corpus — `aegean.load("damos")`
+## The full DAMOS corpus (`aegean.load("damos")`)
 
-The most complete edition of the Mycenaean corpus is **DAMOS** (the Database of Mycenaean at Oslo,
-F. Aurora), published under **CC BY-NC-SA 4.0**. pyaegean hosts the DAMOS transliterations and core
-metadata as a fetched-on-demand release asset, so the whole corpus is one call away:
+**DAMOS** (Database of Mycenaean at Oslo, F. Aurora) is published under
+**CC BY-NC-SA 4.0**. pyaegean hosts the transliterations and core metadata as a
+SHA-256-pinned release asset fetched on demand:
 
 ```python
 import aegean
 
-corpus = aegean.load("damos")        # fetches ~3 MB to the cache on first use, then offline
-len(corpus.documents)                # 5932 — Knossos, Pylos, Thebes, Mycenae, Tiryns, vases…
+corpus = aegean.load("damos")        # fetches ~3 MB on first use, then cached offline
+len(corpus.documents)                # 5932
 
 doc = corpus.documents[0]
 doc.id                               # 'KN Fp(1) 1 + 31 (138)'
@@ -234,27 +225,25 @@ doc.meta.support                     # 'tablet'
 doc.meta.scribe                      # '138'
 doc.meta.findspot                    # 'KN, A'
 doc.meta.period                      # 'LM IIIA2 or LM IIIB'
-print(doc.transcription)             # the DAMOS transliteration, verbatim:
+print(doc.transcription)
 # .1           de-u-ki-jo-jo       'me-no'
 # .2        di-ka-ta-jo  /  di-we    OLE    S   1
 # .3        da-da-re-jo-de     OLE    S   2
-# …
 ```
 
-Each tablet is one `Document`. The transliteration is tokenised into words / numerals / logograms
-(using the DAMOS comma-and-slash word dividers and peeling supraliteral `'me-no'` quotes), and the
-verbatim text is kept in `Document.transcription`. The DAMOS-curated context rides along in the
-metadata, which is what makes scribe- and site-level work one-liners:
+Each tablet becomes one `Document`. The loader splits words, numerals, and
+logograms using DAMOS dividers (`,` and `/`), strips supraliteral quotes such as
+`'me-no'`, and retains the verbatim source text in `Document.transcription`.
 
 | `meta` field | Example | Coverage |
 | --- | --- | --- |
-| `site` | `"Knossos"` | every document |
-| `support` (object class) | `"tablet"`, `"stirrup jar"`, `"label"`, `"nodule, sealed"` | every document |
-| `scribe` (scribal hand) | `"117"`, `"138"` | 3,945 of 5,932 documents |
-| `findspot` (find context) | `"KN, A"`, `"PY, Room 8"` | where DAMOS records one |
-| `period` (chronology) | `"LM IIIA2 or LM IIIB"` | where DAMOS records one |
+| `site` | `"Knossos"` | all 5,932 documents |
+| `support` | `"tablet"`, `"stirrup jar"`, `"label"`, `"nodule, sealed"` | all 5,932 documents |
+| `scribe` | `"117"`, `"138"` | 3,945 of 5,932 documents |
+| `findspot` | `"KN, A"`, `"PY, Room 8"` | where recorded in DAMOS |
+| `period` | `"LM IIIA2 or LM IIIB"` | where recorded in DAMOS |
 
-The sites, busiest first (real counts):
+Major find-sites in DAMOS:
 
 | Site | Tablets |
 | --- | --- |
@@ -263,13 +252,13 @@ The sites, busiest first (real counts):
 | Thebes | 363 |
 | Mycenae | 87 |
 | Tiryns | 27 |
-| (plus inscribed vases: Thebes, Khania, Tiryns, Mycenae…) | |
+| Inscribed vases (Thebes, Khania, Tiryns, Mycenae, others) | remainder |
 
-The whole thing is browsable from the shell too: `aegean` treats `damos` like any fetched corpus:
+CLI queries over `damos`:
 
 ```bash
-aegean info damos              # size, provenance, license, citation
-aegean stats damos --top 8     # most frequent words
+aegean info damos
+aegean stats damos --top 8
 #  damos: top 8 words
 # ┌──────────┬───────┐
 # │ item     │ count │
@@ -284,36 +273,37 @@ aegean stats damos --top 8     # most frequent words
 # │ ko-wa    │ 113   │
 # └──────────┴───────┘
 
-aegean search damos "po-*"     # words matching a wildcard sign pattern (po-me ×8, po-si ×5, …)
-aegean dispersion damos ku-ta-to   # how concentrated a place-name is (Gries' DP)
+aegean search damos "po-*"         # po-me (8), po-si (5), ...
+aegean dispersion damos ku-ta-to   # Gries' DP
 ```
 
-### Slicing the corpus
+### Filtering
 
-`corpus.filter(...)` returns a new `Corpus` of the matching documents: chainable with every
-analysis function:
+`corpus.filter(...)` returns a new `Corpus` compatible with every analysis
+function:
 
 ```python
 corpus = aegean.load("damos")
 
-corpus.filter(scribe="117")            # the most prolific Knossos hand: 684 tablets
-corpus.filter(support="stirrup jar")   # the painted-vase inscriptions: 196 documents
-corpus.filter(site="Pylos")            # 1,004 Pylos tablets
+corpus.filter(scribe="117")            # 684 tablets
+corpus.filter(support="stirrup jar")   # 196 documents
+corpus.filter(site="Pylos")            # 1,004 tablets
 ```
 
 ### Scribal-hand analysis
 
-The `aegean.analysis.scribal` layer profiles every hand and finds what is characteristic of each
-one. `scribal_hands` returns one `HandProfile` per hand (busiest first); `hand_keyness` runs the
-standard log-likelihood keyness of one hand against all the others. A "hand" here is one distinct
-attribution string the edition records (a hand number, possibly qualified with a certainty mark
-such as `117?`, or a compound/sub-hand tag), not necessarily one distinct scribe; DAMOS carries
-291 such strings, which `aegean.analysis.hands` groups into 212 site-and-series dossiers.
+`aegean.analysis.scribal` profiles attributed hands and computes per-hand
+keyness. `scribal_hands` returns one `HandProfile` per distinct attribution
+string, sorted by document count; `hand_keyness` computes log-likelihood keyness
+for one hand against the rest of the corpus. Each hand key represents one
+distinct edition string (including qualified marks such as `117?` or sub-hand
+tags): DAMOS contains 291 such strings, which `aegean.analysis.hands` groups
+into 212 site-and-series dossiers.
 
 ```python
 from aegean.analysis import scribal_hands, hand_keyness
 
-profiles = scribal_hands(corpus)             # 291 distinct hand-attribution strings in DAMOS
+profiles = scribal_hands(corpus)             # 291 attribution strings
 for h in profiles[:5]:
     print(h.hand, h.doc_count, list(h.sites)[:1], [w for w, _ in h.top_words[:3]])
 # 117 684 ['Knossos'] ['ku-ta-to', 'ru-ki-to', 'pa-i-to']
@@ -322,60 +312,76 @@ for h in profiles[:5]:
 # 124 171 ['Knossos'] ['o-u-te-mi', 'ko-no-si-jo', 'a-mi-ni-so']
 # 141 106 ['Knossos'] ['zo-a', 'ku-pi-ri-jo', 'o-no']
 
-rows = hand_keyness(corpus, "117")           # what does Hand 117 write more than the rest?
+rows = hand_keyness(corpus, "117")
 [r.item for r in rows[:6]]
-# ['ku-ta-to', 'ru-ki-to', 'ra-to', 'u-ta-jo-jo', 'u-ta-jo', 'pa-i-to']  (mostly place-names)
+# ['ku-ta-to', 'ru-ki-to', 'ra-to', 'u-ta-jo-jo', 'u-ta-jo', 'pa-i-to']
 ```
 
-`HandProfile` carries: `hand`, `doc_count`, `token_count`, `word_count`, `sites` (a `{site: tablets}`
-map), `periods`, and `top_words`. `scribal_hands` takes `top_n=` (how many top words) and
-`min_docs=` (drop hands below a threshold). Per-hand **dispersion** is just the standard helper over
-the hand's slice: `dispersion(corpus.filter(scribe="117"), "ku-ta-to")`.
+`HandProfile` exposes `hand`, `doc_count`, `token_count`, `word_count`, `sites`
+(`{site: count}`), `periods`, and `top_words`. `scribal_hands` accepts `top_n`
+and `min_docs`. Per-hand dispersion runs directly on a filtered slice:
+`dispersion(corpus.filter(scribe="117"), "ku-ta-to")`. The same functions work
+on any corpus that populates `meta.scribe`, including the bundled Linear A
+corpus (592 of 1,721 inscriptions carry GORILA hand identifications).
 
-The hand layer is script-agnostic: any corpus whose documents set `meta.scribe` works. DAMOS and
-the bundled Linear A corpus both ship with hands (Linear A carries GORILA hand identifications on
-592 of its 1,721 inscriptions).
+### Licensing and citation
 
-### Licensing and citation (read this)
+DAMOS is licensed **CC BY-NC-SA 4.0**; those NonCommercial and ShareAlike
+obligations apply to downstream use. pyaegean fetches the asset on demand and
+never bundles it in the Apache-2.0 wheel. Cite DAMOS (Aurora 2015) in published
+work (`corpus.provenance.cite()`), and record the pinned asset hash via
+`aegean data versions`. `scripts/build_damos_corpus.py` documents the build from
+the DAMOS public API.
 
-The DAMOS data is **NonCommercial + ShareAlike**: those obligations pass through to you. The corpus
-is hosted as a clearly-labeled CC BY-NC-SA 4.0 release asset, fetched to your cache on demand, and
-**never bundled inside the Apache-2.0 wheel**. **Cite DAMOS** (Aurora 2015) in academic work: the
-`Provenance` on the loaded corpus carries the citation, and `aegean data versions` pins the exact
-asset sha256 for reproducible papers. `scripts/build_damos_corpus.py` documents exactly how the
-asset is built from the DAMOS public API (joins, museum location and inventory numbers are also in
-the JSON for those who read it directly).
+## Browser workbench
+
+`aegean workbench` opens Linear B corpora directly in the multi-script browser
+workbench (`v2.1.0`) with self-hosted Noto Sans Aegean fonts, the 211-sign
+inventory, phonetic values, and Linear B `to-so`/`o-pe-ro` accounting
+reconciliation:
+
+```bash
+aegean workbench --corpus damos                         # full DAMOS corpus
+aegean workbench --corpus damos --site Pylos --scribe 1 # scoped view
+aegean workbench --corpus linearb --state lb-notes.json # bundled sample + local workspace backup
+```
+
+From Python, `aegean.io.to_workbench_bundle(corpus, "damos-workbench.json")`
+writes the schema-v1 multi-script envelope (inscriptions, `signs`,
+`phoneticMap`, and `_meta.script = "linearb"`). See
+[Interoperability](Interoperability) for workspace backup round-tripping.
 
 ## Accounting
 
-Linear B tablets are administrative records: names, commodity ideograms, and numerals, often
-with a `to-so`/`to-sa` (τόσος, "so much") total. The script-agnostic accounting engine reads them
-directly, using Linear B's own markers in place of Linear A's `KU-RO`:
+Linear B administrative tablets record commodities and quantities, frequently
+closing with a `to-so`/`to-sa` (τόσος, "so much") total or an `o-pe-ro`
+(ὄφελος, "deficit / owed") line. The script-agnostic accounting engine
+recognizes Linear B markers automatically:
 
 | Role | Linear B markers | Meaning |
 | --- | --- | --- |
-| total | `TO-SO`, `TO-SA`, `TO-SO-DE` | "so much / so many": the stated total |
-| deficit | `O-PE-RO`, `O-PE-RO-SI` | what is owed / outstanding |
+| total | `TO-SO`, `TO-SA`, `TO-SO-DE` | stated total |
+| deficit | `O-PE-RO`, `O-PE-RO-SI` | amount owed or outstanding |
 
-`balance_check(doc)` sums the item lines above each total line and compares. Each result is a
-`BalanceCheck` with `stated_total`, `computed_sum`, `item_count`, `difference`, `balances`,
-`marker`, `total_line_index`, and rational `exact_difference`; `exact_balances`
-reports equality of the written quantities. `balance_check(doc, exact=True)`
-(CLI `--exact`) uses rational equality for `balances`; the default retains the
-legacy float cutoff. Neither mode establishes metrological interpretation.
+`balance_check(doc)` sums item lines above each total line and returns one
+`BalanceCheck` per total (`stated_total`, `computed_sum`, `item_count`,
+`difference`, `balances`, `marker`, `total_line_index`, `exact_difference`, and
+the `exact_balances` property). Pass `exact=True` (CLI `--exact`) to require
+exact rational equality instead of the default `1e-6` float cutoff.
 
 ```python
 from aegean.analysis import balance_check
 from aegean.scripts.linearb.loader import classify
 from aegean.core.model import Document, DocumentMeta
 
-# a tiny worked account: two items, then the stated total
 rows = [["A-KO-RA-JA", "3"], ["WO-NO", "4"], ["TO-SO", "7"]]
 tokens, lines, pos = [], [], 0
 for li, row in enumerate(rows):
     idxs = []
     for w in row:
-        tokens.append(classify(w, li, pos)); idxs.append(pos); pos += 1
+        tokens.append(classify(w, li, pos))
+        idxs.append(pos)
+        pos += 1
     lines.append(idxs)
 doc = Document(id="demo", script_id="linearb", tokens=tokens, lines=lines, meta=DocumentMeta())
 
@@ -384,33 +390,27 @@ for chk in balance_check(doc):
 # TO-SO 7.0 == 7.0 → True
 ```
 
-From the shell, `aegean balance` sweeps a whole corpus (or one document) and can fail a CI run with
-`--strict`:
+CLI usage:
 
 ```bash
-aegean balance linearb            # sweep the bundled sample
-aegean balance damos "KN Fp(1) 1 + 31 (138)"   # one tablet
-aegean balance linearb --json --strict          # machine-readable; exit 1 if any total fails
+aegean balance linearb
+aegean balance damos "KN Fp(1) 1 + 31 (138)"
+aegean balance linearb --json --strict
 ```
 
-`is_checkable_account(doc)` and `checkable_accounts(corpus)` pick out the *intact, balancing*
-accounts: every token securely read, at least one total within
-`max(1, tolerance * abs(stated_total))`, with `tolerance=0.10` by default because
-Aegean metrology is imperfectly understood. `tolerance=0` still allows an absolute
-difference of one; use `exact=True` for equality of the written rational quantities.
-These are arithmetic drill candidates, subject to the reading and section boundaries.
+`is_checkable_account(doc)` and `checkable_accounts(corpus)` select intact
+tablets whose tokens are all securely read and whose total falls within
+`max(1, tolerance * abs(stated_total))` (default `tolerance=0.10`; pass
+`exact=True` for exact rational equality). Section boundaries are heuristic, so
+a non-zero difference can reflect line damage or multi-section layout.
 
-The reconciliation is heuristic (section boundaries are inferred), so a balance is **evidence, not
-proof**, exactly as for Linear A. See [Limitations](Limitations).
+## Bundled sample (`aegean.load("linearb")`)
 
-## The bundled sample — `aegean.load("linearb")`
-
-For a zero-network default, pyaegean also bundles an **18-tablet illustrative sample**: PY Ta 641
-(the tablet that confirmed Ventris's decipherment) and PY Er 312 hand-curated, plus sixteen one-line
-excerpts from Pylos, Knossos and Mycenae tablets taken from *sourced quotations* in Wiktionary's
-Mycenaean entries (each cites its tablet and carries a translation; CC BY-SA). These are excerpts to
-exercise the tools, **not editions**: use `aegean.load("damos")` above for the full corpus, or
-bring your own below.
+For offline use without fetching DAMOS, pyaegean bundles an **18-tablet sample**:
+PY Ta 641 and PY Er 312 plus 16 single-line excerpts from Pylos, Knossos, and
+Mycenae drawn from sourced Wiktionary Mycenaean quotations (CC BY-SA). These are
+illustrative excerpts, not full critical editions; load `damos` for corpus-scale
+work.
 
 ```python
 import aegean
@@ -428,34 +428,34 @@ aegean cite linearb
 # Ventris, M. & Chadwick, J. (1973). Documents in Mycenaean Greek (2nd ed.). Cambridge University Press.
 ```
 
-> **A note on case.** The bundled sample and the EpiDoc reader use pyaegean's uppercase token
-> convention; the DAMOS asset preserves DAMOS's own **lowercase** transliterations (`to-so`).
-> Marker matching folds case (like the bridge and the lexicon already did), so `balance_check`
-> works on both as-is: over the full DAMOS corpus it finds 130 tablets with stated totals
-> (255 checks, 52 balancing exactly).
+> **Case folding.** The bundled sample and EpiDoc reader use uppercase tokens,
+> while DAMOS preserves lowercase transliterations (`to-so`). Marker matching
+> folds case, so `balance_check` handles both conventions: across DAMOS it finds
+> 130 tablets with stated totals (255 checks, 52 balancing exactly).
 
-## Bring your own corpus
+## Importing external Linear B corpora
 
-### From a CSV (e.g. a LiBER selection)
+### From CSV (e.g. a LiBER selection)
 
-LiBER's interface exports a selection by copy-to-clipboard ("e.g., to be pasted into an *Excel*
-spreadsheet"). Your own copied selection: your use, under LiBER's terms; pyaegean fetches and
-re-hosts nothing; saves as a CSV with columns like `id,site,text`. The one-step path is the
-`from_csv` importer (or `aegean import sel.csv -o liber.db --script linearb` with no Python):
+Selections exported from LiBER via clipboard and saved to CSV (for example,
+columns `id,site,text`) can be loaded locally under LiBER's own terms without
+re-hosting:
 
 ```python
 from aegean.io import from_csv
 
 corpus = from_csv(
     "my-liber-selection.csv",
-    script_id="linearb",          # whitespace tokenizer (keeps TI-RI-PO-DE as one token)
+    script_id="linearb",          # whitespace tokenizer preserves TI-RI-PO-DE
     id_col="id", text_col="text", meta_cols=["site"],
 )
 ```
 
-`from_csv` stamps a generic *user-supplied* provenance. When you want the licensing recorded
-explicitly (the right move for LiBER material) build through `Corpus.from_records` instead, which
-takes your own `provenance=`:
+CLI equivalent: `aegean import sel.csv -o liber.db --script linearb`.
+
+To record explicit license and citation metadata rather than `from_csv`'s
+generic user-supplied provenance, construct the corpus through
+`Corpus.from_records`:
 
 ```python
 import csv
@@ -467,86 +467,83 @@ with open("my-liber-selection.csv", encoding="utf-8") as f:
         for r in csv.DictReader(f)
     ]
 corpus = aegean.Corpus.from_records(
-    records, script_id="linearb",
+    records,
+    script_id="linearb",
     provenance=aegean.Provenance(
-        source="My LiBER selection (manual export)",
+        source="Personal LiBER selection (manual export)",
         license="© CNR Edizioni — all rights reserved; personal research use",
         citation="LiBER — Linear B Electronic Resources (Del Freo & Di Filippo, CNR).",
     ),
 )
 ```
 
-### From an EpiDoc export (e.g. your own DAMOS download)
+### From local EpiDoc XML (DAMOS-style files)
 
-Point pyaegean at a licensed EpiDoc file or directory and it parses it locally, never re-hosting:
+Install the `[epidoc]` extra (`lxml`) for the Linear B DAMOS-style EpiDoc
+reader (the generic `aegean.io.from_epidoc` uses only the stdlib XML parser):
 
 ```bash
-pip install "pyaegean[epidoc]"                  # lxml, for this DAMOS reader (the generic io.from_epidoc needs no extra)
-export PYAEGEAN_LINEARB_CORPUS=/path/to/damos   # a file or directory of EpiDoc XML
+pip install "pyaegean[epidoc]"
+export PYAEGEAN_LINEARB_CORPUS=/path/to/damos
 ```
 
 ```python
 import aegean
-aegean.load("linearb")                          # now loads your corpus instead of the sample
+aegean.load("linearb")                          # loads PYAEGEAN_LINEARB_CORPUS instead of the sample
 
-# or explicitly:
 from aegean.scripts.linearb import load_epidoc_corpus, parse_epidoc
-load_epidoc_corpus("/path/to/damos")            # a Corpus
-parse_epidoc("/path/to/one-file.xml")           # a list of Documents
+load_epidoc_corpus("/path/to/damos")            # Corpus
+parse_epidoc("/path/to/one-file.xml")           # list[Document]
 ```
 
-The reader is tolerant of EpiDoc variation: it takes the tablet id and provenance from the header,
-reads the transliteration line by line (splitting at `<lb>`), and maps the EpiDoc apparatus
-(`<supplied>`, `<unclear>`, `<gap>`, `<app>`) to pyaegean's `ReadingStatus` so restored and uncertain
-readings are flagged. EpiDoc transliterations are lowercase; the reader uppercases on import to match
-pyaegean's token convention.
+The reader extracts the tablet id and provenance from the TEI header, splits
+lines at `<lb>`, maps `<supplied>`, `<unclear>`, `<gap>`, and `<app>` onto
+`ReadingStatus`, and uppercases transliterations to match pyaegean's Linear B
+token convention.
 
-## Reference: Linear B CLI commands
+## CLI command reference
 
-Every data-producing command takes `--json` for machine-readable output (`export` writes the
-file itself). `corpus` accepts `linearb` (the sample) or
-`damos` (the full fetched corpus), among others.
+Data commands accept `--json` for machine-readable output. `CORPUS` may be
+`linearb` (bundled sample) or `damos` (full fetched corpus).
 
-| Command | What it does |
+| Command | Action |
 | --- | --- |
-| `aegean sign linearb LABEL` | Look up one sign (glyph, codepoint, sound, Bennett no.) |
-| `aegean bridge linearb WORD` | Read a transliterated word as Greek |
-| `aegean info CORPUS` | Corpus overview: size, provenance, license, citation |
-| `aegean cite CORPUS` | One-line citation (filters cite the exact subset) |
-| `aegean show CORPUS DOC_ID` | One document: metadata + line-by-line tokens |
-| `aegean load CORPUS` | Filter by metadata (`--scribe`, `--site`, `--support`…); list or `--json` |
-| `aegean search CORPUS PATTERN` | Words matching a wildcard sign pattern, with counts |
-| `aegean stats CORPUS` | Frequency table of words (`--signs` for signs) |
-| `aegean dispersion CORPUS ITEM` | How evenly an item spreads (Gries' DP) |
-| `aegean keyness CORPUS …` | Key items vs a reference (log-likelihood G²) |
-| `aegean balance CORPUS [DOC_ID]` | Accounting check (`--strict` exits 1 on a fail) |
-| `aegean export CORPUS …` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / RDF Turtle / JSON-LD |
-| `aegean data list` / `fetch` / `versions` | The fetchable datasets and the cache manifest |
+| `aegean sign linearb LABEL` | Look up one sign (glyph, codepoint, sound, Bennett number) |
+| `aegean bridge linearb WORD` | Look up a transliterated word's Greek lemma and gloss |
+| `aegean info CORPUS` | Corpus size, provenance, license, and citation |
+| `aegean cite CORPUS` | Citation string (with filter flags for exact subsets) |
+| `aegean show CORPUS DOC_ID` | Document metadata and line-by-line tokens |
+| `aegean load CORPUS` | Filter by metadata (`--scribe`, `--site`, `--support`) |
+| `aegean search CORPUS PATTERN` | Wildcard sign-pattern matches with counts |
+| `aegean stats CORPUS` | Word or sign (`--signs`) frequency table |
+| `aegean dispersion CORPUS ITEM` | Gries' DP dispersion |
+| `aegean keyness CORPUS ...` | Log-likelihood G² keyness against a reference |
+| `aegean analyze hands CORPUS` | Scribal-hand profiles and per-hand keyness |
+| `aegean balance CORPUS [DOC_ID]` | Accounting check (`--strict` exits 1 on failure) |
+| `aegean workbench --corpus CORPUS` | Launch multi-script browser workbench (`v2.1.0`) |
+| `aegean export CORPUS ...` | Export JSON / CSV / Parquet / EpiDoc / SQLite / Workbench / RDF Turtle / JSON-LD |
+| `aegean data list` / `fetch` / `versions` | Manage fetchable datasets and pinned SHA-256 versions |
 
 ## Limitations
 
-- **The bridge is a curated lexicon, not a parser.** 149 attested equations: it does not read
-  arbitrary unattested words. Words outside the lexicon return `None`, keeping every reading
-  source-attested.
-- **Accounting is heuristic.** Section boundaries are inferred and Aegean metrology is contested; a
-  balance is evidence, not proof. Marker matching folds case (since 0.15.0), so it fires over the
-  lowercase DAMOS corpus (130 tablets carry a stated total, 52 balance exactly).
-- **DAMOS is NonCommercial.** The CC BY-NC-SA 4.0 obligations pass through to you, and the asset is
-  never bundled in the wheel. Cite Aurora 2015.
-- **Some tablets are fragmentary.** Many DAMOS transliterations carry brackets and damage markers
-  (`[`, `]`, `?`); tokens are flagged with their editorial `ReadingStatus`, but a fragment is a
-  fragment.
+- **Curated bridge lexicon.** The 149-entry lexicon covers attested equations
+  and returns `None` for unlisted words; it does not parse arbitrary Mycenaean
+  forms.
+- **Heuristic accounting.** Section boundaries are inferred and Aegean metrology
+  is contested. Over DAMOS, 130 tablets carry checkable totals and 52 balance
+  exactly.
+- **DAMOS license.** DAMOS carries CC BY-NC-SA 4.0 terms and is never bundled in
+  the wheel. Cite Aurora (2015).
+- **Fragmentary tablets.** Damaged readings in DAMOS are flagged via
+  `ReadingStatus`, but incomplete text limits statistical and accounting analyses.
 
-See the full [Limitations](Limitations) page for the project-wide caveats.
+See [Limitations](Limitations) for project-wide boundaries.
 
 ## Related pages
 
-- [Greek NLP](Greek-NLP): what to do with the lemma once the bridge hands it to you (glossing,
-  morphology, treebank lookup).
-- [Linear A](Linear-A): the undeciphered sibling script, same plugin model.
-- [Cypriot](Cypriot): the other deciphered syllabary with a Greek-reading `bridge`.
-- [Analysis](Analysis): dispersion, keyness, collocation, structure, and the rest of the toolkit
-  that works over the DAMOS corpus.
-- [Data & Provenance](Data-and-Provenance): where every dataset comes from and how it is licensed.
-- [CLI](CLI): the full command reference.
-- [Meters](Meters) and [Limitations](Limitations).
+- [Greek NLP](Greek-NLP): dictionary lookup, morphology, and parsing for Greek lemmas
+- [Linear A](Linear-A): undeciphered sibling script under the same plugin model
+- [Cypriot](Cypriot): deciphered Cypriot syllabary and Greek bridge
+- [Analysis](Analysis): dispersion, keyness, collocation, scribal hands, and query engine
+- [Data & Provenance](Data-and-Provenance): dataset sources and licensing
+- [CLI](CLI), [Meters](Meters), and [Limitations](Limitations)

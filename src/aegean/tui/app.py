@@ -44,12 +44,13 @@ __all__ = ["AegeanApp", "AppState", "run_tui"]
 
 @dataclass
 class AppState:
-    """The selection shared across screens: the corpus a user is browsing and the
-    document they have opened in it. Mutated only through the app's ``set_corpus``
-    / ``set_doc`` helpers; a screen reads it back when it is shown."""
+    """The selection shared across screens: the corpus a user is browsing, the
+    document they have opened in it, and any active review CSV paths. Mutated
+    through the app's helpers; screens read it back when shown."""
 
     selected_corpus: str | None = None
     selected_doc_id: str | None = None
+    review_paths: tuple[str, ...] = ()
 
 
 # The screens the app registers, each ``(name, module, class)``. Registration
@@ -61,6 +62,7 @@ _SCREEN_SPECS: tuple[tuple[str, str, str], ...] = (
     ("greek", "screens.greek", "GreekWorkbenchScreen"),
     ("bible", "screens.bible", "BiblicalScreen"),
     ("library", "screens.library", "LibraryScreen"),
+    ("review", "screens.review", "ReviewScreen"),
     ("data", "screens.data", "DataStoreScreen"),
     ("works", "screens.works", "WorksScreen"),
     ("console", "screens.console", "CommandConsoleScreen"),
@@ -118,6 +120,7 @@ class CorpusCommands(Provider):
             ("Go to Greek workbench", "greek"),
             ("Go to Biblical Greek study", "bible"),
             ("Go to Library manager", "library"),
+            ("Go to Annotation review", "review"),
             ("Go to Data store", "data"),
             ("Go to Works library", "works"),
             ("Go to Command console", "console"),
@@ -149,7 +152,7 @@ class CorpusCommands(Provider):
 
 class AegeanApp(App[None]):
     """The pyaegean terminal UI: browse corpora, the Greek workbench, Biblical
-    Greek study, and the unified library manager."""
+    Greek study, annotation review, and the unified library manager."""
 
     TITLE = "aegean"
     SUB_TITLE = "Ancient Greek + Aegean scripts"
@@ -158,8 +161,8 @@ class AegeanApp(App[None]):
     COMMANDS = App.COMMANDS | {CorpusCommands}
 
     # The screen registry, resolved from ``_SCREEN_SPECS`` at class-definition
-    # time: Home always, plus each of corpus / greek / bible / library / data
-    # whose ``screens/<name>.py`` module imports cleanly.
+    # time: Home always, plus each screen whose ``screens/<name>.py`` module
+    # imports cleanly.
     SCREENS = _load_screens()  # type: ignore[assignment]
 
     BINDINGS = [
@@ -169,6 +172,7 @@ class AegeanApp(App[None]):
         Binding("g", "switch('greek')", "Greek"),
         Binding("b", "switch('bible')", "Bible"),
         Binding("l", "switch('library')", "Library"),
+        Binding("r", "switch('review')", "Review"),
         Binding("w", "switch('works')", "Works"),
         Binding("d", "switch('data')", "Data"),
         Binding("colon", "console", "Console"),
@@ -177,9 +181,17 @@ class AegeanApp(App[None]):
         Binding("question_mark", "help", "Help"),
     ]
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        corpus: str | None = None,
+        review_paths: tuple[str, ...] | list[str] = (),
+    ) -> None:
         super().__init__()
-        self.state = AppState()
+        self.state = AppState(
+            selected_corpus=corpus,
+            review_paths=tuple(review_paths),
+        )
         self._current_screen_name: str | None = None
         # a history of switched-to main screens, so Esc can walk back (modals use
         # the real screen_stack; the flat main screens need this app-owned list).
@@ -190,8 +202,13 @@ class AegeanApp(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.push_screen("home")
-        self._current_screen_name = "home"
+        initial = "home"
+        if self.state.review_paths and "review" in self.SCREENS:
+            initial = "review"
+        elif self.state.selected_corpus and "corpus" in self.SCREENS:
+            initial = "corpus"
+        self.push_screen(initial)
+        self._current_screen_name = initial
         # apply a persisted theme if it is still a known one (a removed theme is ignored)
         saved = adapter.load_tui_config().get("theme")
         if isinstance(saved, str) and saved in self.available_themes:
@@ -264,6 +281,13 @@ class AegeanApp(App[None]):
         self.set_corpus(corpus_id)
         self.goto("corpus")
 
+    def open_review(self, *paths: str, corpus_id: str | None = None) -> None:
+        """Select one or more review CSVs and switch to the annotation review screen."""
+        if corpus_id is not None:
+            self.set_corpus(corpus_id)
+        self.state.review_paths = tuple(paths)
+        self.goto("review")
+
     # ── shared state ────────────────────────────────────────────────────────
     def set_corpus(self, corpus_id: str) -> None:
         """Set the selected corpus and clear any open document. A screen picks up
@@ -277,6 +301,10 @@ class AegeanApp(App[None]):
         self.state.selected_doc_id = doc_id
 
 
-def run_tui() -> None:
+def run_tui(
+    *,
+    corpus: str | None = None,
+    review_paths: tuple[str, ...] | list[str] = (),
+) -> None:
     """Construct and run the terminal UI (the ``aegean tui`` entry point)."""
-    AegeanApp().run()
+    AegeanApp(corpus=corpus, review_paths=review_paths).run()

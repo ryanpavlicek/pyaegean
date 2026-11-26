@@ -1,50 +1,50 @@
 # The `aegean` command line
 
-`aegean` is the whole toolkit from your terminal (corpora, Greek NLP, surface
-analysis, the fetch-to-cache data layer, SQLite, plots, and the (exploratory) AI
-layer) without writing a line of Python. If you've never used a command line
-before, start with [Getting Started](Getting-Started) (it shows you how to open a
-terminal); then come back here. Everything below is something you can copy, paste,
-and run.
+`aegean` exposes the pyaegean toolkit from the terminal: corpora, Greek NLP,
+Biblical and Koine Greek, surface analysis, research bundles, the local data
+store, SQLite full-text search, plots, and the exploratory AI layer. If you are
+new to the command line, start with [Getting Started](Getting-Started) to set up
+a terminal, then return here.
 
-> **In a hurry?** The [CLI Cheatsheet](CLI-Cheatsheet) is the dense one-page index
-> of every command and flag. This page is the guided tour: it explains each group
-> and shows a worked example with real output.
+> **Quick lookup:** [CLI Cheatsheet](CLI-Cheatsheet) lists every command and
+> flag on one page. This page walks through each command group with worked
+> examples.
 
-> **Available in v0.67.0.** The annotation-profile and interoperability commands, the
-> CoNLL-U, long-input, source-alignment, and analysis-receipt commands and fields, and the
-> runtime-variant selectors described below are all part of the current release.
+> **Available in v0.72.0.** All commands, flags, research bundle workflows,
+> multi-script workbench controls, and TUI review options on this page match the
+> current release.
 
 ```bash
-pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
+pip install "pyaegean[cli]"     # adds typer + rich; core library stays zero-dependency
 aegean --help
 ```
 
-The `aegean` entry point is installed with the core package; install the `[cli]`
-extra to run the commands. Without it, the entry point prints an installation hint.
+The core package installs the `aegean` entry point. Running commands requires
+the `[cli]` extra; without it, `aegean` prints the `pip install` command and
+exits.
 
-## Conventions that hold everywhere
+## Global conventions
 
-Learn these once and every command behaves predictably.
+These four behaviors apply across the command tree:
 
-| Convention | What it does | Example |
+| Convention | Behavior | Example |
 |---|---|---|
-| **`--json`** | Print one machine-readable JSON document to stdout and nothing else, so results pipe into `jq`, files, or other programs. Greek stays readable (`ensure_ascii=False`). Combines with `--output/-o`: the file is written (a one-line `wrote <path>` confirmation goes to stderr) and the JSON still prints to stdout. | `aegean info lineara --json` |
-| **`-` reads stdin** | Anywhere a command takes a `TEXT` argument, passing `-` reads the text from standard input, so commands compose in pipelines. | `echo "μῆνιν" \| aegean greek lemmatize -` |
-| **`--top` / `--limit`** | Interchangeable spellings of the same cap: every command that caps a ranked table or result list accepts both, `plot` included. `0` lifts the cap wherever the help says `0 = all` (`greek rarity` is the one exception: its cap is a plain slice, so `0` shows nothing). | `aegean stats lineara --limit 3` |
-| **Exit codes** | `0` success · `1` a domain error (one line on stderr, prefixed `aegean:`) · `2` a usage error (typer's default). `balance --strict` exits `1` when any total fails to balance. | see below |
+| **`--json`** | Prints one JSON document to stdout with readable Greek (`ensure_ascii=False`), suitable for `jq` or scripts. When combined with `--output/-o`, writes the file (`wrote <path>` on stderr) and still prints JSON to stdout. | `aegean info lineara --json` |
+| **`-` reads stdin** | Any command accepting a `TEXT` argument reads from stdin when given `-`. | `echo "μῆνιν" \| aegean greek lemmatize -` |
+| **`--top` / `--limit`** | Aliases for the same row cap on ranked tables and result lists, including `plot`. Passing `0` removes the cap wherever `--help` says `0 = all` (`greek rarity` is the exception: its cap slices directly, so `0` prints nothing). | `aegean stats lineara --limit 3` |
+| **Exit codes** | `0` success · `1` domain error (one line on stderr prefixed `aegean:`) · `2` usage error (missing/invalid arguments). `balance --strict` exits `1` if any checked total fails. | see below |
 
-Here are those exit codes, actually demonstrated:
+Exit code examples:
 
 ```bash
 aegean info lineara --json > /dev/null ; echo "exit=$?"      # exit=0   (success)
 aegean info bogus                                            # aegean: unknown corpus 'bogus'; expected a registered id (…)
-                                                            # exit=1   (domain error, message on stderr)
+                                                             # exit=1   (domain error on stderr)
 aegean info                                                  # exit=2   (usage error: missing argument)
-aegean balance lineara HT13 --strict ; echo "exit=$?"        # exit=1   (a total didn't balance)
+aegean balance lineara HT13 --strict ; echo "exit=$?"        # exit=1   (total did not balance)
 ```
 
-A help summary is one `-h`/`--help` away on every command and group:
+Every command and group supports `-h` and `--help`:
 
 ```bash
 aegean --help
@@ -52,95 +52,86 @@ aegean greek --help
 aegean greek scan --help
 ```
 
-> **Windows note:** if polytonic Greek shows up as boxes or `?`, that's the
-> terminal font, not pyaegean. Set `PYTHONUTF8=1` and run `chcp 65001` once to
-> switch the console to UTF-8, or just use the `--json` output, which is always
-> correct, and view it in an editor. See [Getting Started](Getting-Started#seeing-greek-correctly).
-> The Linear A/B glyph columns (𐝫, 𐙂) additionally need a font that covers the
-> Aegean scripts: see [Installation → Set up your terminal](Installation#set-up-your-terminal).
+> **Windows terminals:** If polytonic Greek appears as boxes or `?`, check the
+> terminal font and encoding. Set `PYTHONUTF8=1` and run `chcp 65001` once for
+> UTF-8 console output, or write `--json` output and inspect it in an editor.
+> See [Getting Started](Getting-Started#seeing-greek-correctly). Linear A/B
+> glyph columns (𐝫, 𐙂) also require a font with Aegean script coverage: see
+> [Installation → Set up your terminal](Installation#set-up-your-terminal).
 
-## How to read a command
+## Reading usage lines
 
-Every `--help` screen (and every example on this page) describes commands in the
-same compact notation. Here is one real usage line, exactly as
-`aegean stats --help` prints it, decoded piece by piece:
+`--help` output and this wiki use standard CLI notation. Take `aegean stats --help`:
 
 ```text
 Usage: aegean stats [OPTIONS] CORPUS
 ```
 
-- **`aegean stats`** is the command itself: the program (`aegean`), then the
-  command (`stats`). Grouped commands add one more word: `aegean greek scan`.
-- **`CORPUS`** (capitals, no dashes) is an **argument**: a value you supply in
-  that position, with nothing in front of it. Here it is the corpus to analyse,
-  so the simplest complete command is `aegean stats lineara`. An argument in
-  square brackets is optional: `aegean balance [OPTIONS] CORPUS [DOC_ID]` means
-  the document id may be given (check one tablet) or left off (sweep the whole
-  corpus).
-- **`[OPTIONS]`** stands for the command's **options** (also called flags):
-  named switches that start with dashes and can go in any order. An option
-  either takes a value after it (`--top 5`) or is a plain on/off switch
-  (`--signs`). `aegean stats --help` lists them all with one-line descriptions.
-- **Short and long spellings.** Some options have a one-letter short form:
-  `-o` is the same option as `--output`, `-f` the same as `--format`. This page
-  usually writes the long form because it is self-describing; type whichever
-  you prefer.
+- **`aegean stats`** is the command (`aegean` plus subcommand `stats`). Grouped
+  commands add one more word, such as `aegean greek scan`.
+- **`CORPUS`** (uppercase, no dashes) is a positional **argument**, so the
+  shortest valid invocation is `aegean stats lineara`. Square brackets mark
+  optional arguments: `aegean balance [OPTIONS] CORPUS [DOC_ID]` checks one
+  tablet when `DOC_ID` is given, or the whole corpus when omitted.
+- **`[OPTIONS]`** are named flags starting with `-` or `--` that can appear in
+  any order. Options either take a value (`--top 5`) or act as boolean switches
+  (`--signs`). Run `aegean stats --help` to see all options for a command.
+- **Short and long flags.** Common options have one-letter aliases: `-o` equals
+  `--output`, `-f` equals `--format`. The docs prefer long names for clarity.
 
-Put together, this command:
+For example:
 
 ```bash
 aegean stats lineara --signs --top 5
 ```
 
-reads as: run `stats` on the corpus `lineara`, count individual signs rather
-than whole words, and show the top five rows.
+runs `stats` on `lineara`, counts individual signs instead of words, and limits
+output to five rows.
 
-**Quoting.** Wrap anything containing a space, an asterisk, or punctuation in
+**Quoting.** Wrap values containing spaces, wildcards (`*`), or punctuation in
 double quotes: `aegean search lineara "KU-*-RO"`,
-`aegean load lineara --site "Haghia Triada"`. Double quotes work in every shell
-pyaegean runs in (Windows PowerShell, cmd, macOS/Linux bash and zsh). A single
-Greek word needs no quotes (`aegean greek syllabify εἰσφέρω`),
-but quoting never hurts, and a multi-word line always needs it:
-`aegean greek scan "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"`. On macOS/Linux single
-quotes work too; in PowerShell prefer double quotes so the text passes through
-unchanged.
+`aegean load lineara --site "Haghia Triada"`. Double quotes work in PowerShell,
+cmd, bash, and zsh. Single Greek words need no quotes
+(`aegean greek syllabify εἰσφέρω`), while multi-word lines require them
+(`aegean greek scan "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"`). On macOS and Linux,
+single quotes work too; on PowerShell, prefer double quotes.
 
-## The command map
+## Command map
 
 ```bash
-aegean --version          # pyaegean 0.67.0
+aegean --version          # pyaegean 0.72.0
 ```
 
-| Group | What's in it |
+| Group | Commands |
 |---|---|
-| **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean library …`** | `status` `packs` `list` `search` `info` `install` `remove` (unified manager for all corpora, Biblical bundles, ~1,778 Greek works, 48 commentaries, lexica, models, and named packs) |
-| **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `explain`, bounded neural `stream`, `annotation-profiles list`/`show`, `interop export`/`import`/`report`, `gloss`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`works`/`catalog`, and `eval` |
-| **`aegean bible …`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` (5 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's + roots, 55 LXX books, 48 patristic commentaries) |
+| **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `find` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **`aegean library …`** | `status` `packs` `list` `search` `info` `install` `remove` (all corpora, Biblical bundles, ~1,778 Greek works, 86 patristic commentaries, lexica, models, and 7 named packs) |
+| **`aegean greek …`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse`, plus `pipeline`, `explain`, `stream`, `annotation-profiles list`/`show`, `interop export`/`import`/`report`, `gloss`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`works`/`catalog`, and `eval` |
+| **`aegean bible …`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` (9 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's + roots, 55 LXX books, 86 patristic commentaries) |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
+| **`aegean bundle …`** | `create` `inspect` `verify` `extract` `hydrate` (deterministic, SHA-256-verified, NC-safe research bundles `.zip`) |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `index` `search` `annotate` `job-status` (SQLite + FTS5 + resumable annotation jobs) |
-| **`aegean review …`** | `export` `merge` `apply` (the human-in-the-loop annotation round-trip, editable & risk-prioritized spreadsheets) |
-| **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (key-gated) |
-| **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
+| **`aegean review …`** | `export` `merge` `apply` (human-in-the-loop annotation review, editable & calibrated-risk queues) |
+| **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
+| **`aegean-mcp`** | Separate console script exposing 29 read/analysis tools to AI agents over MCP stdio |
 
 ---
 
 ## Common tasks
 
-One goal, one command, and what comes back. Every command here was run as
-shown; longer outputs are abridged with `…`. Commands marked *(downloads on
-first use)* fetch their data once and are offline after that.
+Each example below matches live command output (long listings abridged with
+`…`). Commands marked *(downloads on first use)* cache their data once and run
+offline afterward.
 
-**See what is in a corpus** (size, source, license, the ready-to-paste citation):
+**Inspect a corpus** (size, source, license, citation):
 
 ```bash
 aegean info edh
-# a small table: 1286 documents, 26937 words, the EDH source line,
-# the CC-BY-SA-4.0 license, and the citation
+# 1286 documents, 26937 words, EDH source line, CC-BY-SA-4.0 license, and citation
 ```
 
-**Read one Linear A tablet**, line by line:
+**Read a Linear A tablet line by line**:
 
 ```bash
 aegean show lineara HT13
@@ -150,8 +141,7 @@ aegean show lineara HT13
 #   …
 ```
 
-**Read a chapter of the Greek New Testament** (John 1 is bundled, so this works
-offline from install):
+**Read a chapter of the Greek New Testament** (John 1 is bundled offline):
 
 ```bash
 aegean bible read John 1
@@ -161,7 +151,7 @@ aegean bible read John 1
 #   …
 ```
 
-**Read the Iliad, one book at a time** *(downloads on first use)*:
+**Read the Iliad by book** *(downloads on first use)*:
 
 ```bash
 aegean show tlg0012.tlg001 1
@@ -171,43 +161,41 @@ aegean show tlg0012.tlg001 1
 #   …
 ```
 
-**Count the commonest words in a corpus** *(nt downloads on first use)*:
+**Count the most frequent words** *(downloads `nt` on first use)*:
 
 ```bash
 aegean stats nt --top 3
-# a two-column table: καὶ 8541 · ὁ 2768 · ἐν 2683
+# καὶ 8541 · ὁ 2768 · ἐν 2683
 ```
 
-**Find a word anywhere in 57,000 documentary papyri** *(the DDbDP database
-downloads once, ~219 MB)*:
+**Search 57,000 documentary papyri** *(downloads the ~219 MB DDbDP database once)*:
 
 ```bash
 aegean db search ddbdp "βασιλέως" --limit 3
-# a doc/pos/text table: apf.59.84_2 · bgu.10.1910 · bgu.10.1957, each
-# holding βασιλέως at the given token position
+# doc/pos/text table: apf.59.84_2 · bgu.10.1910 · bgu.10.1957
 ```
 
-**List the documents that contain a given word**:
+**Query documents containing a word**:
 
 ```bash
 aegean query nt --where "ins-contains-word=ἀγάπη" --limit 3
 # Contains exact word: ἀγάπη → 20 inscription(s)
-# a table starting Matt 24 · John 17 · Rom 5, then the exact-subset citation
+# table starting Matt 24 · John 17 · Rom 5, followed by the exact-subset citation
 ```
 
-**Map where a word was found** (case does not matter):
+**Map where a word is attested** (case-insensitive):
 
 ```bash
 aegean geo lineara --word a-du
 # lineara: 'a-du' attested at 3 located site(s)
-# a site/lat/lon/count table: Haghia Triada ×7, Khania ×2, Tylissos ×1
+# Haghia Triada ×7, Khania ×2, Tylissos ×1
 ```
 
-**Check whether a tablet's arithmetic adds up**:
+**Check tablet arithmetic**:
 
 ```bash
 aegean balance lineara HT9a
-# one row: HT9a  KU-RO  stated 31.75  computed 31.0  diff -0.75  balances NO
+# HT9a  KU-RO  stated 31.75  computed 31.0  diff -0.75  balances NO
 ```
 
 **Read a Linear B word as Greek**:
@@ -232,21 +220,21 @@ aegean greek scan "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλ�
 # hexameter: dactyl, dactyl, spondee, dactyl, dactyl, final; caesura: penthemimeral
 ```
 
-**Reconstruct a pronunciation** (Attic or Koine):
+**Reconstruct pronunciation** (Attic or Koine):
 
 ```bash
 aegean greek ipa "Χριστός" --period koine
 # xristos
 ```
 
-**Type Greek without a Greek keyboard** (Beta Code in, polytonic Greek out):
+**Convert Beta Code to polytonic Greek**:
 
 ```bash
 aegean greek betacode "lo/gos"
 # λόγος
 ```
 
-**Look up an NT word's meaning** (bundled lexicon, no download):
+**Look up an NT word's gloss** (bundled offline Dodson lexicon):
 
 ```bash
 aegean bible strongs ἀγάπη
@@ -263,14 +251,14 @@ echo "ἐν ἀρχῇ ἦν ὁ λόγος" | aegean greek lemmatize -
 # …
 ```
 
-**Cite exactly what you used**:
+**Cite a corpus**:
 
 ```bash
 aegean cite nt
 # Nestle, E. (1904). Novum Testamentum Graece (Nestle 1904). Morphology/lemmatization (CC0) via biblicalhumanities/Nestle1904. — https://github.com/biblicalhumanities/Nestle1904
 ```
 
-**Check the install when something seems off**:
+**Check the local installation**:
 
 ```bash
 aegean doctor
@@ -280,16 +268,13 @@ aegean doctor
 
 ---
 
-## The guided tour (`aegean quickstart`)
+## Guided tour (`aegean quickstart`)
 
-New to the toolkit? `aegean quickstart` runs the first five minutes for you:
-eight short steps, each printing one dim line of context; seven of them run a real
-command and show its **real output**, live on the bundled data (the last points onward).
-All offline, no keys, nothing downloaded. It reads a Linear A tablet, audits its
-accounting arithmetic, searches by sign pattern, runs the Greek pipeline, scans
-the Iliad's first line as a hexameter, shows the fetchable datasets, and closes
-with pointers for where to go next. Two of the eight steps, as they actually
-print:
+`aegean quickstart` runs an eight-step offline walkthrough on bundled data with
+no network calls or API keys. Seven steps execute live commands (reading a
+Linear A tablet, checking accounting totals, searching sign patterns, running
+the Greek pipeline, scanning Iliad 1.1, and listing fetchable datasets) and the
+eighth lists next steps:
 
 ```text
 $ aegean quickstart
@@ -313,24 +298,22 @@ $ aegean search lineara "KU-*-RO"
 That was 7 real commands in 0.2s, all offline, all bundled data.
 ```
 
-`--no-run` prints the tour script without executing anything, so you can read
-the seven commands first. Because the outputs are live, what you see is exactly
-what your install does.
+Pass `--no-run` to print the commands without executing them.
 
 ---
 
 ## Interactive shell (`aegean` / `aegean repl`)
 
-Running bare **`aegean`** in an interactive terminal opens the interactive shell
-directly so you don't retype `aegean` for every command (`aegean repl` stays
-available explicitly and also handles piped scripts; `aegean --help` or a
-non-TTY/piped `aegean` still prints the command map). Inside the shell you get
-**live predictive completion** (fish-style inline ghost text — press **Right**
-or **End** to accept — plus a live dropdown on **Tab** or while typing) across
-every command, subcommand, `--flag`, and domain value (corpora, fetchable
-datasets, NT/LXX books, editions, manuscript sigla, meters, dictionaries, and
-output formats), together with a **history that persists across sessions** and a
-read-only per-session corpus cache so repeated `show`/`stats`/`search` runs skip
+Running bare `aegean` in an interactive terminal launches the shell so you can
+type commands without the `aegean` prefix. `aegean repl` invokes the same shell
+explicitly and also accepts piped command scripts. Calling `aegean --help` or
+piping non-interactive stdin to bare `aegean` prints the help text instead.
+
+Inside the shell you get inline ghost-text predictions (**Right** or **End** to
+accept), a live completion dropdown (**Tab** or while typing) covering commands,
+subcommands, flags, and domain values (corpora, datasets, NT/LXX books,
+editions, manuscript sigla, meters, dictionaries, and formats), persistent
+command history, and a read-only session corpus cache so repeated queries avoid
 re-parsing the same corpus:
 
 ```text
@@ -351,70 +334,58 @@ aegean> stats --top 3
 aegean> :exit
 ```
 
-Every line is dispatched through the same command tree, so a command behaves
-exactly as it does on the regular command line: `--json`, `-o`, corpus files and
-work ids, all of it. A mistyped command just prints its error and leaves the shell
-open. The shell needs the `[cli]` extra (it ships `prompt_toolkit`). The same
-completion and inline-prediction engine powers the TUI command console (`:`) and
-native shell tab completion (`aegean --install-completion`).
+Every line dispatches through the regular CLI parser (`--json`, `-o`, corpus
+files, work ids). Syntax or domain errors print a message and keep the shell
+open. The shell requires the `[cli]` extra (which includes `prompt_toolkit`).
+The same completion engine powers the TUI command console (`:`) and shell
+tab-completion (`aegean --install-completion`).
 
-### Shell-only directives
+### Shell directives
 
-Three things exist only inside the shell (they are session sugar, never
-dispatched as commands):
+Three directives work only inside the shell:
 
-- **`use CORPUS`** sets a **session corpus**: the corpus-first commands (`info`,
-  `load`, `show`, `search`, `query`, `stats`, `dispersion`, `keyness`, `balance`,
-  `cite`, `export`, `geo`, `sign`, `db build`, and the corpus-taking `analyze`
-  subcommands) then default to it whenever a line names no corpus, so
-  `show HT13` works after `use lineara`. A line that names its own corpus always
-  wins (`info linearb` still reads `linearb`), `use` alone reports the current
-  setting, and `use off` clears it. The target is validated when you set it, with
-  the standard did-you-mean, and must be re-loadable (a registered id, a Greek
-  work id, or a `.json`/`.db` file; not stdin JSON):
+- **`use CORPUS`** sets a session corpus for corpus-first commands (`info`,
+  `load`, `show`, `search`, `query`, `stats`, `dispersion`, `keyness`,
+  `balance`, `cite`, `export`, `geo`, `sign`, `db build`, and corpus-taking
+  `analyze` subcommands). After `use lineara`, `show HT13` targets `lineara`.
+  Naming a corpus explicitly overrides the session default (`info linearb` still
+  reads `linearb`). `use` alone shows the active corpus; `use off` clears it.
+  The target is validated on assignment and must be re-loadable (registered id,
+  Greek work id, or `.json`/`.db` file; stdin JSON is not allowed):
 
   ```text
   aegean> use linera
-  aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, or a path to a .json or .db corpus
+  aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (aphrodisias, apostolic-fathers, …, sigla), a Greek work id like tlg0012.tlg001, or a path to a .json or .db corpus
   ```
 
-  One deliberate limit: with a session corpus set, options written *before* an
-  explicit corpus (`stats --top 5 linearb`) fail with a clean usage error rather
-  than silently reading the wrong corpus. Put the corpus first, as usual.
-- **`:examples`** (or `examples`) prints copyable starter lines spanning the
-  command groups (including `bible` and `greek`), each with a one-line
-  description, ending with a `use lineara` / `show HT13` pair that demonstrates
-  the directive.
-- **`:help`** (or `help`) prints a one-line reminder of these directives and then
-  the full command list; `:exit`, `quit`, or **Ctrl-D** leaves.
+  When a session corpus is active, placing options *before* an explicit corpus
+  argument (`stats --top 5 linearb`) fails with a usage error so the command
+  does not read the wrong corpus. Put the corpus argument first.
+- **`:examples`** (or `examples`) prints starter commands across the main groups
+  with one-line descriptions, ending with a `use lineara` / `show HT13` example.
+- **`:help`** (or `help`) prints the directive summary and full command list.
+  `:exit`, `quit`, or **Ctrl-D** exits.
 
-### History
+### History and scripting
 
-The arrow-key history **persists across sessions** in
-`~/.config/pyaegean/repl_history` (`XDG_CONFIG_HOME` is honored; on Windows that
-is `%USERPROFILE%\.config\pyaegean\repl_history`). It works on every platform,
-Windows included: `prompt_toolkit` ships with the `[cli]` extra, no readline
-needed. The file lives on the config side, deliberately **not** in the
-`PYAEGEAN_CACHE` data store, so `aegean data store` keeps listing downloads only;
-if the location isn't writable the shell falls back to a session-only history
-rather than failing to start. Piped (scripted) sessions are not recorded.
+Command history persists in `~/.config/pyaegean/repl_history`
+(`XDG_CONFIG_HOME` is respected; on Windows,
+`%USERPROFILE%\.config\pyaegean\repl_history`). History is stored in the config
+directory instead of `PYAEGEAN_CACHE` so `aegean data store` tracks downloads
+only. If the config path is unwritable, the shell falls back to session-only
+history. Piped scripts are not saved to history.
 
-When standard input isn't a terminal, `aegean repl` reads one command per line instead
-of prompting, so you can script it (the `use` directive works there too):
+When stdin is not a terminal, `aegean repl` reads and runs one command per line
+(including `use`):
 
 ```bash
 printf 'use lineara\nshow HT13\nstats --top 3\n' | aegean repl
 ```
 
-### A worked session
+### Worked shell session
 
-A short, realistic sitting: set a session corpus, read a tablet, run two
-analyses on it, ask a Greek question, and leave. The outputs below are from a
-real scripted run (the shell reads one command per line when its input is
-piped); the `aegean>` prompt lines are added for readability, since a piped
-session does not echo them. In an interactive terminal bare `aegean` (or
-`aegean repl`) greets you with a banner and the full command map (`aegean --help`),
-not shown here.
+The following output comes from a scripted run (`aegean>` prompts added for
+clarity):
 
 ```text
 $ aegean repl
@@ -454,35 +425,70 @@ aegean> :examples
 aegean> :exit
 ```
 
-Note what the session corpus did: after `use lineara`, `show HT13`,
-`stats --top 3`, and `search "KU-*-RO"` all ran against Linear A with no corpus
-argument, while `greek syllabify` (not a corpus command) was untouched by it.
+After `use lineara`, `show HT13`, `stats --top 3`, and `search "KU-*-RO"` all
+defaulted to Linear A, while `greek syllabify` ran unchanged.
 
 ---
 
-## The terminal UI (`aegean tui`)
+## Research bundles (`aegean bundle`)
+
+`aegean bundle` packages corpora, citations, workbench workspace backups,
+review CSVs (with editable `.companion.json` sidecars), and analysis receipts
+into deterministic, SHA-256-verified `.zip` archives (`aegean-research-bundle/1`):
+
+```bash
+aegean bundle create study.zip --corpus lineara --site "Haghia Triada" \
+    --state workspace.json --review review.csv --receipt eval.json
+aegean bundle inspect study.zip
+aegean bundle verify study.zip
+aegean bundle extract study.zip ./unpacked
+aegean bundle hydrate study.zip ./hydrated --fetch
+```
+
+By default (`--embed-corpus auto`), CC BY-NC* and restricted corpora (such as
+`damos`) are stored as retrieval pointers instead of embedded payloads so public
+bundles stay redistributable. Pass `--fetch` to `bundle hydrate` to reconstruct
+pointer corpora under their upstream licenses. See
+[CLI: Corpora, Library, Analysis & Data](CLI-Corpora#research-bundles--aegean-bundle-)
+for every option.
+
+---
+
+## Terminal UI (`aegean tui`)
 
 ```bash
 pip install "pyaegean[tui]"
 aegean tui
+aegean tui --corpus lineara
+aegean tui --review a.csv --review b.csv --corpus nt
 ```
 
-Full-screen Textual interface with eight screens (`h` Home over 19 browsable
-corpora, `c` Corpus browser with inline downloads, `g` Greek workbench, `b`
-Biblical Greek, `l` Library manager with 7 packs and `x` removal, `w` Works
-library, `d` Data store, and `:` Command console with live predictions). See
-[TUI](TUI) for keybindings, screen walkthroughs, and theme persistence.
+Full-screen Textual interface with nine screens:
+
+- `h` Home (19 browsable corpora)
+- `c` Corpus browser (inline downloads, reader with word cursor and line analysis)
+- `g` Greek workbench (Beta Code toggle, 10 meters, live pipeline/lexicon/IPA)
+- `b` Biblical Greek (9 NT editions, 13 manuscripts, Strong's word study, LXX & Patristics)
+- `l` Library manager (7 packs, installed resources, filterable catalogue)
+- `r` Annotation review (`ReviewScreen`: single CSVs, multi-reviewer conflict adjudication with `a`/`e`/`1`/`2`/`3`/`d`/`x`/`n`/`p`/`f`/`s`, or live corpus risk queues)
+- `w` Works library (~1,778 Greek works)
+- `d` Data store (`aegean doctor` + dataset fetch/remove)
+- `:` Command console (CLI parity with live completion)
+
+Launch straight into annotation or conflict review with
+`aegean tui --review a.csv [--review b.csv] --corpus <id>`. See [TUI](TUI) for
+keybindings, screen walkthroughs, and theme persistence.
 
 ---
 
 ## Command reference pages
 
-Each major command group has its own dedicated page under **Command Line (CLI)** in the sidebar:
+Each command group has a dedicated reference page:
 
 | Page | Covers |
 |---|---|
-| [CLI Cheatsheet](CLI-Cheatsheet) | Dense one-page index of every command and flag |
-| [CLI: Corpora, Analysis & Data](CLI-Corpora) | Unified library manager (`aegean library`), top-level corpus commands (`info`, `load`, `show`, `search`, `query`, `stats`, `balance`, `export`, `import`, `geo`, `plot`, `workbench`), `aegean analyze`, `aegean data`, and `aegean db` |
+| [CLI Cheatsheet](CLI-Cheatsheet) | One-page index of every command and flag |
+| [CLI: Corpora, Library, Analysis & Data](CLI-Corpora) | `aegean library`, top-level corpus commands (`info`, `load`, `show`, `find`, `search`, `query`, `stats`, `balance`, `export`, `import`, `geo`, `plot`, `workbench`), `aegean bundle`, `aegean analyze`, `aegean data`, and `aegean db` |
 | [CLI: Greek NLP & Review](CLI-Greek) | `aegean greek` (normalization, scansion, tagging, lemmatization, parsing, dictionaries, Perseus/First1KGreek works, CoNLL-U, interop, eval) and `aegean review` |
 | [CLI: Biblical & Koine Greek](CLI-Bible) | `aegean bible` (`read`, `compare`, `witnesses`, `strongs`, `word-study`, `search`, `commentary`, `books`, `psalm`, `status`, `install`) |
 | [CLI: AI & MCP](CLI-AI) | `aegean ai`, `aegean-mcp`, troubleshooting, and recipes |

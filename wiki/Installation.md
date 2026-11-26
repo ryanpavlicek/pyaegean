@@ -1,33 +1,31 @@
 # Installation
 
-pyaegean is a free Python toolkit for Ancient Greek and the Aegean syllabic
-scripts (Linear A, Linear B, Cypriot, Cypro-Minoan). This page gets it onto your
-machine on any platform, explains the optional add-ons, and shows you how to
-confirm it works.
+pyaegean is a Python toolkit for Ancient Greek and the Aegean syllabic scripts
+(Linear A, Linear B, Cypriot, and Cypro-Minoan). This page covers installing the
+core package and optional extras, verifying the setup, managing local data, and
+configuring your terminal.
 
-**The core install is one command and has zero
-third-party dependencies.** The wheel ships code and JSON only, so `import aegean`
-is instant and works fully offline. Everything heavier (`pandas`, the Greek NLP
-backends, the AI provider SDKs, plotting, the command line) is an *optional
-extra* that you pull in only when you ask for it. Nothing is downloaded behind
-your back.
+**The core install requires one command and zero third-party dependencies.** The
+wheel contains Python code and bundled JSON only, so `import aegean` starts fast
+and runs offline. Heavier tools (`pandas`, the neural Greek pipeline, AI
+provider SDKs, plotting, the CLI, and the TUI) are optional extras installed
+only when requested. Datasets and model bundles download only when you invoke a
+command or function that uses them.
 
-> Brand new to Python and terminals? Start with **[Getting Started](Getting-Started)**,
-> which walks you through installing Python, opening a terminal, and making a
-> virtual environment before you run anything here. Want to try it with nothing
-> installed at all? The core pipeline runs in your browser:
+> New to Python or the command line? Start with
+> **[Getting Started](Getting-Started)** for Python setup and virtual
+> environments. To try the core pipeline without installing anything, open
 > [the web demo](https://pyaegean.xyz/demo/).
 
 ## Requirements
 
-- **Python 3.10 or newer.** Core `pyaegean` and all pure-Python / data / interop
-  extras are tested on Python 3.10, 3.11, 3.12, 3.13, 3.14, and 3.15. The
-  `[neural]` and `[all]` extras currently require **Python 3.10–3.14** until
-  upstream `onnxruntime` publishes Python 3.15 wheels on PyPI. Check your
-  version with `python --version` (you may need `python3` on macOS/Linux).
-- An internet connection **only** for `pip install` and for the opt-in datasets
-  the first time you turn them on. After that, everything you've fetched stays
-  on disk and works offline.
+- **Python 3.10 or newer.** Core `pyaegean` and all pure-Python, data, and
+  interop extras are tested on Python 3.10–3.15. The `[neural]` and `[all]`
+  extras currently require **Python 3.10–3.14** until upstream `onnxruntime`
+  publishes Python 3.15 wheels on PyPI. Check your version with
+  `python --version` (or `python3 --version` on macOS/Linux).
+- Internet access is needed only for `pip install` and for downloading opt-in
+  datasets or models on first use. Cached assets remain available offline.
 
 ## Install in one line
 
@@ -35,22 +33,19 @@ your back.
 pip install pyaegean            # core: Linear A + Greek, zero hard deps
 ```
 
-That gives you the full Linear A corpus, the Aegean scripts, the Greek phonology
-and metre engine, and the analysis tools: all offline. The heavier Greek
-backends and the AI layer are extras, described below.
+This installs the bundled Linear A corpus, the four Aegean script modules, the
+Greek phonology and metre engine, and the analysis tools for offline use.
 
 ### Platform notes
 
-The command is the same everywhere; only the surrounding setup differs slightly.
-
-| Platform | Recommended way to run it |
+| Platform | Recommended command |
 | --- | --- |
-| **Windows** | Open **PowerShell**, then `pip install pyaegean`. If you have several Pythons, `py -m pip install pyaegean` targets your default. |
-| **macOS** | Open **Terminal**. If `pip` isn't found, use `python3 -m pip install pyaegean`. |
-| **Linux** | Most distros need the venv package first: `sudo apt install python3-venv` (Debian/Ubuntu), then `python3 -m pip install pyaegean`. |
+| **Windows** | Open **PowerShell** and run `pip install pyaegean`. With multiple Pythons installed, use `py -m pip install pyaegean`. |
+| **macOS** | Open **Terminal**. If `pip` is unavailable, use `python3 -m pip install pyaegean`. |
+| **Linux** | On Debian/Ubuntu, install `sudo apt install python3-venv` first if needed, then `python3 -m pip install pyaegean`. |
 
-> **Always prefer a virtual environment.** It keeps pyaegean and its add-ons in a
-> private sandbox so they can't collide with other projects:
+> **Use a virtual environment** to isolate pyaegean and its extras from other
+> projects:
 >
 > ```bash
 > python -m venv .venv
@@ -61,95 +56,92 @@ The command is the same everywhere; only the surrounding setup differs slightly.
 > pip install pyaegean
 > ```
 >
-> See [Getting Started](Getting-Started) for the full beginner version, including
-> the Windows execution-policy fix.
+> See [Getting Started](Getting-Started) for a step-by-step walkthrough,
+> including the Windows PowerShell execution-policy fix.
 
 ## Optional extras
 
-Extras are installed with the `pyaegean[name]` syntax. Quote the whole thing:
-some shells (notably zsh on macOS) treat square brackets specially:
+Install extras using `pyaegean[name]`. Quote the specifier so shells such as zsh
+on macOS do not expand the square brackets:
 
 ```bash
-pip install "pyaegean[ai]"        # the full generative AI layer
-pip install "pyaegean[neural]"    # the measured neural Greek pipeline
-pip install "pyaegean[interop]"   # spaCy/Stanza, plus CLTK when Python is 3.13+
-pip install "pyaegean[cli,interop]" # adapters plus the interop CLI commands
-pip install "pyaegean[cli,viz]"   # combine extras with a comma
-pip install "pyaegean[all]"       # bundled runtime extras; excludes [parquet], [viz-interactive], and framework adapters
+pip install "pyaegean[ai]"          # generative AI provider SDKs
+pip install "pyaegean[neural]"      # neural Greek pipeline and lemmatizer
+pip install "pyaegean[interop]"     # spaCy/Stanza, plus CLTK on Python 3.13+
+pip install "pyaegean[cli,interop]" # adapters plus interop CLI commands
+pip install "pyaegean[cli,viz]"     # combine extras with commas
+pip install "pyaegean[all]"         # bundled runtime extras; excludes [parquet], [viz-interactive], and framework adapters
 ```
 
-The complete matrix:
+Complete extras matrix:
 
 | Extra | Pulls in | What it adds |
 | --- | --- | --- |
 | `pyaegean[data]` | `pandas>=2.2.2` | DataFrame interop (`corpus.to_dataframe()`) |
-| `pyaegean[neural]` | `onnxruntime>=1.23`, `tokenizers>=0.20`, `numpy` | the neural Greek pipeline (`greek.use_neural_pipeline()`) and lemmatizer (`greek.use_neural_lemmatizer()`): torch-free |
+| `pyaegean[neural]` | `onnxruntime>=1.23`, `tokenizers>=0.20`, `numpy>=1.24` | neural Greek pipeline (`greek.use_neural_pipeline()`) and lemmatizer (`greek.use_neural_lemmatizer()`), without PyTorch |
 | `pyaegean[spacy]` | `spacy>=3.8.13` | loss-aware spaCy `Doc` import/export |
-| `pyaegean[stanza]` | `stanza>=1.13.0` | loss-aware Stanza `Document` import/export; Stanza installs its own PyTorch runtime |
-| `pyaegean[cltk]` | `cltk>=2.5.1` | current CLTK `Doc` import/export and explicit `Process` integration; Python 3.13+ |
-| `pyaegean[interop]` | `spacy`, `stanza`, and, on Python 3.13+, `cltk` | all available document adapters for the running Python |
-| `pyaegean[anthropic]` | `anthropic>=0.40` | Anthropic (the default) AI provider |
+| `pyaegean[stanza]` | `stanza>=1.13.0` | loss-aware Stanza `Document` import/export (installs Stanza's PyTorch runtime) |
+| `pyaegean[cltk]` | `cltk>=2.5.1` | CLTK `Doc` import/export and explicit `Process` integration (Python 3.13+) |
+| `pyaegean[interop]` | `spacy`, `stanza`, and (Python 3.13+) `cltk` | all available framework document adapters for the active Python version |
+| `pyaegean[anthropic]` | `anthropic>=0.40` | Anthropic (default) AI provider |
 | `pyaegean[openai]` | `openai>=1.55.3` | OpenAI provider |
 | `pyaegean[grok]` | `openai>=1.55.3` | xAI Grok (OpenAI-API-compatible) |
-| `pyaegean[openrouter]` | `openai>=1.55.3` | OpenRouter (OpenAI-API-compatible gateway to many models) |
-| `pyaegean[local]` | `openai>=1.55.3` | local OpenAI-compatible server (Ollama, LM Studio, llama.cpp, vLLM); no API key |
+| `pyaegean[openrouter]` | `openai>=1.55.3` | OpenRouter gateway (OpenAI-API-compatible) |
+| `pyaegean[local]` | `openai>=1.55.3` | local OpenAI-compatible server (Ollama, LM Studio, llama.cpp, vLLM; no API key) |
 | `pyaegean[gemini]` | `google-genai>=0.3` | Google Gemini provider |
-| `pyaegean[ai]` | `anthropic`, `openai`, `google-genai` | the full AI layer (all providers) |
-| `pyaegean[epidoc]` | `lxml>=5.0` | the Linear B DAMOS EpiDoc reader + schema validation (writing, and the generic `io.from_epidoc` reader, use the stdlib) |
-| `pyaegean[geo]` | `geopandas>=0.14`, `shapely>=2.0.4` | geographic analysis / GeoJSON |
-| `pyaegean[viz]` | `matplotlib>=3.8` | one-line plots (`aegean.viz`, `aegean plot`) |
-| `pyaegean[viz-interactive]` | `plotly>=5` | interactive versions of the findspot/timeline/sign-network plots (`backend="plotly"`) |
+| `pyaegean[ai]` | `anthropic`, `openai`, `google-genai` | all AI providers |
+| `pyaegean[epidoc]` | `lxml>=5.0` | Linear B DAMOS EpiDoc reader and schema validation (writing and generic `io.from_epidoc` use the stdlib) |
+| `pyaegean[geo]` | `geopandas>=0.14`, `shapely>=2.0.4` | geographic analysis and GeoJSON |
+| `pyaegean[viz]` | `matplotlib>=3.8` | static plots (`aegean.viz`, `aegean plot`) |
+| `pyaegean[viz-interactive]` | `plotly>=5` | interactive plots (`backend="plotly"`) |
 | `pyaegean[parquet]` | `pyarrow>=16.1` | Parquet export (`io.to_parquet`) |
-| `pyaegean[cli]` | `typer>=0.16`, `rich>=13`, `prompt_toolkit>=3.0` | the [`aegean` command line](CLI), including `aegean repl` |
-| `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](TUI) 8-screen terminal UI (corpus browser, Greek workbench, Biblical Greek, Library manager, works, data store, command console) |
-| `pyaegean[mcp]` | `mcp>=2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
-| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | the bundled runtime stack; excludes `parquet`, `viz-interactive`, and the separate framework adapters |
+| `pyaegean[cli]` | `typer>=0.16`, `rich>=13`, `prompt_toolkit>=3.0` | [`aegean` command line](CLI), including interactive shell (`aegean` / `aegean repl`) |
+| `pyaegean[tui]` | `textual>=8.0` + `cli` deps | [`aegean tui`](TUI) 9-screen terminal UI (home, corpus browser, Greek workbench, Biblical Greek, library manager, interactive annotation & conflict review, data store, works, command console) |
+| `pyaegean[mcp]` | `mcp>=2` | `aegean-mcp` Model Context Protocol server for AI agents |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | full runtime stack; excludes `parquet`, `viz-interactive`, and framework adapters |
 
-- **`[all]` includes `[neural]` but omits `[parquet]`, `[viz-interactive]`, and `[interop]`.** It installs ONNX Runtime,
-  Tokenizers, and NumPy, but neural model bundles still download lazily on first use and
-  remain SHA-256 verified. Parquet remains separate because it adds `pyarrow`, interactive
-  plots remain separate because they add `plotly`, and the interoperability frameworks
-  remain separate because Stanza adds a second PyTorch runtime.
-  See [Interoperability](Interoperability) for target-specific installs and field support.
-- **The neural pipeline uses a GPU automatically when one is available.** Replace
-  the CPU wheel with a GPU build (`pip uninstall onnxruntime`, then
-  `pip install onnxruntime-gpu` for NVIDIA or `onnxruntime-directml` on Windows)
-  and provider selection picks it up, with the CPU kept as fallback. Match the
-  wheel to your CUDA version: PyPI's current `onnxruntime-gpu` targets CUDA 13; on
-  a CUDA 12 system install `onnxruntime-gpu==1.25.*`. `PYAEGEAN_ORT_PROVIDERS`
-  overrides the selection; see [Greek NLP](Greek-NLP#gpu-execution-and-batching).
-- **`[grok]`, `[openrouter]`, `[local]`, and `[openai]` install the same SDK**:
-  all four speak the OpenAI chat-completions API, so they reuse the `openai` package
-  with different endpoints and keys (none needed for `local`).
-- **The AI layer is exploratory and key-gated.** Installing `[ai]` only adds the
-  SDKs; you still supply your own API key at runtime, unless you run a model locally
-  with the `local` provider (Ollama, LM Studio, llama.cpp), which needs no key.
-  See [AI Layer](AI-Layer).
+- **`[all]` includes `[neural]` and omits `[parquet]`, `[viz-interactive]`, and `[interop]`.**
+  It installs ONNX Runtime, Tokenizers, and NumPy, while neural model weights
+  still download on first use with SHA-256 verification. Parquet (`pyarrow`),
+  interactive plots (`plotly`), and framework adapters (Stanza brings PyTorch)
+  remain separate extras. See [Interoperability](Interoperability) for
+  target-specific installs.
+- **GPU inference for `[neural]`.** Replace the CPU wheel with a GPU wheel
+  (`pip uninstall onnxruntime`, then `pip install onnxruntime-gpu` for NVIDIA or
+  `onnxruntime-directml` on Windows). Provider selection detects the GPU and
+  keeps CPU as fallback. Match the wheel to your CUDA version: PyPI's current
+  `onnxruntime-gpu` targets CUDA 13; on CUDA 12, install
+  `onnxruntime-gpu==1.25.*`. Override provider order with
+  `PYAEGEAN_ORT_PROVIDERS`; see [Greek NLP](Greek-NLP#gpu-execution-and-batching).
+- **`[grok]`, `[openrouter]`, `[local]`, and `[openai]` share the `openai` SDK**
+  because all four use the OpenAI chat-completions API with different endpoints
+  and keys (no key for `local`).
+- **The AI layer is key-gated and exploratory.** Installing `[ai]` provides the
+  client SDKs; you supply your own API key at runtime unless you use `local`
+  (Ollama, LM Studio, llama.cpp). See [AI Layer](AI-Layer).
 
-### Two extras that add command-line tools
+### Extras that add console commands
 
-Installing `[cli]` puts an `aegean` command on your PATH; installing `[mcp]` puts
-an `aegean-mcp` command on your PATH (the MCP server an agent like Claude Code can
-talk to; 23 tools documented in [MCP Server](MCP)). Both are declared as console
-scripts, so after a fresh install they are ready to type:
+Installing `[cli]` adds `aegean` to your PATH; installing `[mcp]` adds
+`aegean-mcp` (29 tools documented in [MCP Server](MCP)). Check immediately after
+installation:
 
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.68.0
+# pyaegean 0.72.0
 ```
 
 ## Verify
 
-A 30-second check that the core and the Greek engine are working. None of this
-touches the network: it all runs on the bundled, offline data:
+Run this offline check against the bundled data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.68.0
+print(aegean.__version__)                 # 0.72.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
-print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
+print(len(aegean.load("greek")))          # 5  (bundled offline sample; full works
                                           #     via greek.load_work("tlg0012.tlg001"))
 
 from aegean import greek
@@ -159,71 +151,78 @@ print(greek.scan_hexameter(
     "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος").pattern)     # —⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×
 ```
 
-If you installed `[cli]`, the same checks from the shell:
+With `[cli]` installed:
 
 ```bash
 aegean --version
-# pyaegean 0.68.0
+# pyaegean 0.72.0
 
 aegean info lineara
 ```
 
 > The bundled Greek corpus is a five-document public-domain sample (Homer,
-> Herodotus, Heraclitus, Sappho, Gospel of John). To work with full texts, fetch
-> them by id or pack: see [Greek Works and Books](Greek-Works-and-Books) and
-> `aegean library packs`.
+> Herodotus, Heraclitus, Sappho, Gospel of John). Fetch full texts by ID or pack;
+> see [Greek Works & Books](Greek-Works-and-Books) and `aegean library packs`.
 
-### One-command check: `aegean doctor`
+### Offline environment check: `aegean doctor`
 
-With `[cli]` installed, `aegean doctor` verifies the whole environment in one
-run, entirely offline (no network, nothing downloaded): Python and pyaegean
-versions, which optional extras are importable, the data store (location, size,
-per-dataset state, leftover partial downloads, writability), the neural model
-bundles, and the analysis cache. Exit code `0` means healthy; any issue prints
-with its fix and the command exits `1`. `--json` emits the whole report as
-machine-readable JSON. See
+With `[cli]` installed, `aegean doctor` inspects your local setup without making
+network requests. It checks Python and pyaegean versions, importable optional
+extras, data store location and writability, leftover partial downloads, neural
+model bundles, and the analysis cache. Exit code `0` indicates a healthy setup;
+exit code `1` prints each detected issue with its fix. Pass `--json` for
+machine-readable output. See
 [CLI: Corpora, Analysis & Data → doctor](CLI-Corpora#doctor--the-offline-environment-check).
 
 ## Offline & data
 
 **Bundled inside the wheel (offline immediately):** the Linear A corpus and sign
-inventories, the Linear B / Cypriot / Cypro-Minoan / Greek seed samples, the
-~1,778-work Greek discovery catalogue (`greek.catalog()`), the Dodson Koine
+inventories, the Cypriot IG XV 1 corpus (178 inscriptions + 2 samples), the
+Linear B / Cypro-Minoan / Greek seed samples, bundled NT and Swete LXX samples,
+the 1,778-work Greek discovery catalogue (`greek.catalog()`), the Dodson Koine
 lexicon, and all phonology, metre, and analysis code.
 
 **Fetched on demand into a user cache** (never bundled in the Apache-2.0 wheel;
-SHA-256-verified on download and cached offline thereafter): the 39 hosted
-datasets covering Biblical & Koine Greek (9 NT editions, 13 early manuscripts,
-55 LXX books, Extended Strong's), Patristic & Second Temple texts (*Patrologia
-Graeca*, Open Apostolic Fathers, Old Testament Pseudepigrapha), Greek epigraphy
-and papyri (I.Sicily, IIP, IOSPE, IGCyr/GVCyr, Aphrodisias, Crete, EDH, DDbDP),
-Byzantine vernacular Greek, Homer Multitext *Iliad* & *scholia*, DAMOS Linear B,
-SigLA Linear A, five prebuilt lexica, AGDT/neural models, and facsimile imagery.
+SHA-256-verified on download and cached for offline reuse): 39 hosted assets
+covering Biblical & Koine Greek (9 NT editions, 13 early manuscripts, 55 LXX
+books, Extended Strong's), Patristic & Second Temple texts (*Patrologia Graeca*,
+Open Apostolic Fathers, Old Testament Pseudepigrapha), seven Greek epigraphic
+corpora and DDbDP documentary papyri (I.Sicily, IIP, IOSPE, IGCyr/GVCyr,
+Aphrodisias, Crete, EDH, DDbDP), Byzantine vernacular Greek, Homer Multitext
+*Iliad* & *scholia*, DAMOS Linear B, SigLA Linear A, five prebuilt lexica,
+AGDT/neural models, facsimile imagery, and the local multi-script browser
+workbench (`workbench-app-v2.1.0`).
 
-Manage them from the CLI (`aegean library`) or the TUI Library Manager (`l`):
+Use `aegean library` (or the TUI Library Manager via `l`) as the primary
+resource manager, with `aegean data` available for low-level dataset cache
+operations:
 
 ```bash
-aegean library status                 # summary of installed vs available assets
-aegean library packs                  # 7 one-command packs: biblical, patristic, aegean, epigraphy, literary, lexica, neural
-aegean library install biblical       # download a whole pack at once
+aegean library status                 # installed vs available assets and disk usage
+aegean library packs                  # 7 named packs: biblical, patristic, aegean, epigraphy, literary, lexica, neural
+aegean library install biblical       # download a pack in one command
+aegean library remove <name>          # remove cached datasets, works, or packs
 aegean data list                      # live table of all 39 remote datasets
 ```
 
-For the full dataset catalog, sizes, SHA-256 hosting policy, and exact licenses,
-see [Data and Provenance](Data-and-Provenance).
+To package corpora (or retrieval pointers for non-commercial datasets),
+citations, review tables, and receipts for transfer to another machine or
+archive, use `aegean bundle create` (`aegean.bundle`). See
+[Data & Provenance](Data-and-Provenance) for sizes, licenses, and the SHA-256
+hosting policy.
 
-For speed, the Greek backends prefer small **prebuilt** artifacts over building
-from source: `greek.use_lsj()` fetches the ~15 MB index instead of downloading
-~270 MB of Perseus TEI, and `greek.use_treebank()` / `use_tagger()` /
-`use_lemmatizer()` / `use_parser()` share one ~15 MB AGDT-derived bundle instead
-of a 75 MB download and minutes of training. If a prebuilt asset is ever
-unreachable, each falls back to building from the upstream source. The two neural
-models are only used by the `[neural]` extra's `greek.use_neural_lemmatizer()`
-and `greek.use_neural_pipeline()`.
+Greek backends fetch small prebuilt artifacts instead of building from upstream
+source: `greek.use_lsj()` fetches a ~15 MB index rather than ~270 MB of Perseus
+TEI, and `greek.use_treebank()` / `use_tagger()` / `use_lemmatizer()` /
+`use_parser()` share one ~15 MB AGDT-derived bundle instead of a 75 MB download
+and local training. Each falls back to building from upstream source if a
+prebuilt artifact is unavailable. The neural models are fetched only when you
+call `greek.use_neural_lemmatizer()` or `greek.use_neural_pipeline()` under
+`[neural]`.
 
-### Where the cache lives, and how to move it
+### Cache location and overrides
 
-`aegean data store` prints the location and what's currently in it:
+`aegean data store` prints the cache directory and its contents:
 
 ```bash
 aegean data store
@@ -232,10 +231,9 @@ aegean data store
 #  (override with PYAEGEAN_CACHE)
 ```
 
-The default is your OS user-cache directory (e.g. `~/.cache/pyaegean` on
-Linux/macOS, `%USERPROFILE%\.cache\pyaegean` on Windows). **Set the
-`PYAEGEAN_CACHE` environment variable** to put it elsewhere: handy for a shared
-drive, a larger disk, or a reproducible/offline machine:
+By default, pyaegean uses your OS user-cache directory (`~/.cache/pyaegean` on
+Linux/macOS, `%USERPROFILE%\.cache\pyaegean` on Windows). Set `PYAEGEAN_CACHE`
+to relocate it to another disk, shared directory, or offline staging location:
 
 ```bash
 # Windows (PowerShell)
@@ -245,131 +243,117 @@ $env:PYAEGEAN_CACHE = "D:\aegean-cache"
 export PYAEGEAN_CACHE=/data/aegean-cache
 ```
 
-To pre-download a dataset (for example, before going offline) use
-`aegean data fetch <name>`; it's idempotent and skips anything already cached.
-`aegean data versions` prints the reproducibility manifest (every dataset's
-version + sha256). See [Data & Provenance](Data-and-Provenance) for the full
-story on sources, licenses, and citation.
+Pre-download packs with `aegean library install <pack>` or individual remote
+datasets with `aegean data fetch <name>` (both skip already-cached valid files).
+`aegean data versions` prints the reproducibility manifest (version and SHA-256
+per dataset). See [Data & Provenance](Data-and-Provenance) for full source,
+license, and citation details.
 
 ## Set up your terminal
 
-Three small upgrades make the command line noticeably nicer, especially on
-Windows. (This is about the terminal *application*; the UTF-8 *encoding* fix for
-classic-console Greek is the next section.)
+Three adjustments improve terminal output, especially on Windows. (UTF-8
+encoding for the legacy Windows console is covered in the next section.)
 
 ### Use Windows Terminal, not the legacy console
 
-On Windows, run the CLI in **Windows Terminal** (the default terminal on
-Windows 11; free from the Microsoft Store on Windows 10) rather than the legacy
-console host, the bare `conhost.exe` window older setups open. Windows Terminal
-renders Unicode properly, falls back across installed fonts for glyphs the
-selected font lacks, and defaults to fonts with polytonic Greek coverage; the
-legacy console predates all of that. On macOS (Terminal, iTerm2) and Linux the
-stock terminals are fine as they are.
+On Windows, run the CLI in **Windows Terminal** (default on Windows 11; free
+from the Microsoft Store on Windows 10) instead of the legacy `conhost.exe`
+console. Windows Terminal supports Unicode rendering, automatic font fallback,
+and polytonic Greek with no extra configuration. Stock terminals on macOS
+(Terminal, iTerm2) and Linux need no changes.
 
-### A font for the Aegean scripts
+### Fonts for the Aegean scripts
 
-Polytonic Greek (μῆνιν ἄειδε θεά) displays correctly in the default fonts of
-every modern terminal: nothing to install. The Aegean **glyphs** are different:
-signs like 𐘇 (Linear A) or 𐀀 (Linear B) live in Unicode's Supplementary
-Multilingual Plane, which most monospace fonts don't cover, so commands that
-print glyph columns (`aegean stats lineara --signs`, `aegean sign lineara KU`)
-can show boxes where the signs should be. Install the free **Noto Sans** fonts
-for the scripts you use, from [Google's Noto fonts](https://fonts.google.com/noto)
-(all are under the SIL Open Font License, so free for any use):
+Polytonic Greek (`μῆνιν ἄειδε θεά`) displays in default fonts on modern
+terminals. Aegean glyphs such as `𐘇` (Linear A) and `𐀀` (Linear B) live in
+Unicode's Supplementary Multilingual Plane, which most monospace fonts omit, so
+glyph columns (`aegean stats lineara --signs`, `aegean sign lineara KU`) can
+display empty boxes. Install the SIL Open Font License **Noto Sans** fonts from
+[Google's Noto fonts](https://fonts.google.com/noto):
 
-- **Noto Sans Linear A** and **Noto Sans Linear B**: the Aegean syllabaries,
-- **Noto Sans Cypriot**: the Cypriot syllabary (the `cypriot` corpus),
-- **Noto Sans Cypro-Minoan**: the undeciphered Cypro-Minoan signs.
+- **Noto Sans Linear A** and **Noto Sans Linear B**
+- **Noto Sans Cypriot**
+- **Noto Sans Cypro-Minoan**
 
-Those four cover every script pyaegean renders. Windows Terminal then usually
-finds the glyphs by automatic font fallback, and if not you can select a font
-explicitly per profile under **Settings → your profile → Appearance → Font
-face**. (You may see the "Aegean" font by George Douros recommended elsewhere;
-it covers all four scripts in one file, but its license changed in 2024 to
-personal-use only, with educational and commercial use now requiring a paid licence,
-so the Noto fonts above are the free choice.) Nothing breaks without the fonts:
-the transliterations (`KU-RO`, `po-me`) are plain text and always display; you
-only miss the glyph rendering.
+Windows Terminal usually picks up these glyphs via automatic fallback; otherwise
+set the font per profile under **Settings → your profile → Appearance → Font
+face**. Some guides recommend George Douros's "Aegean" font, which covers all
+four scripts in one file, but its 2024 license restricts free use to personal
+purposes and requires a paid license for educational or commercial use. Without
+Aegean glyph fonts installed, transliterations (`KU-RO`, `po-me`) still display
+normally.
 
-The fonts matter most in the **[`aegean tui`](TUI)**
-full-screen terminal UI (`pip install "pyaegean[tui]"`), where whole columns of
-Linear A and Linear B glyphs are on screen at once; the same Windows Terminal +
-Noto Aegean fonts advice applies, and running the TUI with `PYTHONUTF8=1` keeps
-Greek and Linear A displaying correctly.
+These fonts are especially helpful in [`aegean tui`](TUI), which displays
+columns of Linear A and Linear B glyphs together. Run `aegean tui` with
+`PYTHONUTF8=1` on Windows to keep Greek and Aegean glyphs displaying cleanly.
 
-**Polytonic and epigraphic Greek.** Ordinary polytonic Greek needs no special font. For the
-fullest coverage (every accent combination, plus the brackets and underdots of the epigraphic /
-papyrological texts that the inscription corpora such as `isicily` use), the
-best **free** classicist fonts are **New Athena Unicode** (the de-facto scholarly standard, the most
-complete), and the SIL Open Font License families **Gentium Plus** and **Cardo**, plus the **Greek
-Font Society (GFS)** fonts. All are free for any use; New Athena Unicode and the GFS/OFL fonts are
-downloadable from the [Digital Classicist Greek-fonts list](https://wiki.digitalclassicist.org/Greek_Fonts_(Unicode)).
+**Polytonic and epigraphic Greek.** Ordinary polytonic Greek requires no extra
+font. For complete diacritic combinations and epigraphic/papyrological brackets
+and underdots (used in corpora such as `isicily`), free classicist fonts include
+**New Athena Unicode**, **Gentium Plus**, **Cardo**, and the **Greek Font
+Society (GFS)** families, linked from the
+[Digital Classicist Greek-fonts list](https://wiki.digitalclassicist.org/Greek_Fonts_(Unicode)).
 
 ### Shell completion
 
-`aegean --install-completion` installs Tab-completion for the shell you run it
-from (detected automatically); open a new shell afterward and
+`aegean --install-completion` installs Tab-completion for the active shell. Open
+a new shell afterward to complete commands and arguments such as
 `aegean gre<Tab>`, `aegean greek syl<Tab>`, and `aegean bible read J<Tab>`
-complete (including NT/LXX books, editions, and manuscript sigla).
-`aegean --show-completion` prints the completion script instead, to inspect or
-wire in yourself. One line per supported shell family:
+(including NT/LXX books, editions, and manuscript sigla).
+`aegean --show-completion` prints the generated completion script for inspection:
 
 - **bash**: writes `~/.bash_completions/aegean.sh` and sources it from `~/.bashrc`
 - **zsh**: writes `~/.zfunc/_aegean` and wires it into `~/.zshrc`
 - **fish**: writes `~/.config/fish/completions/aegean.fish`
-- **PowerShell / pwsh**: appends the completer to your PowerShell `$PROFILE`
+- **PowerShell / pwsh**: appends the completer to `$PROFILE`
 
-(Running bare `aegean` in an interactive terminal opens the interactive shell
-directly with live inline ghost-text suggestions and dropdown completion across
-every command, `--flag`, and domain value — no shell setup required.)
+Running bare `aegean` in an interactive terminal launches the interactive shell
+directly with inline ghost-text suggestions and dropdown completion across every
+command, `--flag`, and domain value, with no shell setup required.
 
 ## Windows: seeing Greek correctly (UTF-8)
 
-Polytonic Greek displays perfectly in Jupyter and in editors like VS Code. The
-only place it can look wrong is the **classic Windows console**, where accents may
-render as boxes or `?`, and, more importantly, writing Greek to a file or piping
-output can raise a `UnicodeEncodeError` if the console is on a legacy code page.
+Polytonic Greek renders cleanly in Jupyter, VS Code, and Windows Terminal. In
+the legacy Windows console, accents can render as boxes or `?`, and writing
+Greek to a file or piping output can raise a `UnicodeEncodeError` under a legacy
+code page.
 
-The clean fix is to tell Python to use UTF-8 everywhere. Set this once and it
-applies to every Python process:
+Enable Python UTF-8 mode globally for your user account:
 
 ```powershell
 # PowerShell — persist PYTHONUTF8 for your user account
 setx PYTHONUTF8 1
-# open a NEW terminal afterward so the change takes effect
+# Open a new terminal afterward for the variable to take effect
 ```
 
-Or just for the current session:
+Or enable it for the current session only:
 
 ```powershell
 $env:PYTHONUTF8 = "1"
 ```
 
-A lighter touch for a single terminal is `chcp 65001` (switch the console to
-UTF-8), but `PYTHONUTF8=1` is more robust because it also fixes file writes and
-subprocess output, not just the display. None of this is needed on macOS or
-Linux, which are UTF-8 by default.
+Running `chcp 65001` switches console display to UTF-8 for one session, while
+`PYTHONUTF8=1` fixes file writes, subprocess pipes, and terminal output
+together. macOS and Linux default to UTF-8 and do not need this step.
 
 ## Upgrading and uninstalling
 
 ```bash
-pip install --upgrade pyaegean          # to the latest release
-pip install --upgrade "pyaegean[all]"   # keep your extras when upgrading
+pip install --upgrade pyaegean          # upgrade to the latest release
+pip install --upgrade "pyaegean[all]"   # upgrade with extras
 pip uninstall pyaegean                  # remove the package
 ```
 
-Uninstalling does **not** delete the downloaded datasets (they are permanent
-local copies, kept so a reinstall never re-downloads). To reclaim that space,
-run `aegean data remove --all` first (or `aegean data remove NAME` for one
-dataset), or delete the directory shown by `aegean data store` yourself.
+Uninstalling leaves downloaded datasets intact in your local cache so reinstalls
+do not re-download them. To reclaim disk space, run `aegean library remove` /
+`aegean data remove --all` (or `aegean data remove NAME`), or delete the
+directory shown by `aegean data store`.
 
 ## From source
 
-If you want to hack on pyaegean or run the test suite, install it editable from a
-clone. The development extra (`[dev]`) pulls in pytest, mypy, ruff, and the rest
-of the toolchain. Full instructions, including the typecheck/test gate, live on
-the [Development](Development) page:
+To modify pyaegean or run the test suite, install an editable checkout with
+`[dev]` (pytest, mypy, ruff, and build tools). Full contributor instructions are
+on the [Development](Development) page:
 
 ```bash
 git clone https://github.com/ryanpavlicek/pyaegean
@@ -379,20 +363,22 @@ pip install -e ".[dev]"
 
 ## Notes & limitations
 
-- **Core install never downloads models.** If you only `pip install pyaegean`, no
-  dataset is fetched until you call something that needs it (e.g.
-  `greek.use_treebank()` or `aegean.load("damos")`).
-- **Some datasets are NonCommercial (CC BY-NC-SA).** DAMOS (Linear B) and SigLA
-  (Linear A) are not redistributed inside the package precisely because of their
-  licenses: you fetch them yourself, under their terms. The facsimile imagery is
-  for academic reference only. Mind the license column before reusing data.
-- **The AI layer needs your own API key** (or a no-key local server via the `local`
-  provider) and is explicitly exploratory; it does not ship a model. See
+- **Core install never downloads models or datasets.** Nothing is fetched until
+  you call an opt-in backend or loader (such as `greek.use_treebank()` or
+  `aegean.load("damos")`).
+- **NonCommercial datasets stay outside the wheel.** DAMOS (Linear B), SigLA
+  (Linear A), and NonCommercial Greek epigraphy/scholia corpora are fetched on
+  demand under their own licenses. Facsimile imagery is for academic reference
+  only. `aegean.bundle` keeps non-commercial datasets out of redistributable
+  bundles by default, storing a retrieval pointer instead.
+- **The AI layer requires your own API key** (or a local OpenAI-compatible
+  server via the `local` provider) and labels all outputs exploratory. See
   [AI Layer](AI-Layer).
-- **`aegean.__version__` is the package release identity.** The release gate checks it
-  against `pyproject.toml`, and the bundled-data manifest uses the same value.
+- **`aegean.__version__` matches the package release.** The release gate checks
+  it against `pyproject.toml`, and the bundled-data manifest uses the same
+  version string.
 
-For anything that didn't go to plan, see [FAQ & Troubleshooting](FAQ) and the
-project-wide [Limitations](Limitations) page. To start using it, head to
-[Getting Started](Getting-Started), the [Tutorial](Tutorial), or
-[Greek NLP](Greek-NLP) and [Linear A](Linear-A).
+See [FAQ & Troubleshooting](FAQ) for common issues and
+[Limitations](Limitations) for scope limits. Next steps:
+[Getting Started](Getting-Started), [Tutorial](Tutorial),
+[Greek NLP](Greek-NLP), or [Linear A](Linear-A).

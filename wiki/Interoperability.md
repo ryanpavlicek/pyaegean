@@ -1,62 +1,70 @@
-# Interoperability with spaCy, Stanza, and CLTK
+# Interoperability & Interchange Formats
 
-pyaegean can move an aligned Ancient Greek analysis into and out of the document
-objects used by spaCy, Stanza, and CLTK. The adapters are for comparison,
-substitution, and mixed-tool research. They do not turn pyaegean into a wrapper
-around those frameworks, and they do not assume that every framework shares one
-data model.
+pyaegean moves corpora, annotations, and research snapshots across external NLP
+frameworks, digital epigraphy standards, linked open data, the browser
+workbench, and portable verification archives.
 
-The adapters preserve a complete pyaegean document. Each export carries a
-versioned sidecar and a report that states which fields are native to the
-target, which are kept in the sidecar, and which a requested projection drops.
+| Target / Format | Module | Direction | Round-trip contract |
+| --- | --- | --- | --- |
+| CoNLL-U, spaCy, Stanza, CLTK | `aegean.io` | Read & write | Lossless with `aegean.interop/v1` sidecar; explicit `InteropReport` |
+| EpiDoc TEI XML | `aegean.io.epidoc` | Read & write | Semantic TEI via stdlib XML (tokens, lines, apparatus, `<choice>`) |
+| RDF Turtle / JSON-LD | `aegean.io.rdf` | Write only | Linked Open Data with canonical URIs and license pass-through |
+| Browser workbench bundles & backups | `aegean.io.workbench` | Read & write | Multi-script corpus bundles (`v2.1.0`) + lossless workspace backups |
+| Portable research bundles (`.zip`) | `aegean.bundle` | Create, verify, hydrate | Deterministic SHA-256 archive (`aegean-research-bundle/1`), NC-safe |
+| Native lossless archive | `Corpus.to_json` / `aegean.db` | Read & write | Lossless internal persistence (see [Data Model](Data-Model)) |
 
-## Install only the target you use
+---
+
+## NLP adapters: CoNLL-U, spaCy, Stanza, and CLTK
+
+pyaegean converts aligned Ancient Greek analyses to and from `spacy.tokens.Doc`,
+`stanza.Document`, and CLTK `Doc` objects for comparison, substitution, and
+mixed-tool workflows. Each export pairs the target-native object with a
+versioned `aegean.interop/v1` JSON sidecar and an `InteropReport` listing which
+fields live natively on the target, which travel in the sidecar, and which a
+lossy projection drops.
+
+### Optional dependencies
 
 ```bash
 pip install "pyaegean[spacy]"       # spaCy Doc adapter
-pip install "pyaegean[stanza]"      # Stanza Document adapter; Stanza installs PyTorch
-pip install "pyaegean[cltk]"        # current CLTK Doc/Process adapter; Python 3.13+
-pip install "pyaegean[interop]"     # spaCy + Stanza; CLTK is included on Python 3.13+
-pip install "pyaegean[cli,interop]" # adapters plus the interop CLI commands
+pip install "pyaegean[stanza]"      # Stanza Document adapter (installs PyTorch)
+pip install "pyaegean[cltk]"        # CLTK Doc/Process adapter (Python 3.13+ upstream)
+pip install "pyaegean[interop]"     # spaCy + Stanza (+ CLTK on Python 3.13+)
+pip install "pyaegean[cli,interop]" # adapters plus CLI interop commands
 ```
 
-These extras are deliberately separate from `pyaegean[all]`. The pyaegean neural
-pipeline stays a torch-free ONNX runtime; installing the Stanza adapter is what
-brings in Stanza's separate PyTorch dependency. CLTK 2.5.1 requires Python 3.13
-or newer upstream. The rest of pyaegean, including the spaCy and Stanza adapters,
-keeps the project's Python 3.10 floor.
+These extras stay separate from `pyaegean[all]`. pyaegean's own neural pipeline
+uses ONNX Runtime without PyTorch; only `pyaegean[stanza]` pulls in PyTorch.
+Importing `aegean` or `aegean.io` imports none of the three frameworks; a
+missing extra raises `InteropDependencyError` with an install command only when
+its adapter is called.
 
-Importing `aegean` or `aegean.io` imports none of the three frameworks. A missing
-target dependency produces a short install hint, and only when its adapter is
-called.
+### Canonical model and sidecar integrity
 
-## What "lossless" means here
+The structural source of truth is pyaegean's complete CoNLL-U document model
+(`greek.UDDocument`): comments, all ten columns, multiword-token ranges, empty
+nodes, enhanced dependencies, ordered MISC entries, opaque lenient rows, and
+original line endings. `InteropDocument` additionally carries:
 
-The structural source of truth is pyaegean's complete CoNLL-U document model:
-comments, all ten columns, multiword-token ranges, empty nodes, enhanced
-dependencies, MISC, opaque lenient rows, and original line endings. An
-`InteropDocument` adds more when those values exist:
+- exact source text and `SourceAlignment`;
+- typed editorial forms (`TokenFormState`), calibrated confidence, and analysis
+  receipts;
+- inference annotation-profile identity and composed output-profile identity;
+- corpus provenance.
 
-- the source text and a stable source alignment;
-- typed editorial forms, calibrated confidence, and analysis receipts;
-- the inference annotation-profile identity and any composed output-profile identity;
-- provenance.
+Because none of the external document objects represents all of those fields
+natively, every export produces two paired artifacts:
 
-The v1 sidecar carries these identities through receipts; it does not embed
-custom profile objects.
+1. the target framework's standard document object populated with every field it
+   supports;
+2. a hash-bound `aegean.interop/v1` JSON sidecar carrying the remaining fields.
 
-No target document type represents all of that natively. Each export therefore
-has two parts:
-
-1. the target's ordinary document object, filled with every field it represents;
-2. a canonical `aegean.interop/v1` JSON sidecar for the rest.
-
-An `InteropReport` separates `native_fields`, `sidecar_fields`, and
-`lost_fields`. `report.lossless` is true only when `lost_fields` is empty. The
-sidecar and the native projection are hash-bound, so stale, mismatched, or
-hash-inconsistent token order, text, offsets, annotations, or sidecar data make
-strict reimport fail rather than silently pair unrelated data. This catches
-integrity errors; it is not a digital signature.
+`InteropReport` separates `native_fields`, `sidecar_fields`, and `lost_fields`;
+`report.lossless` is `True` only when `lost_fields` is empty. Strict reimport
+verifies the native-projection digest against the sidecar so modified, stale, or
+mismatched token order, text, offsets, or annotations raise an error on import.
+This verifies structural integrity, not cryptographic authenticity.
 
 ```mermaid
 flowchart LR
@@ -69,32 +77,29 @@ flowchart LR
     F --> B
 ```
 
-In short: the framework object stays useful to that framework, while the sidecar
-stops its narrower schema from erasing research data on the trip back.
+### Field support by target
 
-## Field support by target
-
-"Sidecar" means the value round-trips exactly but is not advertised as a native
-target annotation.
+"Sidecar" means the field round-trips intact via the sidecar without being
+exposed as a native attribute on the target object.
 
 | Field | CoNLL-U | spaCy `Doc` | Stanza `Document` | CLTK `Doc` |
 | --- | --- | --- | --- | --- |
 | Token text, lemma, UPOS/XPOS, morphology | native | native | native | native |
 | Basic dependency head and relation | native | native | native | native |
 | Sentence order and boundaries | native comments/order | native starts; IDs in sidecar | native, including `sent_id` | native boundaries; IDs in sidecar |
-| Exact arbitrary whitespace and source offsets | sidecar when supplied | sidecar; spaCy has a boolean trailing-space projection | native when the object supports the exact offsets/spaces, plus sidecar | native raw offsets when the basis is exact, plus sidecar |
-| Multiword-token ranges | native | sidecar | native token ranges, plus sidecar for exact row state | sidecar |
+| Exact whitespace and source offsets | sidecar when supplied | sidecar (spaCy has boolean trailing space) | native where supported + sidecar | native raw offsets when exact + sidecar |
+| Multiword-token ranges | native | sidecar | native token ranges + sidecar for exact rows | sidecar |
 | Empty nodes and opaque rows | native | sidecar | sidecar | sidecar |
-| Enhanced dependencies and ordered MISC | native | sidecar | native word strings where supported, exact state in sidecar | sidecar |
+| Enhanced dependencies and ordered MISC | native | sidecar | native word strings where supported + sidecar | sidecar |
 | Typed editorial form state | native reserved MISC + sidecar | sidecar | sidecar | sidecar |
-| Calibrated confidence and abstention evidence | sidecar | sidecar | sidecar | selected native confidence/source fields + complete sidecar |
-| Analysis receipt, inference/output profile identity, provenance | sidecar | sidecar | sidecar | namespaced metadata sidecar |
+| Calibrated confidence and abstention evidence | sidecar | sidecar | sidecar | selected native fields + complete sidecar |
+| Analysis receipt, profile identities, provenance | sidecar | sidecar | sidecar | namespaced metadata + sidecar |
 
-The adapters never infer offsets with `str.find()`. Repeated words, combining
-marks, and normalization make that unsafe. Exact alignment must already be
-present, or the report marks it unavailable.
+Adapters never reconstruct character offsets with `str.find()`, which breaks on
+repeated tokens, combining marks, and Unicode normalization. Exact alignment
+must already be present, or the report marks alignment unavailable.
 
-## Python workflow
+### Python workflow
 
 ```python
 from pathlib import Path
@@ -104,35 +109,31 @@ from aegean.io import from_conllu, from_spacy, to_spacy
 canonical = from_conllu(Path("treebank.conllu")).value
 exported = to_spacy(canonical)
 
-doc = exported.value                 # a normal spacy.tokens.Doc
-exported.report.lossless             # True: narrower fields live in the sidecar
-exported.report.sidecar_fields       # exact machine-readable disclosure
+doc = exported.value                 # spacy.tokens.Doc
+exported.report.lossless             # True
+exported.report.sidecar_fields       # machine-readable disclosure
 
 restored = from_spacy(doc, sidecar=exported.sidecar).value
-restored.ud_document.dumps()         # the complete canonical document is back
+restored.ud_document.dumps()         # complete canonical CoNLL-U document
 ```
 
-The Stanza and CLTK pairs use the same shape: `to_stanza` / `from_stanza` and
-`to_cltk` / `from_cltk`. Conversion runs no model and downloads no data. It moves
-annotations that already exist.
+`to_stanza`/`from_stanza` and `to_cltk`/`from_cltk` follow the same interface.
+Conversion runs no models and performs no network requests.
 
-Strict framework import is the default. If a framework object has lost its
-sidecar, reimport raises `InteropLossError`. A caller that deliberately wants
-only the surviving native projection can opt in:
+Strict reimport is the default: missing or mismatched sidecars raise
+`InteropLossError`. Pass `allow_lossy=True` to accept only the target-native
+projection and inspect `report.lost_fields`:
 
 ```python
 projected = from_spacy(doc_without_sidecar, allow_lossy=True)
-print(projected.report.lost_fields)
+print(projected.report.lossless, projected.report.lost_fields)
 ```
 
-That result is useful for exchange, but it is not called lossless.
+### Portable CLI adapter bundles
 
-## Portable adapter bundles from the CLI
-
-Framework objects often have version-specific binary serializers, so the CLI
-uses an explicit JSON adapter bundle instead of writing a spaCy, Stanza, or CLTK
-binary file. The bundle holds the target-native JSON projection, the canonical
-sidecar, target and version information, and the same loss report.
+Because external NLP frameworks use version-dependent binary formats, the CLI
+reads and writes a self-contained JSON adapter bundle holding the target-native
+projection, sidecar, version metadata, and loss report:
 
 ```bash
 aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json
@@ -140,47 +141,239 @@ aegean greek interop report treebank.spacy.json
 aegean greek interop import treebank.spacy.json -o treebank-restored.conllu
 ```
 
-`export` needs the selected target extra so it can build and verify the real
-object. `report` and `import` validate the portable bundle without loading a
-model. The imported CoNLL-U is the complete sidecar-backed document, not only the
-target's word projection.
+`export` requires the target extra to construct and verify the native object.
+`report` and `import` validate the bundle without loading external models and
+restore the complete sidecar-backed CoNLL-U document.
 
-## Serializer caveats
+### Serializer caveats and CLTK pipeline integration
 
-- spaCy `Doc.to_bytes()` carries `Doc.user_data`. `DocBin` carries it only when
-  created with `store_user_data=True`; the default `False` is lossy for these
-  adapters.
-- Stanza's standard `to_dict()` and `to_serialized()` promise its standard
-  annotation fields, not arbitrary custom properties. Keep the adapter's returned
-  sidecar or the CLI bundle alongside serialized Stanza data.
-- CLTK has a documented free-form `Doc.metadata` mapping, which is where the
-  namespaced sidecar is stored. The adapter still returns it separately, so
-  integrity checks do not depend on an application preserving unrelated metadata.
-- A removed or edited sidecar is never repaired by guesswork. Strict framework
-  import fails, and explicit projection names what is gone.
+- **spaCy:** `Doc.to_bytes()` preserves `Doc.user_data`. `DocBin` preserves it
+  only with `store_user_data=True`; the default `False` drops the sidecar.
+- **Stanza:** `to_dict()` and `to_serialized()` retain standard Stanza fields
+  only; store `exported.sidecar` or the CLI bundle alongside serialized Stanza
+  documents.
+- **CLTK:** the namespaced sidecar is stored in `Doc.metadata` and also returned
+  separately on `InteropResult.sidecar`.
+- **CLTK process wrapper:** `make_cltk_process(pipeline)` wraps an explicit
+  pyaegean `GreekPipeline` instance as a CLTK process without modifying
+  module-global state, triggering downloads, or discarding unrelated CLTK
+  document metadata.
 
-## CLTK pipeline integration
+### Scope boundaries for NLP adapters
 
-`make_cltk_process(...)` builds a CLTK-compatible process around a pyaegean
-pipeline instance that you supply. It preserves unrelated CLTK document metadata
-and does not, by itself, activate a global backend, fetch a model, or make a
-network call. The supplied pyaegean pipeline decides whether processing uses the
-dependency-free baseline or an already-configured neural instance.
+- Sidecar-preserved MWTs or empty nodes are transferred annotations, not
+  predictions from pyaegean's `v3` neural model.
+- Adapters transfer inference and output profile identities without converting
+  annotation conventions (e.g. Perseus vs PROIEL tagsets).
+- A stripped native projection (`allow_lossy=True`) always reports
+  `lossless=False`.
 
-This explicit ownership matters when an application compares configurations: two
-CLTK pipelines can use different pyaegean instances without touching
-module-global state.
+---
 
-## What the adapters do not claim
+## EpiDoc TEI XML (`aegean.io.epidoc`)
 
-- They do not train, improve, or benchmark any model. A sidecar-preserved MWT or
-  empty node is a moved annotation, not a pyaegean model prediction.
-- They do not convert annotation conventions. The inference and composed output
-  identities travel with the analysis, and the registry exposes declared
-  diagnostic mappings, but the adapters perform no source-compatible conversion.
-- They do not make a stripped native projection lossless. The report always
-  separates target-native support from sidecar preservation.
+`to_epidoc`, `write_epidoc`, `from_epidoc`, and `read_epidoc` convert between
+`Corpus`/`Document` and EpiDoc TEI XML using only Python's standard library XML
+parser (no extra dependencies):
 
-See [Greek NLP](Greek-NLP#lossless-conll-u-structure-and-the-model-projection) for
-the underlying structural model, [Data Model](Data-Model) for source alignment and typed
-forms, and [Data & Provenance](Data-and-Provenance) for receipts and citation metadata.
+```python
+from aegean.io import to_epidoc, write_epidoc, from_epidoc, read_epidoc
+import aegean
+
+corpus = aegean.load("lineara")
+xml_str = to_epidoc(corpus.get("HT13"))
+write_epidoc(corpus.get("HT13"), "ht13.xml")
+
+reloaded = from_epidoc("ht13.xml")         # Corpus from a file or directory
+```
+
+- **Token carriers:** `<w>` (word), `<num>` (numeral, preserving `@value` in
+  `annotations["epidoc:num_value"]`), `<g>` (logogram), `<pc>` (punctuation),
+  and `<seg type="...">` (separators, unknown tokens, or tokens carrying inline
+  apparatus).
+- **Editorial apparatus:** `<unclear>`, `<supplied>`, `<gap>`, and
+  `<choice><reg>…</reg><orig>…</orig></choice>` populate both `ReadingStatus`
+  and typed `TokenFormState`, and are emitted semantically by `to_epidoc()`.
+- **Linear B DAMOS EpiDoc:** free-text DAMOS XML files without token carriers
+  use `aegean.scripts.linearb.load_epidoc_corpus` / `parse_epidoc` (requires
+  `pip install "pyaegean[epidoc]"` for `lxml`).
+
+---
+
+## Linked Open Data RDF (`aegean.io.rdf`)
+
+`to_rdf(corpus, path, *, fmt="turtle", base_uri=None)` exports a corpus as RDF
+Turtle (`fmt="turtle"` / `"ttl"`) or JSON-LD (`fmt="jsonld"` / `"json-ld"`)
+using only the standard library (no `rdflib`). CLI equivalents:
+`aegean export CORPUS -f ttl -o out.ttl` and `-f jsonld -o out.jsonld`.
+
+```python
+import aegean
+from aegean.io import to_rdf
+
+corpus = aegean.load("lineara")
+to_rdf(corpus, "lineara.ttl", fmt="turtle")
+to_rdf(corpus, "lineara.jsonld", fmt="jsonld")
+```
+
+- **Subject URI priority:** (1) `http://papyri.info/ddbdp/<hybrid>` for DDbDP
+  papyri (from `DDb <hybrid>` notes or the lazily fetched `ddbdp-uris` map,
+  matching papyri.info's byte-exact `http://` IRIs, with Trismegistos moved to
+  `rdfs:seeAlso`); (2) `https://www.trismegistos.org/text/<id>` for EDH/DDbDP
+  `TM` notes; (3) `http://sicily.classics.ox.ac.uk/inscription/ISic...` for
+  I.Sicily IDs; (4) fragment URIs under `base_uri` (default `urn:aegean:`).
+- **Vocabularies:** `dcterms` (`identifier`, `title`, `license`, `source`,
+  `spatial`, `temporal`, `language`), `dctype:Text`, `rdf`/`rdfs`, and WGS84
+  `geo:lat`/`geo:long` when coordinates are present.
+- **License pass-through:** `dcterms:license` preserves the corpus license (as a
+  Creative Commons/SPDX URI or verbatim string), including NonCommercial terms.
+- **Export-only:** `to_rdf` has no inverse reader, and per-token editorial
+  apparatus stays in lossless JSON or SQLite.
+
+---
+
+## Browser workbench bundles and workspace backups (`aegean.io.workbench`)
+
+pyaegean exchanges corpora and researcher workspace state with the multi-script
+browser workbench (`v2.1.0`, bundled with self-hosted Noto Sans Aegean fonts for
+Linear A, Linear B, Cypriot Syllabic, and Cypro-Minoan, plus Linear B
+`to-so`/`o-pe-ro` accounting).
+
+### Multi-script corpus bundles
+
+`to_workbench_bundle(corpus, path=None)` writes a schema-v1 multi-script JSON
+envelope containing `_meta.script`, `inscriptions`, `signs` (from the script's
+`SignInventory`), and `phoneticMap`:
+
+```python
+import aegean
+from aegean.io import to_workbench_bundle, from_workbench_export
+
+damos = aegean.load("damos")
+bundle = to_workbench_bundle(damos, "damos-workbench.json")
+
+# Load any workbench schema-v1 export or plain inscription array back into a Corpus
+reloaded = from_workbench_export("damos-workbench.json")
+```
+
+`to_workbench(corpus, path=None)` emits the legacy plain array of inscription
+records. On the CLI, `aegean workbench --corpus <id-or-path>` calls
+`to_workbench_bundle` automatically and serves the corpus directly to the local
+browser UI.
+
+The workbench format stores token text and inline Linear A apparatus (erased
+marks and brackets are re-classified on `from_workbench_export`), not
+out-of-band `Token.annotations` or review stamps. Use `Corpus.to_json` or
+`aegean.db.to_sqlite` for lossless token annotation storage.
+
+### Workspace state backups (`WorkbenchBackup`)
+
+`load_workbench_backup` and `save_workbench_backup` read and atomically write
+`linear-a-workbench-backup` v1 JSON files (`annotations`, `collections`,
+`findings`, `notes`, `hypotheses`, `saved_queries`, `tablet_categories`,
+`custom_languages`, `pins`), preserving any additional workbench keys in
+`backup.extra` for lossless round-trips:
+
+```python
+from aegean.io import load_workbench_backup, save_workbench_backup
+import aegean
+
+backup = load_workbench_backup("workspace.json")
+print(len(backup.annotations), len(backup.findings), len(backup.notes))
+
+# Convert a saved workbench query directly into FilterRow predicates for Corpus.query()
+la = aegean.load("lineara")
+if backup.saved_queries:
+    rows = backup.to_filter_rows(0)
+    matches = la.query(rows, output="inscriptions")
+
+save_workbench_backup(backup, "workspace-updated.json")
+```
+
+Mount the same file live in the browser UI with
+`aegean workbench --corpus lineara --state workspace.json`; edits made in the
+browser sync back atomically over loopback (`/api/local/backup`).
+
+---
+
+## Reproducible research bundles (`aegean.bundle`)
+
+`aegean.bundle` packages a complete study snapshot into a single deterministic,
+SHA-256-verified `.zip` archive (`aegean-research-bundle/1`) containing an
+optional corpus (or license-clean retrieval pointer), `CITATIONS.bib` /
+`CITATIONS.txt` / `citations.json`, review CSVs (automatically paired with
+`.companion.json` snapshots), analysis/evaluation receipts, optional
+`workbench-state.json`, and study metadata.
+
+### License-clean corpus handling
+
+`create_bundle` checks the corpus license with `is_redistributable_license()`:
+
+- `embed_corpus="auto"` (default): embeds open-licensed corpora as
+  `corpus.json.gz`; for NonCommercial (`CC BY-NC*`) or restricted corpora, omits
+  the corpus bytes and records a `CorpusReference` retrieval pointer (`dataset`,
+  `version`, `script_id`, `sha256`, `url`, `license`, `filter_spec`) so the
+  archive remains redistributable.
+- `embed_corpus="never"`: always emits a `CorpusReference` pointer without
+  embedding corpus text.
+- `embed_corpus="always"`: embeds the corpus even under NC/restricted terms and
+  stamps `manifest.redistributable = False` with an explicit license note.
+
+### Python API
+
+```python
+import aegean
+from aegean.bundle import create_bundle, inspect_bundle, verify_bundle, hydrate_bundle
+
+la = aegean.load("lineara").filter(site="Haghia Triada")
+
+manifest = create_bundle(
+    "ht-study.zip",
+    corpus=la,
+    dataset="lineara",
+    filter_spec={"site": "Haghia Triada"},
+    title="Haghia Triada Linear A study",
+    workbench_state="workspace.json",
+    review_paths=["review.csv"],
+    receipts=["receipt.json"],
+    embed_corpus="auto",
+)
+
+# Inspect manifest without unpacking
+info = inspect_bundle("ht-study.zip")
+print(info.format, info.redistributable, len(info.members))
+
+# Verify archive safety (no symlinks / path traversal / extra members) and all SHA-256 digests
+report = verify_bundle("ht-study.zip")
+assert report.ok, report.errors
+
+# Reconstruct live Corpus, WorkbenchBackup, review file paths, receipts, and citations
+hydrated = hydrate_bundle("ht-study.zip", dest="unpacked-study", allow_fetch=False)
+print(len(hydrated.corpus), hydrated.workbench_state is not None, hydrated.review_files)
+```
+
+For bundles carrying a `CorpusReference` pointer to an uncached remote dataset
+(such as `damos` or `sigla`), `hydrate_bundle(..., allow_fetch=True)` fetches
+the pinned dataset directly from its upstream source under its upstream license
+and reapplies `filter_spec`. `extract_bundle(path, dest)` performs verified
+safe extraction to disk without constructing Python objects.
+
+### CLI commands
+
+```bash
+aegean bundle create study.zip --corpus lineara --site "Haghia Triada" \
+    --state workspace.json --review review.csv --receipt receipt.json \
+    --title "Haghia Triada study"
+
+aegean bundle inspect study.zip
+aegean bundle verify study.zip
+aegean bundle extract study.zip ./unpacked
+aegean bundle hydrate study.zip ./hydrated --fetch
+```
+
+---
+
+See [Greek NLP](Greek-NLP#lossless-conll-u-structure-and-the-model-projection)
+for the underlying CoNLL-U structural model, [Data Model](Data-Model) for source
+alignment and typed forms, [Benchmarks](Benchmarks) for measured accuracy
+tables, and [Data & Provenance](Data-and-Provenance) for receipts and licensing.

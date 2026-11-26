@@ -249,12 +249,14 @@ class TestWorkbenchServerBridge:
         thread.start()
         try:
             base = f"http://127.0.0.1:{port}"
-            # 1. Mounted custom corpus
+            # 1. Mounted custom corpus (multi-script envelope)
             with urllib.request.urlopen(f"{base}/api/local/corpus.json") as r:
                 assert r.status == 200
                 assert r.headers.get("Cache-Control") == "no-store"
-                records = json.loads(r.read().decode("utf-8"))
-                assert len(records) == 1721
+                bundle = json.loads(r.read().decode("utf-8"))
+                assert bundle["_meta"]["script"] == "lineara"
+                assert len(bundle["inscriptions"]) == 1721
+                assert len(bundle["signs"]) > 80
 
             # 2. Mounted DAMOS file
             with urllib.request.urlopen(f"{base}/api/local/damos-corpus.json") as r:
@@ -333,3 +335,27 @@ class TestWorkbenchServerBridge:
             "--dir",
         ):
             assert flag in opts, f"missing CLI flag {flag}"
+
+    def test_multi_script_bundle_and_launch_url(self) -> None:
+        from aegean.cli._workbench import _load_corpus_payload
+        from aegean.io.workbench import from_workbench_export, to_workbench_bundle
+
+        cyp = aegean.load("cypriot")
+        bundle = to_workbench_bundle(cyp)
+        assert bundle["_meta"]["script"] == "cypriot"
+        assert len(bundle["inscriptions"]) == len(cyp)
+        assert len(bundle["signs"]) >= 50
+        assert "phoneticMap" in bundle
+
+        reloaded = from_workbench_export(bundle)
+        assert reloaded.script_id == "cypriot"
+        assert reloaded.sign_inventory is not None
+
+        raw, sid = _load_corpus_payload("cyprominoan")
+        assert sid == "cyprominoan"
+        parsed = json.loads(raw.decode("utf-8"))
+        assert parsed["_meta"]["script"] == "cyprominoan"
+
+        url = _build_launch_url(8000, has_corpus=True, script_id="linearb")
+        assert "corpus=%2Fapi%2Flocal%2Fcorpus.json" in url
+        assert "script=linearb" in url

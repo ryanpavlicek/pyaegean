@@ -1,83 +1,86 @@
 # Using critical editions
 
-Epigraphic and papyrological texts are rarely whole. Stone breaks, ink fades, and a scribe's hand is
-sometimes hard to read, so an editor marks which letters are certain, which are damaged but legible,
-which are restored by conjecture, and which are lost. pyaegean's epigraphy and papyri corpora carry
-that editorial judgement through to every token, so a restored or damaged reading is never presented
-to you as if it were securely on the stone.
+Epigraphic and papyrological texts rarely survive intact. Editors mark which
+letters are legible on the stone or papyrus, which are damaged, which are
+supplied by conjecture, and which are lost. pyaegean's epigraphy and papyri
+corpora carry those editorial distinctions on every token so restored or
+damaged words stay distinguishable from securely preserved text.
 
-This page explains the reading-status marks, the `edition_fidelity` provenance flag, and how to work
-with both.
+This page explains token reading statuses, typed form states, the
+`edition_fidelity` provenance flag, and how the epigraphic and papyrological
+corpora represent editorial choices.
 
 ## Reading status on every token
 
-Each token of an inscription or papyrus carries a `ReadingStatus`:
+Every token in an epigraphic or papyrological corpus carries a `ReadingStatus`:
 
-| Status | Meaning | From the EpiDoc apparatus |
+| Status | Meaning | EpiDoc source |
 | --- | --- | --- |
-| `CERTAIN` | Securely read on the object | plain edition text |
+| `CERTAIN` | Securely read on the object | Plain edition text |
 | `UNCLEAR` | Legible but damaged or ambiguous | `<unclear>` |
-| `RESTORED` | Supplied by the editor (conjecture, parallels) | `<supplied>` |
-| `LOST` | Editorially marked as not recoverable | `<supplied reason="undefined">`, lost gaps |
+| `RESTORED` | Supplied by the editor (conjecture or parallels) | `<supplied>` |
+| `LOST` | Marked as not recoverable | `<supplied reason="undefined">`, lacunae |
 
-A word that is only partly damaged takes the most severe status touching any of its letters. The
-editorial apparatus marks damage at the level of individual letters; a pyaegean `Token` holds one
-status per word, so a word with even one restored letter is reported as `RESTORED`. This rounds
-toward caution: it never understates how much of a word was reconstructed.
+Editorial apparatuses mark damage letter by letter, whereas a pyaegean `Token`
+stores one aggregate status per word. A partially damaged token takes the most
+severe status affecting any of its letters, so a word with even one supplied
+letter carries `RESTORED`.
 
 ```python
 import aegean
 from aegean.core.model import ReadingStatus
 
-corpus = aegean.load("isicily")            # a funerary text from Roman Sicily
+corpus = aegean.load("isicily")            # funerary inscription from Roman Sicily
 doc = corpus.get("ISic000643")
 for tok in doc.tokens:
     print(f"{tok.text:12} {tok.status.name}")
 # ᾶρκος        CERTAIN
 # Βαλήρις      CERTAIN
-# Μαρκαρίων    UNCLEAR      the name is damaged
-# ἔζησε        RESTORED     "lived", supplied by the editor
+# Μαρκαρίων    UNCLEAR      damaged name
+# ἔζησε        RESTORED     "lived", editorially supplied
 # ἔτη          CERTAIN
 # νʹ           CERTAIN      50 (numeral)
 # μῆνες        RESTORED
 # ηʹ           CERTAIN      8
 ```
 
-The plain reading text is unchanged from before status tracking: `" ".join(t.text for t in
-doc.tokens)` reads exactly as the edition does. Status is additional information, not a rewrite of
-the text.
+`ReadingStatus` sits beside `token.text` without altering it:
+`" ".join(t.text for t in doc.tokens)` reproduces the plain reading text of the
+edition.
 
 ### Diplomatic, regularized, and model-input forms
 
-`ReadingStatus` is an aggregate word-level signal. A token-carrier EpiDoc import
-can also preserve the pieces behind that signal in `Token.form_state`:
+While `ReadingStatus` summarizes a token as a single value, direct token-carrier
+EpiDoc imports also preserve fine-grained layers in `Token.form_state`:
 
-- `diplomatic` is the original or diplomatic spelling.
-- `regularized` is an editorial spelling, for example a correction or expansion.
-- `normalized` is an optional normalized preprocessing form.
-- `model_input` is the exact string later handed to an analyzer, with
-  `model_input_source` and ordered operations recording how it was selected.
-- `segments` retain the order and status of certain, supplied, unclear, and lost
-  pieces, plus semantic references to source markup when available.
+- `diplomatic`: original or diplomatic spelling on the artifact.
+- `regularized`: editorial spelling (correction or expansion).
+- `normalized`: optional normalized preprocessing form.
+- `model_input`: exact string handed to an analyzer, paired with
+  `model_input_source` and ordered operations recording how it was derived.
+- `segments`: ordered spans carrying per-segment status (`certain`, `supplied`,
+  `unclear`, `lost`) and source markup references when present.
 
-These are not interchangeable. The first three fields and the segments describe
-the evidence or an editorial representation. `model_input` describes a computation
-and is not a claim that the source contained that spelling. `pipeline_tokens()`
-selects an explicit model input first, then regularized, normalized, or diplomatic
-text, and returns the selected value in the `TokenRecord` state.
+The first three fields and `segments` represent documentary or editorial
+evidence; `model_input` records computational input and makes no claim that the
+source contained that spelling. `pipeline_tokens()` selects an explicit
+`model_input` first, then `regularized`, `normalized`, or `diplomatic`, and
+records the chosen string on the resulting `TokenRecord`.
 
-The generic reader recognizes these states when they occur on token carriers such
-as `<w>`, `<num>`, `<g>`, `<pc>`, or `<seg>`, including `<choice>` and apparatus markup.
-It does not turn arbitrary free-text TEI into a structured token state. The eight
-currently hosted epigraphy and papyri assets retain their aggregate
-`ReadingStatus` values and do not yet carry `TokenFormState`.
+The generic EpiDoc reader populates `TokenFormState` from token carriers
+(`<w>`, `<num>`, `<g>`, `<pc>`, `<seg>`), including `<choice>` and apparatus
+elements. It does not parse arbitrary free-text TEI into structured token
+states. The eight hosted epigraphy and papyri assets retain aggregate
+`ReadingStatus` values and do not yet populate `TokenFormState`.
 
-### Working with status
+### Filtering and counting by status
 
-Filter to the securely-read text, or measure how much of a corpus is reconstruction:
+Filter to securely read words or count how much of a corpus relies on
+restoration:
 
 ```python
 from collections import Counter
+from aegean.core.model import ReadingStatus
 
 secure = [t.text for t in doc.tokens if t.status is ReadingStatus.CERTAIN]
 
@@ -85,25 +88,22 @@ dist = Counter(t.status.name for d in corpus.documents for t in d.tokens)
 # {'CERTAIN': 22139, 'RESTORED': 5328, 'UNCLEAR': 1134, 'LOST': 312}
 ```
 
-Not quite a quarter of the I.Sicily tokens (6,774 of 28,913) are something other than securely
-read: restored, unclear, or lost. That is normal for an epigraphic corpus, and it is exactly the
-information a study should account for rather than discover too late.
+Roughly 23% of I.Sicily tokens (6,774 of 28,913) are restored, unclear, or lost.
+Accounting for that share is standard practice in quantitative epigraphy.
 
-Status round-trips through every persistence format: `Corpus.to_json` / `from_json`, the SQLite store
-(`aegean.db`), and EpiDoc export all preserve it, and the token-level tabular exports (`to_csv`,
-`to_parquet`, `to_dataframe`) carry it as a `status` column, so a spreadsheet can filter restored
-readings out. Schema-3 JSON and SQLite also preserve typed form
-states, while CSV and Parquet expose them as `form_*` columns and a JSON `form_segments` cell. A
-corpus you load, filter, and re-save keeps the apparatus. Two caveats: the Workbench export format
-carries token text only, so a Workbench round-trip drops statuses, typed form state, and
-annotations and returns every token as
-`CERTAIN`, and merging corpora keeps `edition_fidelity` only when every input agrees on one value
-(a mixed merge reports it unknown).
+`ReadingStatus` round-trips through `Corpus.to_json` / `from_json`, SQLite
+(`aegean.db`), and EpiDoc export, and appears as a `status` column in `to_csv`,
+`to_parquet`, and `to_dataframe`. Schema-3 JSON and SQLite also preserve
+`TokenFormState`, while CSV and Parquet expose `form_*` columns and a JSON
+`form_segments` cell. Two exceptions apply: the Workbench export format stores
+token text only (so round-tripping through Workbench resets statuses to
+`CERTAIN` and drops form states and annotations), and merging corpora preserves
+`edition_fidelity` only when all inputs share the same value.
 
-## The `edition_fidelity` flag
+## The `edition_fidelity` provenance flag
 
-Each corpus records, in its provenance, how faithful the shipped text is to the printed critical
-edition:
+`corpus.provenance.edition_fidelity` records how the text relates to its
+printed edition:
 
 ```python
 aegean.load("isicily").provenance.edition_fidelity
@@ -112,68 +112,73 @@ aegean.load("igcyr").provenance.edition_fidelity
 # 'apparatus-preserved,epichoric'
 ```
 
-The comma-separated vocabulary:
+Vocabulary (comma-separated):
 
-- **`apparatus-preserved`** — the editorial apparatus is carried through as `ReadingStatus` (all eight
-  epigraphy and papyri corpora).
-- **`normalized`** — the Greek is standard polytonic orthography, as the edition prints it.
-- **`epichoric`** — the text keeps local, pre-standard letterforms rather than normalizing them. Only
-  IGCyr/GVCyr is `epichoric`: it preserves the archaic Cyrenaean forms (for example a single letter
-  for long *o*/*e*), so its tokens are not standard Koine spelling. Do not feed epichoric
-  text to the normalized-Greek pipeline expecting standard results.
-- **`ocr`** — automated OCR transcription (*Patrologia Graeca* CGPG volumes via `aegean.load("patrologia")`), where optical character errors occur.
+- **`apparatus-preserved`:** editorial apparatus is carried on tokens via
+  `ReadingStatus` (all eight epigraphy and papyri corpora).
+- **`normalized`:** Greek appears in standard polytonic orthography as printed
+  by the edition.
+- **`epichoric`:** local, pre-standard letterforms are preserved rather than
+  normalized. Only IGCyr/GVCyr carries `epichoric` (archaic Cyrenaean
+  orthography, such as single letters for long *e* and *o*); do not expect
+  standard literary-Greek accuracy when passing epichoric tokens to the
+  normalized pipeline.
+- **`ocr`:** automated OCR transcription (*Patrologia Graeca* CGPG volumes via
+  `aegean.load("patrologia")`), where optical character errors occur.
 
-The flag is optional and additive: corpora without it (the bundled sample, the literary works, the
-New Testament) report an empty string.
+Corpora without these flags (bundled samples, literary works, New Testament)
+leave `edition_fidelity` as an empty string.
 
-## Which corpora carry an apparatus
+## Corpora with apparatus status
 
-All eight fetch-on-demand epigraphy and papyri corpora:
+All eight fetch-on-demand epigraphy and papyri corpora carry `ReadingStatus`:
 
-| Corpus | `edition_fidelity` | Notes |
+| Corpus | `edition_fidelity` | Scope |
 | --- | --- | --- |
 | `isicily` | `apparatus-preserved,normalized` | Greek inscriptions of Sicily |
-| `iip` | `apparatus-preserved,normalized` | Israel/Palestine |
-| `iospe` | `apparatus-preserved,normalized` | Northern Black Sea |
-| `igcyr` | `apparatus-preserved,epichoric` | Cyrenaica: archaic Doric and verse |
+| `iip` | `apparatus-preserved,normalized` | Inscriptions of Israel/Palestine |
+| `iospe` | `apparatus-preserved,normalized` | Inscriptions of the Northern Black Sea |
+| `igcyr` | `apparatus-preserved,epichoric` | Cyrenaica (archaic Doric and verse) |
 | `edh` | `apparatus-preserved,normalized` | Epigraphic Database Heidelberg (Greek subset) |
 | `aphrodisias` | `apparatus-preserved,normalized` | Inscriptions of Aphrodisias (IAph2007, Caria) |
 | `crete` | `apparatus-preserved,normalized` | Cretan Institutional Inscriptions (Archaic–Hellenistic Crete) |
-| `ddbdp` | `apparatus-preserved,normalized` | Duke Databank documentary papyri |
+| `ddbdp` | `apparatus-preserved,normalized` | Duke Databank of Documentary Papyri |
 
-The literary corpora (`greek`, the fetched Perseus/First1KGreek works, `nt`) are transmitted texts,
-not editorial reconstructions of a damaged object, so they do not use reading status.
+Transmitted literary corpora (`greek`, Perseus/First1KGreek works, `nt`) do not
+carry stone/papyrus reading status.
 
-## The papyrological apparatus (DDbDP)
+## Documentary papyri (DDbDP)
 
-Documentary papyri record editorial choices differently from stone inscriptions. Where an editor
-regularized a spelling, corrected a scribal error, or expanded an abbreviation, the DDbDP EpiDoc
-encodes both the raw and the edited form. The currently hosted DDbDP asset exposes the preferred
-reading and aggregate status, not a typed `TokenFormState`; a token-carrier EpiDoc file imported
-directly can retain both forms. pyaegean takes the editor's preferred reading:
+Where a papyrus editor regularized a spelling, corrected a scribal error, or
+expanded an abbreviation, DDbDP EpiDoc encodes both original and edited forms.
+The hosted DDbDP asset exposes the editor's preferred reading and aggregate
+`ReadingStatus` (importing token-carrier EpiDoc directly retains both layers in
+`TokenFormState`):
 
-- a regularized spelling (`<reg>`) over the raw one (`<orig>`),
-- the lemmatized/corrected reading (`<lem>`) over a rejected variant (`<rdg>`),
-- an editorial addition (`<add>`) over a deletion (`<del>`),
-- and abbreviation expansions in full.
+- regularized spelling (`<reg>`) over original spelling (`<orig>`),
+- corrected or lemmatized reading (`<lem>`) over rejected variant (`<rdg>`),
+- editorial addition (`<add>`) over deletion (`<del>`),
+- expanded abbreviations in full.
 
-Reading status is threaded through this the same way: a preferred reading that is itself supplied or
-unclear keeps that status. Because DDbDP is large (57,331 texts), the memory-friendly path is the
-full-text search index rather than materializing the whole corpus:
+If the preferred reading itself is supplied or unclear, that status carries
+through. Because DDbDP holds 57,331 texts, query the SQLite full-text index
+directly or stream with `aegean.db.stream` instead of loading the entire corpus
+into memory:
 
 ```bash
-aegean db search ddbdp "ὁμολογῶ"     # instant FTS over the papyri
+aegean db search ddbdp "ὁμολογῶ"
 ```
 
-## Citing with fidelity
+## Citing editorial choices
 
-When you cite a subset or a query result, the provenance travels with it, including
-`edition_fidelity` and the corpus licence. See [Citing Computational Assistance](Citing-Computational-Assistance)
-for the full citation workflow. State in your own write-up whether your analysis included restored
-readings or was restricted to securely-read text; the status marks make either choice reproducible.
+Filtered subsets and query results retain `edition_fidelity` and upstream
+license metadata in their provenance; see
+[Citing Computational Assistance](Citing-Computational-Assistance). In published
+counts, state explicitly whether restored and unclear tokens were included or
+filtered to `ReadingStatus.CERTAIN`.
 
 ## See also
 
-- [Data & Provenance](Data-and-Provenance) — the corpora, licences, and sources
-- [When the Tool Is Wrong](When-the-Tool-Is-Wrong) — reading the tool's output critically
-- [Reading a Parse](Reading-a-Parse) — evidence and uncertainty in the Greek NLP output
+- [Data & Provenance](Data-and-Provenance): dataset catalog, licenses, and sources
+- [When the Tool Is Wrong](When-the-Tool-Is-Wrong): error analysis and review workflows
+- [Reading a Parse](Reading-a-Parse): per-token provenance and calibrated confidence

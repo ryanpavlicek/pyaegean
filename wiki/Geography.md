@@ -1,22 +1,19 @@
 # Geography
 
-`aegean.geo` maps a corpus's **find-sites** to coordinates and hands you the corpus back as a
-geopandas **GeoDataFrame**, so you can ask *where* things are: where a word clusters, how far a
-script reaches, how a corpus spreads across Crete and the wider Aegean. You'd reach for it to draw a
-distribution map, run a spatial join, or export your find-sites as GeoJSON for QGIS, a web map, or a
-linked-open-data project.
+`aegean.geo` maps corpus find-sites to coordinates and returns a `geopandas`
+`GeoDataFrame` for spatial analysis, plotting, or GeoJSON export to QGIS,
+Leaflet, or linked-open-data workflows.
 
-It's an **opt-in** extra (`pip install "pyaegean[geo]"`: geopandas + shapely). `import aegean` stays
-instant and dependency-free; geopandas and shapely are imported lazily, only when you call a geo
-function, and that call raises a clear error if the extra isn't installed:
+`geopandas` and `shapely` are optional (`pip install "pyaegean[geo]"`). They are
+imported lazily on call; if missing, the call raises:
 
-```
+```text
 ImportError: geographic analysis needs the optional dependencies: pip install 'pyaegean[geo]'
 ```
 
-Everything here is also reachable from the command line with `aegean geo` if you'd rather not write
-Python: see [CLI](CLI). The table view (`aegean geo CORPUS`) works with **just the core install**;
-only GeoJSON export pulls in the `[geo]` extra.
+The CLI command `aegean geo CORPUS` prints a located-sites table on the
+zero-dependency core install; only GeoJSON output (`-o`) requires `[geo]`. See
+[CLI](CLI).
 
 ---
 
@@ -29,31 +26,32 @@ from aegean import geo
 corpus = aegean.load("lineara")
 
 geo.to_geodataframe(corpus)                 # one row per inscription with a mapped site
-geo.to_geodataframe(corpus, level="site")   # one row per site + its inscription count
-geo.word_distribution(corpus, "KU-RO")      # the sites where KU-RO is attested, with counts
-geo.site_coordinates()                       # the raw site -> coordinate gazetteer (no extra needed)
+geo.to_geodataframe(corpus, level="site")   # one row per site with inscription count
+geo.word_distribution(corpus, "KU-RO")      # sites where KU-RO is attested, with counts
+geo.site_coordinates()                      # bundled site -> coordinate gazetteer (core only)
 ```
 
-Each of the first three returns a `geopandas.GeoDataFrame` in **EPSG:4326** (WGS84 lat/lon) with a
-`geometry` column of points: ready for `.plot()`, spatial joins, or export. Inscriptions whose site
-isn't in the gazetteer are silently dropped (see [Coverage](#coverage)).
+The first three functions return a `geopandas.GeoDataFrame` in **EPSG:4326**
+(WGS84 latitude/longitude) with a `geometry` column of `Point` objects.
+Inscriptions whose `meta.site` is absent from the gazetteer are omitted (see
+[Coverage](#coverage)).
 
-### What's in the box
+### API summary
 
-| Object | What it gives you | Needs `[geo]`? |
-|---|---|---|
+| Object | Description | Requires `[geo]`? |
+| --- | --- | --- |
 | `geo.to_geodataframe(corpus)` | GeoDataFrame, one row per inscription | yes |
-| `geo.to_geodataframe(corpus, level="site")` | GeoDataFrame, one row per site + count | yes |
+| `geo.to_geodataframe(corpus, level="site")` | GeoDataFrame, one row per site with count | yes |
 | `geo.word_distribution(corpus, word)` | GeoDataFrame of sites where `word` occurs | yes |
-| `geo.site_coordinates()` | `dict[str, SiteCoord]`: the bundled gazetteer | no |
-| `geo.SiteCoord` | a single site's coordinates + Pleiades id | no |
+| `geo.site_coordinates()` | `dict[str, SiteCoord]` bundled gazetteer | no |
+| `geo.SiteCoord` | Frozen dataclass for one site's coordinates and Pleiades id | no |
 
 ---
 
 ## Corpus → GeoDataFrame
 
-`to_geodataframe` is the workhorse. It walks the corpus, looks each inscription's `meta.site` up in
-the gazetteer, and builds point geometry from the matched coordinates. Two granularities:
+`to_geodataframe` resolves each inscription's `meta.site` against the gazetteer
+and constructs point geometry at either inscription or site granularity.
 
 ### `level="inscription"` — one row per text
 
@@ -75,7 +73,7 @@ gdf.head(3)
 # 2  HT3  Haghia Triada  Haghia Triada  crete   LMIB  589672.0       NaN  POINT (24.79 35.06)
 ```
 
-(1721 inscriptions in the Linear A corpus, 1718 of them with a site in the gazetteer.)
+Of the 1,721 Linear A inscriptions, 1,718 carry a site present in the gazetteer.
 
 ### `level="site"` — one row per find-site
 
@@ -90,36 +88,35 @@ gdf.head(8)
 # 0  Haghia Triada     Haghia Triada   crete     589672.0          1110       NaN  POINT (24.79 35.06)
 # 1         Khania            Khania   crete     589886.0           226       NaN  POINT (24.02 35.51)
 # 2       Phaistos          Phaistos   crete     589987.0            66       NaN  POINT (24.81 35.05)
-# 3        Knossos           Knossos   crete  781961476.0            59       NaN   POINT (25.16 35.3)
-# 4         Zakros            Zakros   crete  650881089.0            53       NaN   POINT (26.26 35.1)
-# 5    Palaikastro       Palaikastro   crete  213924739.0            25       NaN   POINT (26.27 35.2)
+# 3        Knossos           Knossos   crete  781961476.0            59       NaN  POINT (25.16 35.3)
+# 4         Zakros            Zakros   crete  650881089.0            53       NaN  POINT (26.26 35.1)
+# 5    Palaikastro       Palaikastro   crete  213924739.0            25       NaN  POINT (26.27 35.2)
 # 6          Malia             Malia   crete     589922.0            22       NaN  POINT (25.49 35.29)
-# 7          Thera  Thera (Akrotiri)  aegean     599478.0            18       NaN   POINT (25.4 36.36)
+# 7          Thera  Thera (Akrotiri)  aegean     599478.0            18       NaN  POINT (25.4 36.36)
 ```
 
-Site rows come back sorted by inscription count (most prolific first). The total here (52) is the
-number of distinct **located** sites in the Linear A corpus.
+Site rows are sorted by inscription count descending (52 located sites in
+`lineara`).
 
 ### Columns
 
 | Column | Levels | Type | Meaning |
-|---|---|---|---|
-| `id` | inscription | str | the inscription id (e.g. `HT1`) |
-| `site` | both | str | at inscription level, the raw `meta.site` label; at site and word_distribution level, the canonical gazetteer label (whitespace-variant find-place spellings collapse into one row) |
-| `label` | both | str | the gazetteer's display name (may be fuller, e.g. `Iouktas (Mt Juktas)`) |
-| `region` | both | str | one of the nine [region codes](#regions) |
-| `period` | inscription | str | the inscription's `meta.period` (e.g. `LMIB`) |
-| `pleiades` | both | int / null | the [Pleiades](#pleiades-alignment) place id, if aligned |
-| `contested` | both | str / null | reason string if the find-spot's provenance is disputed (e.g. Margiana), else null; see [Contested find-spots](#contested-find-spots) |
-| `inscriptions` | site | int | number of inscriptions from this site |
-| `count` | (word_distribution) | int | number of inscriptions at this site that contain the word |
+| --- | --- | --- | --- |
+| `id` | inscription | str | Inscription id (e.g. `HT1`) |
+| `site` | both | str | Raw `meta.site` at inscription level; canonical gazetteer label at site and `word_distribution` level (collapsing whitespace variants) |
+| `label` | both | str | Gazetteer display name (e.g. `Iouktas (Mt Juktas)`) |
+| `region` | both | str | One of the nine [region codes](#regions) |
+| `period` | inscription | str | Inscription's `meta.period` (e.g. `LMIB`) |
+| `pleiades` | both | int / null | [Pleiades](#pleiades-alignment) place id, when aligned |
+| `contested` | both | str / null | Reason string if provenance is disputed (e.g. Margiana), else null; see [Contested find-spots](#contested-find-spots) |
+| `inscriptions` | site | int | Number of inscriptions from this site |
+| `count` | `word_distribution` | int | Number of inscriptions at this site containing the word |
 | `geometry` | all | Point | EPSG:4326 point, `POINT (lon lat)` |
 
-> Note: `pleiades` arrives as a float in the GeoDataFrame (e.g. `589672.0`) because the column holds
-> nulls for unaligned sites and pandas promotes integer-with-nulls to float. The underlying value is
-> still the integer place id; `SiteCoord.pleiades` gives you the clean `int`.
+Because `pleiades` contains nulls for unaligned sites, pandas displays the
+column as float (e.g. `589672.0`). `SiteCoord.pleiades` stores the integer id.
 
-`level` only accepts `"inscription"` or `"site"`; anything else is a `ValueError`:
+`level` accepts only `"inscription"` or `"site"`:
 
 ```python
 geo.to_geodataframe(corpus, level="county")
@@ -128,59 +125,59 @@ geo.to_geodataframe(corpus, level="county")
 
 ### CLI equivalent
 
-`aegean geo` prints a located-sites table by default (no `[geo]` extra needed) and writes GeoJSON
-with `--output`. The CLI defaults to `--level site`.
+`aegean geo` prints a located-sites table by default (no `[geo]` extra required)
+and writes GeoJSON when given `-o`/`--output`. The CLI defaults to
+`--level site`.
 
 ```bash
 aegean geo lineara
-#        lineara: 52 located site(s) of 52
-# ┌──────────────────┬───────┬───────┬───────────┬───────────┐
-# │ site             │ lat   │ lon   │ pleiades  │ contested │
-# ├──────────────────┼───────┼───────┼───────────┼───────────┤
-# │ Apodoulou        │ 35.16 │ 24.73 │ 119143959 │           │
-# │ Arkhalkhori      │ 35.15 │ 25.27 │ 220781958 │           │
-# │ Armenoi          │ 35.3  │ 24.5  │           │           │
-# │ ...              │       │       │           │           │
-# └──────────────────┴───────┴───────┴───────────┴───────────┘
-# (Margiana's row shows "disputed" in the contested column.)
+#               lineara: 52 located site(s) of 52
+# ┌──────────────────┬────────┬────────┬───────────┬───────────┐
+# │ site             │ lat    │ lon    │ pleiades  │ contested │
+# ├──────────────────┼────────┼────────┼───────────┼───────────┤
+# │ Apodoulou        │ 35.16  │ 24.73  │ 119143959 │           │
+# │ Arkhalkhori      │ 35.15  │ 25.3   │ 220781958 │           │
+# │ Armenoi          │ 35.3   │ 24.5   │           │           │
+# │ ...              │        │        │           │           │
+# └──────────────────┴────────┴────────┴───────────┴───────────┘
+# (Margiana shows "disputed" in the contested column.)
 
 aegean geo linearb
-#     linearb: 3 located site(s) of 3
-# ┌─────────┬───────┬───────┬───────────┬───────────┐
-# │ site    │ lat   │ lon   │ pleiades  │ contested │
-# ├─────────┼───────┼───────┼───────────┼───────────┤
-# │ Knossos │ 35.3  │ 25.16 │ 781961476 │           │
-# │ Mycenae │ 37.73 │ 22.75 │ 570491    │           │
-# │ Pylos   │ 36.952 │ 21.66 │ 156116232 │           │
-# └─────────┴───────┴───────┴───────────┴───────────┘
+#               linearb: 3 located site(s) of 3
+# ┌─────────┬───────────┬───────────┬───────────┬───────────┐
+# │ site    │ lat       │ lon       │ pleiades  │ contested │
+# ├─────────┼───────────┼───────────┼───────────┼───────────┤
+# │ Knossos │ 35.3      │ 25.16     │ 781961476 │           │
+# │ Mycenae │ 37.73     │ 22.75     │ 570491    │           │
+# │ Pylos   │ 37.027138 │ 21.694962 │ 156116232 │           │
+# └─────────┴───────────┴───────────┴───────────┴───────────┘
 ```
 
-Machine-readable rows with `--json`:
+JSON output:
 
 ```bash
 aegean geo lineara --json
-# [{"site": "Apodoulou", "lat": 35.16, "lon": 24.73, "pleiades": 119143959, "contested": ""}, ... ]
-# one object per located site; pleiades is "" when unaligned, and contested is "" unless the
-# provenance is disputed (e.g. Margiana carries its reason string)
+# [{"site": "Apodoulou", "lat": 35.16, "lon": 24.73, "pleiades": 119143959, "contested": ""}, ...]
 ```
 
 ### `aegean geo` flags
 
-| Flag | Default | What it does |
-|---|---|---|
-| `CORPUS` (argument) |— | corpus id: `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, or a fetched corpus (`nt`, `damos`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`, …) |
-| `--word` |— | map the per-site attestations of one word (**case-insensitive**) instead of every site |
-| `--level` | `site` | `site` or `inscription` (only affects GeoJSON export) |
-| `--output`, `-o` |— | write GeoJSON to this path instead of printing the table (needs `[geo]`) |
-| `--json` | off | machine-readable JSON rows on stdout (table mode) |
-| `--help`, `-h` |— | show usage and exit |
+| Flag | Default | Action |
+| --- | --- | --- |
+| `CORPUS` (argument) | — | Corpus id (`lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, or fetched corpora such as `damos`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `aphrodisias`, `crete`, `edh`, `ddbdp`) |
+| `--word` | — | Map per-site attestations of one word (case-insensitive) |
+| `--level` | `site` | `site` or `inscription` (applies to GeoJSON export) |
+| `--output`, `-o` | — | Write GeoJSON to this path instead of printing a table (requires `[geo]`) |
+| `--json` | off | Emit JSON rows on stdout (table mode) |
+| `--help`, `-h` | — | Print usage and exit |
 
-Only provenanced inscription corpora yield rows. The Aegean-script corpora (`lineara`, `linearb`,
-`cypriot`, `cyprominoan`, `sigla`, `damos`) are mapped most fully, and the Greek epigraphy and
-papyri corpora resolve the share of their find-places the gazetteer covers:
+Only provenanced inscription corpora yield rows. Aegean-script corpora
+(`lineara`, `linearb`, `cypriot`, `cyprominoan`, `sigla`, `damos`) map most
+fully; Greek epigraphic and papyrological corpora resolve the subset of their
+find-places present in the Aegean-focused gazetteer:
 
 | Corpus | Located sites |
-|---|---|
+| --- | --- |
 | `isicily` | 13 of 121 |
 | `iip` | 10 of 144 |
 | `edh` | 6 of 292 |
@@ -188,25 +185,22 @@ papyri corpora resolve the share of their find-places the gazetteer covers:
 | `igcyr` | 5 of 19 |
 | `ddbdp` | 3 of 798 |
 
-Most of the shortfall is real coverage, not a bug: the gazetteer is Aegean-first, so it holds
-Cyrene and Caesarea but not the hundreds of Egyptian find-places the papyri record. Literary
-corpora (`greek`, `nt`, Greek work ids) carry no find-spot at all, so `geo` prints a one-line
-note rather than an empty table.
+Literary corpora (`greek`, `nt`, and CTS literary works) carry no find-spot
+metadata; `aegean geo` prints a one-line notice for them.
 
 ---
 
-## Where a word shows up — `word_distribution`
+## Word distribution (`word_distribution`)
 
-`word_distribution` answers "where, across the corpus, does this word turn up?" It returns a
-site-level GeoDataFrame with a per-site `count`, sorted most-frequent first: exactly what you want
-to map a single term.
+`word_distribution` returns a site-level GeoDataFrame sorted by `count`
+descending, counting how many inscriptions at each mapped site contain the word:
 
 ```python
 import aegean
 from aegean import geo
 
 corpus = aegean.load("lineara")
-wd = geo.word_distribution(corpus, "KU-RO")      # the LA "total" word
+wd = geo.word_distribution(corpus, "KU-RO")
 
 wd.shape         # (3, 7)
 list(wd.columns) # ['site', 'label', 'region', 'pleiades', 'count', 'contested', 'geometry']
@@ -217,24 +211,20 @@ wd
 # 2         Zakros         Zakros  crete  650881089      1      None   POINT (26.26 35.1)
 ```
 
-The match is on the word token's surface form, folded for case (`ku-ro` finds `KU-RO`), so use the
-corpus's own transliteration (here, dash-joined sign sequences like `KU-RO`). See [Linear A](Linear-A) and
-[Analysis](Analysis) for how to find the words worth mapping.
+Matching is case-insensitive on token surface text (`ku-ro` matches `KU-RO`).
+Pass the transliteration convention used by the target corpus. If a word has no
+hits, `word_distribution` returns an empty 0-row GeoDataFrame with shape
+`(0, 7)` and the same column schema; check `wd.empty`.
 
-> Edge case: if a word has **zero** hits the call returns an empty (0-row) GeoDataFrame with the
-> normal column schema (shape `(0, 7)`), not an error. You can check `wd.empty` to distinguish a
-> word that turns up nowhere from one you simply haven't mapped yet.
-
-The CLI exposes the same word mapping through `aegean geo CORPUS --word WORD`.
+CLI equivalent: `aegean geo CORPUS --word WORD`.
 
 ---
 
 ## The gazetteer
 
-`geo.site_coordinates()` returns the bundled site → coordinate table: a `dict[str, SiteCoord]`
-keyed by the corpus's `meta.site` label. This is the one geo function that needs **no extra**; it's
-plain data. Coordinates are **approximate** (site-level, ~1 km), drawn from standard archaeological
-references: fine for mapping, not survey work.
+`geo.site_coordinates()` returns the bundled `dict[str, SiteCoord]` keyed by
+`meta.site` label without requiring `[geo]`. Coordinates are approximate
+site-level points (~1 km) drawn from standard archaeological references.
 
 ```python
 from aegean import geo
@@ -247,60 +237,55 @@ coords["Haghia Triada"]
 
 ### `SiteCoord`
 
-A frozen dataclass. Fields:
+`SiteCoord` is a frozen dataclass with the following fields and properties:
 
 | Field | Type | Meaning |
-|---|---|---|
-| `name` | str | display name (may be fuller than the corpus's site label) |
-| `lat` | float | latitude, WGS84 |
-| `lon` | float | longitude, WGS84 |
-| `region` | str | one of the nine region codes below |
-| `pleiades` | int / None | Pleiades place id, if aligned (default `None`) |
-| `pleiades_uri` | property → str / None | full `https://pleiades.stoa.org/places/<id>` URI, or `None` |
-| `contested` | str / None | reason string if the find-spot's provenance is disputed; `None` for ordinary sites (default `None`); see [Contested find-spots](#contested-find-spots) |
-| `is_contested` | property → bool | whether `contested` is set |
+| --- | --- | --- |
+| `name` | str | Display name |
+| `lat` | float | WGS84 latitude |
+| `lon` | float | WGS84 longitude |
+| `region` | str | One of the nine region codes below |
+| `pleiades` | int \| None | Aligned Pleiades place id (default `None`) |
+| `pleiades_uri` | property → str \| None | `https://pleiades.stoa.org/places/<id>`, or `None` |
+| `contested` | str \| None | Reason string if provenance is disputed (default `None`); see [Contested find-spots](#contested-find-spots) |
+| `is_contested` | property → bool | `True` when `contested` is set |
 
 ```python
 sc = coords["Haghia Triada"]
-sc.lat, sc.lon            # (35.06, 24.79)
-sc.region                 # 'crete'
-sc.pleiades               # 589672
-sc.pleiades_uri           # 'https://pleiades.stoa.org/places/589672'
+sc.lat, sc.lon                   # (35.06, 24.79)
+sc.region                        # 'crete'
+sc.pleiades                      # 589672
+sc.pleiades_uri                  # 'https://pleiades.stoa.org/places/589672'
 
-coords["Vrysinas"].pleiades_uri # None  (a peak sanctuary, not in Pleiades)
-coords["Margiana"].is_contested # True  (disputed provenance)
+coords["Vrysinas"].pleiades_uri  # None (peak sanctuary, not in Pleiades)
+coords["Margiana"].is_contested  # True (disputed provenance)
 ```
-
-The gazetteer covers the find-sites in all four Aegean-script corpora and extends into the Greek
-epigraphic collections: Crete and the Aegean, mainland Greece, Cyprus and the Levant, Anatolia,
-Cyrenaica, the Pontic region, and Sicily. Margiana (Turkmenistan), the one remote outlier, is
-flagged [contested](#contested-find-spots).
 
 ### Regions
 
 `region` is a controlled vocabulary of nine values. The breakdown of the 94 gazetteer sites:
 
-| Region | Sites | What it covers |
-|---|---|---|
-| `crete` | 40 | the island of Crete (the bulk of Linear A) |
-| `aegean` | 5 | the Aegean islands (Thera, Kea, Milos, Kythera, Samothrace) |
-| `mainland` | 7 | the Greek mainland |
-| `anatolia` | 4 | the Anatolian coast |
+| Region | Sites | Coverage |
+| --- | --- | --- |
+| `crete` | 40 | Crete (bulk of Linear A) |
+| `aegean` | 5 | Aegean islands (Thera, Kea, Milos, Kythera, Samothrace) |
+| `mainland` | 7 | Greek mainland |
+| `anatolia` | 4 | Anatolian coast |
 | `levant` | 14 | Cyprus and the Levantine coast |
 | `cyrenaica` | 5 | Cyrenaica |
-| `pontic` | 5 | the northern Black Sea region |
+| `pontic` | 5 | Northern Black Sea |
 | `sicily` | 13 | Sicily |
-| `remote` | 1 | far-flung outliers (Margiana, Turkmenistan, a [contested](#contested-find-spots) find-spot) |
+| `remote` | 1 | Outliers (Margiana, Turkmenistan; [contested](#contested-find-spots)) |
 
 ### Contested find-spots
 
-A find-spot can be present in the upstream corpus yet not be an accepted provenance. Such a site
-keeps its inscription (so the bundled corpus stays faithful to upstream and matches the workbench's
-parity checksum) but is flagged: `SiteCoord.contested` holds the reason, `is_contested` is `True`,
-and the GeoDataFrames and the `aegean geo` table carry a `contested` column. The one current case
-is **Margiana** (Turkmenistan): no Linear A inscription is accepted from Central Asia (the "1427 in
-Margiana" figure misreads the GORILA corpus total, and the only link is the fringe "Cretan
-Protolinear" theory), so it is never silently mapped as a genuine find-spot.
+Sites that appear in an upstream corpus but lack accepted provenance remain in
+the dataset so upstream parity is preserved, while `SiteCoord.contested` stores
+the reason and `is_contested` returns `True`. GeoDataFrames and `aegean geo`
+expose this in the `contested` column. The single current case is **Margiana**
+(Turkmenistan): no Linear A inscription is accepted from Central Asia (the "1427
+in Margiana" figure misreads the GORILA corpus total, and the sole connection is
+the fringe "Cretan Protolinear" proposal).
 
 ```python
 m = coords["Margiana"]
@@ -312,28 +297,27 @@ m.contested               # 'Disputed: no Linear A inscription is accepted from 
 
 ## Pleiades alignment
 
-**78 of the 94** find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
-linked-open-data work. Every id is **verified by coordinate** (the Pleiades representative point is
-within a few km of ours and its description matches the site), so a match is confirmed, never
-guessed, and `scripts/check_gazetteer.py` re-checks each one against its live Pleiades point on a
-weekly schedule, so a stray coordinate can't quietly slip in. It lives on `SiteCoord.pleiades` (an `int`), with `SiteCoord.pleiades_uri` giving the full
-`https://pleiades.stoa.org/places/<id>` URI, and surfaces as a `pleiades` column in the GeoDataFrames
-from `to_geodataframe` / `word_distribution`.
+**78 of the 94** find-sites are aligned to [Pleiades](https://pleiades.stoa.org/)
+place IDs. Each match is verified against the Pleiades representative
+coordinates and place description, and `scripts/check_gazetteer.py` re-verifies
+every link against live Pleiades data weekly. Aligned IDs live on
+`SiteCoord.pleiades` (and `SiteCoord.pleiades_uri`) and appear in the `pleiades`
+column of `to_geodataframe` and `word_distribution`.
 
 ```python
 geo.site_coordinates()["Haghia Triada"].pleiades_uri
 # 'https://pleiades.stoa.org/places/589672'
 ```
 
-The remaining 16 entries are mostly minor findspots, peak sanctuaries, caves, and one region-level
-placeholder not yet represented by a suitable Pleiades place,
-left null, and listed as upstream-contribution candidates in
+The remaining 16 entries (minor findspots, peak sanctuaries, caves, and the
+generic `Crete` placeholder) have `pleiades=None` and are listed as upstream
+contribution candidates in
 [docs/pleiades-candidates.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/pleiades-candidates.md).
 
-A few of the major aligned sites:
+Selected aligned sites:
 
 | Site | Region | Pleiades id |
-|---|---|---|
+| --- | --- | --- |
 | Haghia Triada | crete | 589672 |
 | Khania | crete | 589886 |
 | Phaistos | crete | 589987 |
@@ -346,20 +330,14 @@ A few of the major aligned sites:
 | Miletus | anatolia | 599799 |
 | Enkomi | levant | 13818291 |
 
-Pull the full machine-readable list straight from the CLI:
-
-```bash
-aegean geo lineara --json
-# every located site, with "pleiades" set to the id (or "" if unaligned)
-```
+Export the full list from the shell with `aegean geo lineara --json`.
 
 ---
 
 ## GeoJSON export
 
-A GeoDataFrame serialises to GeoJSON the standard geopandas way: both from Python and the CLI. The
-output is a `FeatureCollection` in EPSG:4326; the GeoDataFrame columns become each feature's
-`properties`, and `geometry` becomes a GeoJSON `Point`.
+GeoDataFrames serialize as an EPSG:4326 GeoJSON `FeatureCollection` where each
+column becomes a feature property and `geometry` becomes a GeoJSON `Point`.
 
 ### From the CLI
 
@@ -371,7 +349,7 @@ aegean geo lineara --level inscription -o la_inscriptions.geojson
 # wrote 1718 features to la_inscriptions.geojson
 ```
 
-The first feature of the site-level export:
+First feature of the site-level export:
 
 ```json
 {
@@ -394,99 +372,82 @@ The first feature of the site-level export:
 ```python
 gdf = geo.to_geodataframe(corpus, level="site")
 
-# (a) a GeoJSON string in memory:
-gdf.to_json()[:60]
-# '{"type": "FeatureCollection", "features": [{"id": "0", "type'
-
-# (b) straight to a file (any geopandas-supported driver):
-gdf.to_file("la_sites.geojson", driver="GeoJSON")
+gdf.to_json()[:60]                               # GeoJSON string in memory
+gdf.to_file("la_sites.geojson", driver="GeoJSON") # write to disk (any geopandas driver)
 ```
 
-From there it drops straight into QGIS, a web map (Leaflet/Mapbox), or any GeoJSON-aware tool. Other
-tabular exports (CSV, Parquet, EpiDoc, SQLite) for the corpus itself live under
-[`aegean export`](CLI); the geo path is specifically for spatial GeoJSON.
+For non-spatial corpus exports (CSV, Parquet, EpiDoc, SQLite, RDF), see
+[`aegean export`](CLI) and [Interoperability](Interoperability).
 
 ---
 
 ## Plotting
 
-A GeoDataFrame plots in one line (with `matplotlib` installed: that's the separate `[viz]` extra):
+With `matplotlib` (`pip install 'pyaegean[viz]'`), plot a GeoDataFrame directly:
 
 ```python
 gdf = geo.to_geodataframe(corpus, level="site")
-ax = gdf.plot()        # the find-sites as points
-# overlay on a basemap of your choice, or size points by `inscriptions`:
-gdf.plot(markersize="inscriptions" and gdf["inscriptions"] / 5)
-```
+ax = gdf.plot(markersize=gdf["inscriptions"] / 5)
 
-For a quick word map, plot a `word_distribution` frame and scale by `count`:
-
-```python
 wd = geo.word_distribution(corpus, "KU-RO")
 wd.plot(markersize=wd["count"] * 10)
 ```
 
-pyaegean doesn't ship its own basemap: bring your own (contextily, a shapefile of Crete, etc.).
-For non-spatial plots (sign frequencies, period histograms) see `aegean.viz` / [CLI](CLI)'s
-`aegean plot`.
+pyaegean does not bundle basemaps; overlay points onto `contextily` tiles or a
+local coastline shapefile as needed. For non-spatial plots and a zero-`[geo]`
+findspot scatter, see `aegean.viz` / `aegean plot` in [Analysis](Analysis).
 
 ---
 
 ## Coverage
 
-`to_geodataframe` and `word_distribution` only emit rows for sites that are in the gazetteer;
-anything else is dropped. Per corpus:
+`to_geodataframe` and `word_distribution` emit rows only for sites present in
+the gazetteer:
 
 | Corpus | Docs | Located sites | Notes |
-|---|---|---|---|
-| `lineara` | 1721 | 52 of 52 site labels | 1718 docs have a mapped site; the rest have no/unknown site |
-| `linearb` | 18 | 3 of 3 (Knossos, Mycenae, Pylos) | the bundled Linear B sample |
-| `cypriot` | 180 | 1 of 5 | bundled IG XV 1 corpus + samples (only the generic Cyprus label is in the gazetteer) |
-| `cyprominoan` | 2 | 2 of 2 (Enkomi, Ugarit) | small bundled sample |
+| --- | --- | --- | --- |
+| `lineara` | 1,721 | 52 of 52 site labels | 1,718 docs have a mapped site; 3 lack a site label |
+| `linearb` | 18 | 3 of 3 (Knossos, Mycenae, Pylos) | Bundled sample |
+| `cypriot` | 180 | 1 of 5 | Bundled *IG* XV 1 + samples (only generic Cyprus label mapped) |
+| `cyprominoan` | 2 | 2 of 2 (Enkomi, Ugarit) | Bundled sample |
 
-The gazetteer holds 94 entries total (more than any single corpus uses), including all 52 named
-Linear A sites, coverage for the other three Aegean scripts, and the Greek epigraphic and
-papyrological sites listed under [`aegean geo` flags](#aegean-geo-flags). The few Linear A
-inscriptions with no row simply carry no usable `meta.site` value.
-
-The Greek epigraphy and papyri corpora name far more find-places than an Aegean-first gazetteer
-covers, so only a fraction of their site labels resolve; the per-corpus counts are in that same
-table.
+The gazetteer holds 94 entries total, covering all 52 named Linear A sites, the
+other three Aegean scripts, and selected Greek epigraphic and papyrological
+find-places (listed under [`aegean geo` flags](#aegean-geo-flags)).
 
 ---
 
-## Notes & limitations
+## Limitations
 
-- **Coordinates are approximate (~1 km, site-level).** They're for mapping and distribution analysis,
-  not for survey work or anything that needs trench-level precision. Don't measure distances and
-  report metres.
-- **Unmapped inscriptions are dropped silently** in `to_geodataframe` / `word_distribution`. Compare
-  `len(corpus)` against the GeoDataFrame's row count if you need to know how many were excluded; the
-  CLI table prints "*N* located site(s) of *M*" so you can see the gap directly.
-- **`word_distribution` returns an empty (0-row) GeoDataFrame on a zero-hit word**, with the normal
-  column schema intact. Test `wd.empty` to tell "attested nowhere" apart from a mapping gap.
-- **`pleiades` shows as a float in the GeoDataFrame** because the column mixes ids with nulls; the id
-  is still integral. Use `SiteCoord.pleiades` for the clean `int`.
-- **16 entries have no Pleiades id**: mostly minor findspots, peak sanctuaries, and caves, plus
-  the region-level `Crete` placeholder. They're tracked as upstream-contribution candidates, not
-  guessed into place records.
-- **`word_distribution` matches the surface form case-insensitively.** It won't otherwise normalise
-  or fuzzy-match; pass the word as the corpus transliterates it.
+- **Site-level precision (~1 km).** Coordinates are approximate points suitable
+  for regional distribution mapping, not archaeological survey or metre-scale
+  distances.
+- **Unmapped inscriptions omitted.** Compare `len(corpus)` against `len(gdf)` to
+  count excluded documents; the CLI prints `*N* located site(s) of *M*`.
+- **Zero-hit `word_distribution` returns an empty GeoDataFrame.** Check
+  `wd.empty` to distinguish zero attestations from unmapped sites.
+- **Float display of `pleiades`.** Mixed int/null columns render as float in
+  pandas; read `SiteCoord.pleiades` for the integer id.
+- **16 unaligned entries.** Minor findspots, peak sanctuaries, caves, and the
+  region-level `Crete` entry have `pleiades=None`.
+- **Exact surface matching.** `word_distribution` folds case only; pass the
+  corpus's transliteration spelling.
 
-See [Limitations](Limitations) for the project-wide caveats.
+See [Limitations](Limitations) for project-wide boundaries.
 
 ---
 
 ## Provenance
 
-Coordinates are compiled from standard archaeological references (GORILA, Younger, public gazetteers)
-via the [Linear A Research Workbench](https://github.com/ryanpavlicek/linearaworkbench) (Apache-2.0).
-See [Data & Provenance](Data-and-Provenance) and `NOTICE`.
+Coordinates are compiled from standard archaeological references (GORILA,
+Younger, public gazetteers) via the
+[Linear A Research Workbench](https://github.com/ryanpavlicek/linearaworkbench)
+(Apache-2.0). See [Data & Provenance](Data-and-Provenance) and `NOTICE`.
 
 ## See also
 
-- [Installation](Installation): the `[geo]` and `[viz]` extras
-- [Linear A](Linear-A) / [Linear B](Linear-B) / [Cypriot](Cypriot) / [Cypro-Minoan](Cypro-Minoan): the corpora you map
-- [Analysis](Analysis): finding the words and patterns worth mapping
-- [CLI](CLI): `aegean geo` and the other corpus commands
-- [Data & Provenance](Data-and-Provenance): where the coordinates come from
+- [Installation](Installation): `[geo]` and `[viz]` extras
+- [Linear A](Linear-A), [Linear B](Linear-B), [Cypriot](Cypriot), [Cypro-Minoan](Cypro-Minoan)
+- [Analysis](Analysis)
+- [CLI](CLI)
+- [Data & Provenance](Data-and-Provenance)

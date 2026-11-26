@@ -46,6 +46,7 @@ __all__ = [
     "load_workbench_backup",
     "save_workbench_backup",
     "to_workbench",
+    "to_workbench_bundle",
 ]
 
 # A decoded UTF-8 BOM: not whitespace, so str.strip() leaves it in place and a BOM'd
@@ -168,8 +169,95 @@ def to_workbench(corpus: Corpus, path: str | Path | None = None) -> list[dict[st
     return records
 
 
+def _resolve_script_inventory(script_id: str) -> Any:
+    """Return the bundled SignInventory for a known Aegean script, if registered."""
+    from ..core import get_script
+
+    try:
+        script = get_script(script_id)
+    except KeyError:
+        return None
+    inv = getattr(script, "sign_inventory", None)
+    if callable(inv):
+        try:
+            return inv()
+        except Exception:
+            return None
+    return inv
+
+
+def _serialize_signs_and_phonetics(
+    corpus: Corpus,
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Serialize a corpus's SignInventory into workbench SignData + phoneticMap dicts."""
+    inv = corpus.sign_inventory or _resolve_script_inventory(corpus.script_id)
+    if inv is None or not getattr(inv, "signs", None):
+        return ([], {})
+
+    signs_out: list[dict[str, Any]] = []
+    phonetic_map: dict[str, str] = {}
+    for s in inv.signs:
+        attrs = getattr(s, "attrs", None) or {}
+        glyph = s.glyph or None
+        cp = s.codepoint if s.codepoint is not None else (ord(glyph[0]) if glyph else None)
+        phon = s.phonetic or None
+        if phon:
+            phonetic_map[s.label] = phon
+        signs_out.append(
+            {
+                "label": s.label,
+                "glyph": glyph,
+                "codepoint": cp,
+                "phonetic": phon,
+                "sharedWithLinearB": bool(attrs.get("shared_with_linearb", False)),
+                "linearAOnly": bool(attrs.get("linear_a_only", False)),
+                "total": int(attrs.get("total", 0) or 0),
+                "confidence": float(attrs.get("confidence", 1.0) or 1.0),
+                "altGlyphs": list(attrs.get("alt_glyphs", ())),
+            }
+        )
+    return (signs_out, phonetic_map)
+
+
+def to_workbench_bundle(
+    corpus: Corpus,
+    path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Emit a multi-script schema-v1 workbench envelope (inscriptions + signs + script).
+
+    Preserves ``corpus.script_id`` under ``_meta.script`` alongside the script's
+    sign inventory (``signs``) and ``phoneticMap`` so Linear B, Cypriot Syllabic,
+    and Cypro-Minoan corpora load directly into the browser workbench with
+    Unicode glyphs, phonetic readings, and script-specific accounting markers.
+    """
+    inscriptions = to_workbench(corpus)
+    signs, phonetic_map = _serialize_signs_and_phonetics(corpus)
+    prov = corpus.provenance
+    source_desc = (prov.citation or prov.source) if prov is not None else f"pyaegean {corpus.script_id}"
+    bundle: dict[str, Any] = {
+        "_meta": {
+            "schemaVersion": 1,
+            "tool": "pyaegean",
+            "script": corpus.script_id or "lineara",
+            "corpusSource": source_desc,
+            "inscriptionCount": len(inscriptions),
+        },
+        "inscriptions": inscriptions,
+    }
+    if signs:
+        bundle["signs"] = signs
+    if phonetic_map:
+        bundle["phoneticMap"] = phonetic_map
+    if path is not None:
+        from .._atomic import atomic_path
+
+        with atomic_path(path) as tmp:
+            tmp.write_text(json.dumps(bundle, ensure_ascii=False), encoding="utf-8")
+    return bundle
+
+
 def from_workbench_export(
-    source: str | Path | dict[str, Any] | list[Any], *, script_id: str = "lineara"
+    source: str | Path | dict[str, Any] | list[Any], *, script_id: str | None = None
 ) -> Corpus:
     """Load a workbench corpus export into a `Corpus`.
 
@@ -177,15 +265,14 @@ def from_workbench_export(
     JSON. Both forms the workbench produces are accepted: the schema-v1
     export object (records under ``"inscriptions"``, provenance under
     ``"_meta"``, per-record ``"derived"`` analyses — ignored here) and a
-    plain array of inscription records. ``script_id`` defaults to ``lineara``
-    (the workbench's own corpus); pass the real script when re-importing an
-    export of some other corpus, so the documents are not rebranded.
+    plain array of inscription records. When ``script_id`` is omitted,
+    ``_meta.script`` is used if present, falling back to ``"lineara"``.
 
     When ``script_id == "lineara"``, tokens are classified through the Linear A
     loader (`aegean.scripts.lineara.loader.classify`) so inline apparatus
     (erased ``𐝫`` → ``ReadingStatus.LOST`` / ``UNCLEAR``, bracketed ``[?]`` →
     ``UNCLEAR``, logograms, separators, and metrological fractions) is faithfully
-    restored, and `linear_a_inventory()` is attached to ``corpus.inventory``.
+    restored, and `linear_a_inventory()` is attached to ``corpus.sign_inventory``.
     Out-of-band `ReadingStatus` overrides on plain text tokens and
     `Token.annotations` are not represented in the workbench format (see
     `to_workbench`).
@@ -212,6 +299,12 @@ def from_workbench_export(
         raw = data
     else:
         raise ValueError("expected a workbench export object or an array of records")
+
+    resolved_script = (
+        script_id
+        if script_id is not None
+        else str(meta.get("script") or meta.get("scriptId") or "lineara")
+    )
 
     records: list[dict[str, Any]] = []
     # Keyed by id, NOT positional: from_records collapses duplicate ids to one
@@ -276,16 +369,18 @@ def from_workbench_export(
 
     sign_inventory: Any = None
     classify_fn: Any = None
-    if script_id == "lineara":
+    if resolved_script == "lineara":
         from ..scripts.lineara.inventory import linear_a_inventory
         from ..scripts.lineara.loader import classify as _classify_la
 
         sign_inventory = linear_a_inventory()
         classify_fn = _classify_la
+    else:
+        sign_inventory = _resolve_script_inventory(resolved_script)
 
     corpus = Corpus.from_records(
         records,
-        script_id=script_id,
+        script_id=resolved_script,
         provenance=Provenance(
             source=" · ".join(source_bits),
             license="see the workbench's data sources",

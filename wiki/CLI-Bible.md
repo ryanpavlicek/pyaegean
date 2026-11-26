@@ -1,16 +1,16 @@
 # CLI: Biblical & Koine Greek (`aegean bible …`)
 
-Complete command reference for `aegean bible`: multi-edition Greek New Testament reading
-and variant comparison (9 editions), 2nd–5th century CE manuscript witnesses, Strong's
-and Extended Strong's Greek lexicon with root trees, unified word studies, NT and
-Septuagint (LXX) concordance search, Masoretic ↔ LXX Psalm conversion, and 86 Greek
-patristic commentaries across 10 Church Fathers and traditions (*Catenae*, Origen,
-Cyril of Alexandria, Methodius, Eusebius, Clement of Alexandria, Procopius of Gaza,
-Photius, Oecumenius, and Theophylact of Bulgaria).
+Command reference for `aegean bible`: 9 Greek New Testament editions, 13 early
+2nd–5th century CE manuscript witnesses, Strong's and Extended Strong's Greek
+lexicons with root trees, word studies, NT and Septuagint (LXX) concordance
+search, Masoretic ↔ LXX Psalm conversion, and 86 Greek patristic commentaries
+across 10 Church Fathers and traditions (*Catenae*, Origen, Cyril of Alexandria,
+Methodius, Eusebius, Clement of Alexandria, Procopius of Gaza, Photius,
+Oecumenius, and Theophylact of Bulgaria).
 
-Every command works directly in your terminal (`aegean bible …`), inside the bare
-`aegean` interactive shell (`bible …` with live book, edition, manuscript, and work-ID
-prediction), and inside the TUI `:` console. Every command supports `--json`.
+Every command runs in the terminal (`aegean bible …`), inside the bare `aegean`
+shell (`bible …` with live book, edition, manuscript, and work-ID completion),
+and inside the TUI `:` console. Every command accepts `--json`.
 
 Back to [CLI Overview](CLI) · [CLI Cheatsheet](CLI-Cheatsheet) · [Biblical & Koine Greek (Python API)](New-Testament) · [TUI (`b`)](TUI)
 
@@ -21,39 +21,40 @@ Back to [CLI Overview](CLI) · [CLI Cheatsheet](CLI-Cheatsheet) · [Biblical & K
 | Command | Purpose | Common example |
 |---|---|---|
 | `bible read` | Read Greek NT (9 editions) or Septuagint (LXX auto-detected); interlinear or `.json`/`.db` export | `aegean bible read John 1:1-5 -i` |
-| `bible compare` | Side-by-side collation across up to 9 NT editions with word-level variant diffs | `aegean bible compare John 1:18` |
+| `bible compare` | Collate up to 9 NT editions with word-level variant diffs | `aegean bible compare John 1:18` |
 | `bible witnesses` | Compare extant 2nd–5th c. CE manuscripts (P45–P75, 01, 02, 03, 05) | `aegean bible witnesses John 18:37 -s P52,01,03` |
 | `bible strongs` | Strong's / Extended Strong's lookup, etymological root trees, and gloss search | `aegean bible strongs G3056 --roots` |
-| `bible word-study` | Unified Strong's entry, root family, book & morphology distribution, concordance | `aegean bible word-study ἀγάπη` |
+| `bible word-study` | Combined Strong's entry, root family, book & morphology counts, and concordance | `aegean bible word-study ἀγάπη` |
 | `bible search` | Greek NT (lemma/text/Strong's/morph/gloss) and Septuagint concordance | `aegean bible search V-AAI --by morph -b John` |
 | `bible commentary` | List, read, or search 86 Greek patristic commentaries (First1KGreek + *Patrologia Graeca*) | `aegean bible commentary read PG073` |
 | `bible books` | List NT books (27), LXX books (55), NT editions (9), witnesses (13), or all | `aegean bible books editions` |
 | `bible psalm` | Convert Masoretic (Hebrew/English) ↔ Septuagint Psalm numbers | `aegean bible psalm 23 --from mt` |
-| `bible status` | Show which Biblical bundles and patristic commentaries are installed on disk | `aegean bible status` |
-| `bible install` | Download all 5 Biblical bundles (or specific items like `editions`, `lxx`, `witnesses`) | `aegean bible install` |
+| `bible status` | Show which Biblical bundles and patristic commentaries are installed | `aegean bible status` |
+| `bible install` | Download all 5 Biblical bundles or selected items (`editions`, `lxx`, `witnesses`, …) | `aegean bible install` |
 
-Passage references accept both dot and colon notation (`1.1-5`, `1:1-5`, `3.16`, `3:16`,
-`1-3`). Septuagint books (`Gen`, `Exod`, `Ps`, `Isa`, `Wis`, …) auto-detect in
-`bible read` and `bible search`.
+Passage references accept dot or colon notation (`1.1-5`, `1:1-5`, `3.16`,
+`3:16`, `1-3`). Septuagint books (`Gen`, `Exod`, `Ps`, `Isa`, `Wis`, …) are
+auto-detected by `bible read` and `bible search`.
 
-### Downloading Biblical & Patristic texts
+### Downloading Biblical and patristic texts
 
-Bundled offline samples cover `John 1`, `Phlm 1`, `Gen 1:1-5`, and `LXX Ps 22:1-6`. To
-install the full 27-book NT, all 9 editions (`nestle1904`, `sblgnt`, `srgnt`, `bhp`,
-`tisch`, `wh`, `byz`, `antoniades`, `tr`), 13 early manuscripts, 11,142 Extended Strong's
-entries, and all 55 Swete Septuagint books (~27 MB total):
+Bundled offline samples cover `John 1`, `Phlm 1`, `Gen 1:1-5`, and `LXX Ps 22:1-6`.
+Install the full 27-book NT, all 9 editions (`nestle1904`, `sblgnt`, `srgnt`,
+`bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`), 13 early manuscripts, 11,142
+Extended Strong's entries, and all 55 Swete Septuagint books (~27 MB total):
 
 ```bash
-aegean bible status                         # see what is already installed
+aegean bible status                         # check what is already installed
 aegean bible install                        # download the full Biblical pack (~27 MB)
-aegean bible install editions lxx           # or pick individual bundles by friendly name
+aegean bible install editions lxx           # or pick individual bundles by name
 aegean library install patristic            # Apostolic Fathers (15), OT Pseudepigrapha (44), Patrologia Graeca (33 vols)
 aegean bible install commentary:John        # download First1KGreek commentaries on John
 ```
 
-In the TUI (`aegean tui`, press `b`), any tab or edition requiring an uninstalled bundle
-displays an inline **Download** bar right inside the screen (`f` downloads it and reloads
-automatically). See also `aegean library` in [CLI: Corpora, Analysis & Data](CLI-Corpora).
+In the TUI (`aegean tui`, press `b`), selecting a tab or edition whose asset is
+not yet cached shows an inline **Download** bar (`f` downloads and reloads the
+view). See also `aegean library` in
+[CLI: Corpora, Library, Analysis & Data](CLI-Corpora).
 
 ---
 
@@ -63,9 +64,9 @@ automatically). See also `aegean library` in [CLI: Corpora, Analysis & Data](CLI
 aegean bible read BOOK [PASSAGE] [--ref REF] [-e EDITION] [--lxx] [-i/--interlinear] [-o FILE] [--offline] [--json]
 ```
 
-Reads a chapter, verse, or range from any of the 9 Greek NT editions (`nestle1904`
-default, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`) or the
-55-book Swete Septuagint (`lxx-corpus`).
+Reads a chapter, verse, or range from any of the 9 Greek NT editions
+(`nestle1904` default, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`,
+`antoniades`, `tr`) or the 55-book Swete Septuagint (`lxx-corpus`).
 
 ```bash
 aegean bible read John 1:1-5                     # Nestle 1904 verse text
@@ -85,7 +86,7 @@ aegean export john1.json -f csv --level token -o john1.csv
 | `--lxx` | Force Septuagint (optional for unambiguously LXX books such as `Gen`, `Ps`, `Isa`). |
 | `-i`, `--interlinear` | Print a word-by-word table (Ref, Surface, Lemma, Morph, Strong's, Gloss). |
 | `-o`, `--output` | Write the loaded `Corpus` to `.json` or `.db`/`.sqlite` (dispatched by extension). |
-| `--offline` | Use local cache / bundled samples (`John 1`, `Phlm 1`, `Gen 1:1-5`, `LXX Ps 22:1-6`) without network access. |
+| `--offline` | Use local cache and bundled samples (`John 1`, `Phlm 1`, `Gen 1:1-5`, `LXX Ps 22:1-6`) without network access. |
 | `--json` | Emit structured JSON (`book`, `ref`, `source`, `citation`, `verses[]` with token annotations). |
 
 ---
@@ -96,10 +97,10 @@ aegean export john1.json -f csv --level token -o john1.csv
 aegean bible compare BOOK REF [-e EDITIONS] [--offline] [--json]
 ```
 
-Aligns a passage across up to 9 Greek NT editions (`nestle1904`, `sblgnt`, `srgnt`, `bhp`,
-`tisch`, `wh`, `byz`, `antoniades`, `tr`) and reports word-level substitutions, insertions,
-and omissions. Requires the `nt-editions` asset (~3.3 MB, fetched automatically on first use
-unless `--offline`).
+Aligns a passage across up to 9 Greek NT editions (`nestle1904`, `sblgnt`,
+`srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`) and reports word-level
+substitutions, insertions, and omissions. Uses the `nt-editions` asset (~3.3 MB,
+fetched on first use unless `--offline` is set).
 
 ```bash
 aegean bible compare John 1:18
@@ -110,7 +111,7 @@ aegean bible compare Mark 16:9-12 -e nestle1904,sblgnt,byz --json
 | Option | Effect |
 |---|---|
 | `-e`, `--editions` | Comma-separated subset of the 9 editions (default: `nestle1904,sblgnt,srgnt,byz,tr`). |
-| `--offline` | Use cached bundle only; fail cleanly if not yet fetched. |
+| `--offline` | Use cached bundle only; exit `1` if not yet fetched. |
 | `--json` | Emit verse texts and structured diff operations. |
 
 ---
@@ -121,10 +122,11 @@ aegean bible compare Mark 16:9-12 -e nestle1904,sblgnt,byz --json
 aegean bible witnesses BOOK REF [-s SIGLA] [--hand original|corrected] [-d/--diplomatic] [--no-expand] [--offline] [--json]
 ```
 
-Displays extant readings from 13 early Greek NT manuscripts (P45, P46, P47, P52, P66,
-P72, P75, Sinaiticus `01`/`א`, Alexandrinus `02`/`A`, Vaticanus `03`/`B`, Ephraemi
-`04`/`C`, Bezae `05`/`D`, Washingtonianus `032`/`W`), with automatic *nomina sacra*
-expansion and scribal correction tracking. Uses the `nt-witnesses` asset (~2.0 MB).
+Shows extant readings from 13 early Greek NT manuscripts (P45, P46, P47, P52,
+P66, P72, P75, Sinaiticus `01`/`א`, Alexandrinus `02`/`A`, Vaticanus `03`/`B`,
+Ephraemi `04`/`C`, Bezae `05`/`D`, Washingtonianus `032`/`W`), with *nomina
+sacra* expansion and scribal correction tracking. Uses the `nt-witnesses` asset
+(~2.0 MB).
 
 ```bash
 aegean bible witnesses John 1:18
@@ -150,10 +152,10 @@ aegean bible witnesses John 1:1 -s P66 --no-expand
 aegean bible strongs QUERY [-r/--roots] [-s/--search] [--fetch] [--offline] [-n/--limit N] [--json]
 ```
 
-Looks up a Strong's ID (`G3056`, `3056`), Greek lemma (`λόγος`), or searches glosses
-and definitions. Works offline immediately over the bundled Dodson lexicon, and
-automatically upgrades to all 11,142 STEPBible Extended Strong's entries (with Hebrew
-equivalents and full derivations) once `strongs-greek` is cached or `--fetch` is passed.
+Looks up a Strong's ID (`G3056`, `3056`) or Greek lemma (`λόγος`), or searches
+glosses and definitions. Runs offline against the bundled Dodson lexicon, and
+uses all 11,142 STEPBible Extended Strong's entries (with Hebrew equivalents and
+full derivations) once `strongs-greek` is cached or `--fetch` is passed.
 
 ```bash
 aegean bible strongs G3056
@@ -179,8 +181,9 @@ aegean bible strongs G26 --fetch --roots         # fetch Extended Strong's if no
 aegean bible word-study QUERY [-b BOOK] [-n/--limit N] [--offline] [--json]
 ```
 
-Combines Strong's lexicon metadata, etymological root family, book-by-book occurrence
-counts, Robinson morphology breakdown, and sample verse concordance into one report.
+Combines Strong's lexicon metadata, etymological root family, book-by-book
+occurrence counts, Robinson morphology breakdown, and sample verse concordance
+into one report.
 
 ```bash
 aegean bible word-study G3056
@@ -196,10 +199,10 @@ aegean bible word-study G5485 --limit 20 --json
 aegean bible search QUERY [--by FIELD] [-b BOOK] [--section SECTION] [-e EDITION] [--lxx] [-n/--limit N] [--offline] [--json]
 ```
 
-Searches the Greek New Testament by lemma, surface form, Strong's number, Robinson
-morphology prefix, or English gloss — or searches the 55-book Swete Septuagint
-(accent- and case-insensitive). Passing an LXX book (`-b Gen`, `-b Ps`) or `--section`
-auto-selects Septuagint search.
+Searches the Greek New Testament by lemma, surface form, Strong's number,
+Robinson morphology prefix, or English gloss, or searches the 55-book Swete
+Septuagint (accent- and case-insensitive). Passing an LXX book (`-b Gen`,
+`-b Ps`) or `--section` selects Septuagint search automatically.
 
 ```bash
 aegean bible search λόγος                              # NT lemma concordance
@@ -228,20 +231,20 @@ aegean bible search φῶς -b Gen --offline               # auto-detects LXX of
 aegean bible commentary [BOOK | WORK_ID | read TARGET | search TARGET TERM] [-k catena|origen|patristic|patrologia] [--ref REF] [-n/--limit N] [--json]
 ```
 
-Browse, read, and search **86 Greek patristic biblical commentary volumes** across
-10 Church Fathers and traditions:
+Browse, read, and search **86 Greek patristic biblical commentary volumes**
+across 10 Church Fathers and traditions:
 
-- **30 Greek NT *Catenae*** (`tlg4102.*`, First1KGreek, covering Matthew–Jude)
+- **30 Greek NT *Catenae*** (`tlg4102.*`, First1KGreek, Matthew–Jude)
 - **41 Origen** biblical commentaries, homilies, scholia, *selecta*, and *adnotationes* (`tlg2042.*`, First1KGreek)
 - **6 additional First1KGreek Fathers** (`kind=patristic`): Cyril of Alexandria (*In XII Prophetas*), Methodius (*Fragmenta in Job*), Eusebius (*Onomasticon*, *Eclogae propheticae*), Clement of Alexandria (*Eclogae propheticae*), and *Vitae Prophetarum* (with Hesychius scholia)
-- **9 *Patrologia Graeca* commentary volumes** (`kind=patrologia`, `patrologia-graeca-corpus`, CC BY 4.0 OCR): Cyril of Alexandria (`PG071` Minor Prophets, `PG073` John), Procopius of Gaza (`PG087_1` Octateuch/OT), Photius (`PG101` NT), Oecumenius (`PG118` Acts/Paul/Catholic Epistles), and Theophylact of Bulgaria (`PG123`–`PG126` Gospels, Paul, 1–2 Peter, and Minor Prophets)
+- **9 *Patrologia Graeca* commentary volumes** (`kind=patrologia`, `patrologia-graeca-corpus`, CC BY 4.0 OCR): Cyril of Alexandria (`PG071` Minor Prophets, `PG073` John), Procopius of Gaza (`PG087_1` Octateuch/OT), Photius (`PG101` NT), Oecumenius (`PG118` Acts/Paul/Catholic Epistles), and Theophylact of Bulgaria (`PG123`–`PG126` Gospels, Paul, 1–2 Peter, Minor Prophets)
 
 ```bash
 aegean bible commentary                          # list all 86 volumes
 aegean bible commentary John                     # Catenae, Origen, Cyril (PG073), Photius, Theophylact
 aegean bible commentary --kind patrologia        # list the 9 Patrologia Graeca commentary volumes
 
-# Read commentary sections (all equivalent natural forms):
+# Read commentary sections:
 aegean bible commentary read Matt                # read the Matthew catena
 aegean bible commentary tlg4102.tlg001           # read a First1KGreek TLG volume directly
 aegean bible commentary read PG073               # read Cyril of Alexandria on John (PG 73)
@@ -285,8 +288,9 @@ aegean bible books all               # summary of all 4 catalogs
 aegean bible psalm NUMBER [--from mt|lxx] [--json]
 ```
 
-Converts between Hebrew/English (Masoretic, `1–150`) and Greek Septuagint (`1–151`)
-Psalm numbers (including split/merged Psalms 9–10, 114–116, 146–147, and Psalm 151).
+Converts between Hebrew/English (Masoretic, `1–150`) and Greek Septuagint
+(`1–151`) Psalm numbers, including split and merged Psalms (9–10, 114–116,
+146–147) and Psalm 151.
 
 ```bash
 aegean bible psalm 23 --from mt      # MT Psalm 23 ↔ LXX Psalm 22
@@ -296,11 +300,11 @@ aegean bible psalm 151 --from lxx    # extra-canonical in MT
 
 ---
 
-## Interactive shell & TUI workflows
+## Interactive shell and TUI workflows
 
-Inside bare `aegean` (interactive shell) or the TUI `:` console, drop the `aegean`
-prefix and use `Tab` or `Right`/`End` for live completion of books, editions,
-manuscript sigla, commentary verbs, and TLG work IDs:
+Inside bare `aegean` or the TUI `:` console, omit the `aegean` prefix and use
+`Tab` or `Right`/`End` for live completion of books, editions, manuscript sigla,
+commentary verbs, and TLG work IDs:
 
 ```text
 aegean> bible read John 1:1-5 -i
@@ -310,6 +314,6 @@ aegean> bible commentary read Matt
 aegean> bible commentary search John λόγος
 ```
 
-For a full-screen study view (interlinear reader, 5-edition collation, early
-manuscripts, Strong's word study, and inline LXX search/reader), launch `aegean tui`
-and press **`b`**.
+For a full-screen workspace (interlinear reader, 9-edition collation, early
+manuscripts, Strong's word study, and the **LXX & Patristics** tab with inline
+LXX and *Patrologia Graeca* reading/search), run `aegean tui` and press **`b`**.

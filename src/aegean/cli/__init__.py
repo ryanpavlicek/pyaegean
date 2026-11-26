@@ -22,6 +22,8 @@ The command tree mirrors the public API:
   ``commentary``, ``books``, ``psalm``, ``status``, ``install``);
 - ``aegean analyze …``: distance, alignment, cross-script comparison,
   association statistics, morphological clusters, structure census;
+- ``aegean bundle …``: portable, SHA-256-verified, license-clean research
+  bundles (``create``, ``inspect``, ``verify``, ``extract``, ``hydrate``);
 - ``aegean data …``: the fetch-to-store data layer (``fetch``, ``list``,
   ``store``, ``versions``, ``remove``);
 - ``aegean db …``: SQLite persistence (``build``, ``add``, ``search``);
@@ -102,6 +104,7 @@ def _build_app() -> Any:
     from ._ai import ai_app
     from ._analyze import analyze_app
     from ._bible import bible_app
+    from ._bundle import bundle_app
     from ._data import data_app
     from ._db import db_app
     from ._greek import greek_app
@@ -112,8 +115,8 @@ def _build_app() -> Any:
         pretty_exceptions_show_locals=False,
         help=(
             "pyaegean from the shell: corpora, library manager, Greek NLP, Biblical/Koine Greek, "
-            "analysis, data, and the AI layer. Run bare `aegean` in a terminal for the "
-            "interactive shell; every data-producing command takes --json."
+            "analysis, data, research bundles, and the AI layer. Run bare `aegean` in a terminal "
+            "for the interactive shell; every data-producing command takes --json."
         ),
         epilog=(
             "Start with: aegean (or aegean repl) · aegean quickstart · aegean info lineara · "
@@ -156,6 +159,7 @@ def _build_app() -> Any:
     app.add_typer(greek_app, name="greek")
     app.add_typer(bible_app, name="bible")
     app.add_typer(analyze_app, name="analyze")
+    app.add_typer(bundle_app, name="bundle")
     app.add_typer(data_app, name="data")
     app.add_typer(db_app, name="db")
     app.add_typer(ai_app, name="ai")

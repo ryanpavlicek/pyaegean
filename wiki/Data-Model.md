@@ -1,48 +1,44 @@
 # Data model
 
-This page makes the internal structure transparent so you can extend it with
-confidence: every field of every core object, what may live in a token's
-`annotations` dict, how the pipeline's records relate to corpus tokens, what
-`fingerprint()` and `copy()` actually guarantee, the persistence contracts, and
-the invariants your own corpus or loader must hold (including exactly where a
-wrong extension breaks a round-trip). [Architecture](Architecture) is the
-companion tour of the layering and the serialization/query surface; come here
-when you are building on the objects themselves.
+This page documents pyaegean's core object model: every field on `Corpus`,
+`Document`, `Token`, and `TokenRecord`, the reserved keys in
+`Token.annotations`, `fingerprint()` and `copy()` semantics, JSON and SQLite
+persistence contracts, and the invariants required for custom corpora and
+loaders. For module layering and query APIs, see [Architecture](Architecture).
 
-Every example below was run against the installed package; the output shown is
-the real output.
+All examples below were run against the installed package and show actual
+output.
 
 ---
 
-## 1. The object hierarchy
+## 1. Object hierarchy
 
-```
-Corpus                          a collection of documents + shared context
+```text
+Corpus                          collection of documents + shared context
 ├── documents: list[Document]   one per inscription / tablet / text
-│   ├── tokens: list[Token]     the transliterated text stream, in order
-│   ├── lines:  list[list[int]] each physical line = a list of indices into tokens
+│   ├── tokens: list[Token]     transliterated text stream, in order
+│   ├── lines:  list[list[int]] physical lines as indices into tokens
 │   ├── source_text: str | None exact source snapshot for aligned documents
-│   └── meta:   DocumentMeta    site, period, scribe, support, findspot, name, …
-├── sign_inventory: SignInventory | None    the script's Sign objects, indexed
+│   └── meta:   DocumentMeta    site, period, scribe, support, findspot, name, ...
+├── sign_inventory: SignInventory | None    indexed Sign objects for the script
 ├── provenance: Provenance | None           source, license, citation, notes
-└── script_id: str                          "lineara", "greek", "custom", …
+└── script_id: str                          "lineara", "greek", "custom", ...
 ```
 
-Three things to internalize:
+Four structural rules govern this hierarchy:
 
-- **`lines` holds indices, not tokens.** A line is a list of positions into
-  `document.tokens`; `document.line_tokens` resolves them for you. This is what
-  lets a token belong to the physical layout without being stored twice.
-- **`Token` and `Sign` are frozen dataclasses** (edit one with
-  `dataclasses.replace`), each carrying a mutable metadata dict:
-  `Token.annotations` and `Sign.attrs`. `Document` is
-  mutable.
-- **Source alignment is typed, not an annotation convention.** An aligned token
-  carries an immutable `SourceAlignment`; its document retains the exact
-  `source_text` those offsets address.
-- **Document ids are unique within a corpus.** Constructing a `Corpus` with
-  duplicate ids collapses them (keeping the last) with a warning; `merge`
-  refuses duplicates by default (`dedupe="error"`).
+- **`lines` stores token indices, not token copies.** Each entry in
+  `document.lines` is a list of indices into `document.tokens`;
+  `document.line_tokens` resolves them into token lists.
+- **`Token` and `Sign` are frozen dataclasses.** Modify fields via
+  `dataclasses.replace`. Each carries one mutable mapping (`Token.annotations`
+  and `Sign.attrs`). `Document` is mutable.
+- **Source alignment is typed.** An aligned token carries an immutable
+  `SourceAlignment`; its owning `Document` stores the exact `source_text` those
+  character offsets index.
+- **Document IDs are unique within a corpus.** Passing duplicate IDs to
+  `Corpus(...)` collapses duplicates (keeping the last) with a warning;
+  `Corpus.merge` raises on duplicate IDs by default (`dedupe="error"`).
 
 ```python
 import aegean
@@ -51,13 +47,13 @@ corpus = aegean.load("lineara")          # Corpus
 doc = corpus.get("HT13")                 # Document
 print(type(corpus).__name__, "of", len(corpus), "documents")
 print(doc.id, doc.script_id, "-", len(doc.tokens), "tokens on", len(doc.lines), "lines")
-print("lines:", doc.lines)               # each line = a list of indices into doc.tokens
+print("lines:", doc.lines)
 tok = doc.tokens[0]                      # Token
 print("first token:", tok.text, tok.kind, tok.signs)
 print("line 2 text:", [t.text for t in doc.line_tokens[1]])
 ```
 
-```
+```text
 Corpus of 1721 documents
 HT13 lineara - 22 tokens on 8 lines
 lines: [[0, 1, 2, 3, 4], [5, 6, 7], [8, 9], [10, 11, 12], [13, 14], [15, 16], [17, 18], [19, 20, 21]]
@@ -70,36 +66,35 @@ line 2 text: ['RE-ZA', '5', '¹⁄₂']
 ## 2. `Token`, field by field
 
 | Field | Type | Meaning |
-|---|---|---|
-| `text` | `str` | the transliteration as written, e.g. `KU-RO` or `Λόγος,` |
-| `kind` | `TokenKind` | `word` / `logogram` / `numeral` / `separator` / `punct` / `unknown` |
-| `signs` | `tuple[str, ...]` | decomposed sign labels, e.g. `("KU", "RO")`; empty for alphabetic text |
-| `glyphs` | `str \| None` | the Unicode form, when known |
-| `line_no` | `int \| None` | which physical line the token sits on |
-| `position` | `int \| None` | the token's index within the document's token stream |
-| `status` | `ReadingStatus` | editorial certainty (§3); defaults to `CERTAIN` |
-| `alt` | `tuple[str, ...]` | alternate readings (EpiDoc `<app>`/`<rdg>`); `text` is the preferred reading |
-| `annotations` | `dict[str, str]` | script-specific per-token facts; the extension surface (below) |
-| `alignment` | `SourceAlignment \| None` | exact source identity, span, whitespace, and normalization provenance |
-| `form_state` | `TokenFormState \| None` | typed diplomatic, editorial, and model-input forms with ordered apparatus segments |
+| --- | --- | --- |
+| `text` | `str` | Transliteration or surface form, e.g. `KU-RO` or `Λόγος,` |
+| `kind` | `TokenKind` | `word`, `logogram`, `numeral`, `separator`, `punct`, or `unknown` |
+| `signs` | `tuple[str, ...]` | Decomposed sign labels, e.g. `("KU", "RO")`; empty for alphabetic text |
+| `glyphs` | `str \| None` | Unicode glyph form, when known |
+| `line_no` | `int \| None` | Physical line number |
+| `position` | `int \| None` | Token index within the document's token stream |
+| `status` | `ReadingStatus` | Editorial certainty (§3); defaults to `CERTAIN` |
+| `alt` | `tuple[str, ...]` | Alternate readings (EpiDoc `<app>`/`<rdg>`); `text` holds the preferred reading |
+| `annotations` | `dict[str, str]` | Per-token string annotations (see below) |
+| `alignment` | `SourceAlignment \| None` | Exact source identity, character span, whitespace, and normalization record |
+| `form_state` | `TokenFormState \| None` | Typed diplomatic, editorial, and model-input forms with ordered apparatus segments |
 
-`kind` is load-bearing: `document.words`, word-scope queries, the review
-export, and `annotate_corpus` all gate on `TokenKind.WORD`, so a token
-mislabeled `unknown` silently disappears from every word-level analysis.
-`position` is pure data (it may be `None`, and persistence never reorders by
-it, see §6). The review loop prefers `alignment.source_token_id` when present
-and retains `document.id` + `position` as the compatibility join for older
-tables, so keep `position` equal to the token's list index in unaligned documents.
+`document.words`, word-scope queries, review exports, and `annotate_corpus` all
+filter on `TokenKind.WORD`; a word token labeled `unknown` is excluded from
+word-level analyses. `position` is plain data (it may be `None`, and SQLite
+persistence orders by `token_order`, see §6). Review round-tripping joins on
+`alignment.source_token_id` when available and falls back to `document.id` plus
+`position` for unaligned documents, so keep `position` equal to the token list
+index on unaligned corpora.
 
-A gold-annotated token from the New Testament corpus shows a full set of
-fields in the wild:
+A gold-annotated token from the New Testament corpus:
 
 ```python
 import aegean
 
 nt = aegean.load("nt")
 doc = nt.get("John 1")
-tok = doc.tokens[4]                       # λόγος, the fifth token of John 1:1
+tok = doc.tokens[4]                       # Λόγος, fifth token of John 1:1
 print("text      :", tok.text)
 print("kind      :", tok.kind)
 print("signs     :", tok.signs)
@@ -112,7 +107,7 @@ for k, v in sorted(tok.annotations.items()):
     print(f"annotations[{k!r}] = {v!r}")
 ```
 
-```
+```text
 text      : Λόγος,
 kind      : TokenKind.WORD
 signs     : ()
@@ -130,55 +125,50 @@ annotations['strongs'] = '3056'
 annotations['upos'] = 'NOUN'
 ```
 
-### What lives in `annotations`
+### Keys in `annotations`
 
-`annotations` is a flat `dict[str, str]` (keep the values strings; the
-built-in writers do, including the booleans, stored as `"true"`/`"false"`). It
-is covered by `fingerprint()`, survives the JSON and SQLite round-trips
-unchanged, and spreads into token-level DataFrames. The keys in use, by who
-writes them:
+`annotations` is a flat `dict[str, str]` (booleans are stored as `"true"` /
+`"false"`). It is included in `fingerprint()`, survives JSON and SQLite
+round-trips unchanged, and expands into columns in token-level DataFrames.
 
-| Written by | Keys | Meaning |
-|---|---|---|
-| the NT corpus (gold) | `lemma`, `morph`, `strongs`, `gloss`, `normalized`, `upos`, `ref` | edition-supplied annotation |
-| `greek.annotate_corpus` | `lemma`, `upos`, `lemma_source`, `lemma_resolved`, `lemma_verified`, `review_recommended` | machine analysis, exact provenance, and separate resolution/review state (§4) |
-| `aegean.io.from_review_table` | `<field>__pred`, `<field>_review_decision`, `<field>_verified`, `<field>_reviewed_by`, `<field>_review_note`, `<field>_review_evidence`, `review_status`, `reviewed_by`, `review_note`, `review_evidence`, `review_history` | current field decisions and their dated audit trail (§7.3) |
-| you | anything else | your own per-token facts |
+| Writer | Keys | Meaning |
+| --- | --- | --- |
+| NT corpus (gold) | `lemma`, `morph`, `strongs`, `gloss`, `normalized`, `upos`, `ref` | Edition-supplied annotations |
+| `greek.annotate_corpus` | `lemma`, `upos`, `lemma_source`, `lemma_resolved`, `lemma_verified`, `review_recommended` | Machine analysis, provenance, and review flags (§4) |
+| `aegean.io.from_review_table` | `<field>__pred`, `<field>_review_decision`, `<field>_verified`, `<field>_reviewed_by`, `<field>_review_note`, `<field>_review_evidence`, `review_status`, `reviewed_by`, `review_note`, `review_evidence`, `review_history` | Reviewer decisions and dated audit trail (§7.3) |
+| User code | Any other string key | Custom per-token metadata |
 
-The `<field>__pred` convention is the audit trail: when a reviewer's
-correction is applied, the corrected value replaces the machine value under
-its normal key (`lemma`, `upos`, `morph` or `feats`) and the machine value the
-reviewer saw is preserved under `lemma__pred` / `upos__pred` / `morph__pred`.
-Nothing is overwritten silently; treat any key ending in `__pred` as reserved
-for that convention. `lemma_source` holds a `LemmaSource` evidence-class value
-(`attested` / `neural_lookup` / `neural_edit` / generic `neural` / `rule` / `seed` /
-`paradigm` / `identity` / `unresolved` / `punct` / `user`). `lemma_resolved`,
-`lemma_verified`, and `review_recommended` keep distinct questions separate; the
-review export uses the explicit review signal. The legacy `lemma_known` key is a
-deprecated compatibility alias for `lemma_resolved`.
+When a reviewer correction is applied, the corrected value replaces `lemma`,
+`upos`, `morph`, or `feats`, and the original machine prediction is preserved
+under `<field>__pred` (`lemma__pred`, `upos__pred`, `morph__pred`). Treat any
+key ending in `__pred` as reserved. `lemma_source` stores a `LemmaSource` value
+(`attested`, `neural_lookup`, `neural_edit`, `neural`, `rule`, `seed`,
+`paradigm`, `identity`, `unresolved`, `punct`, or `user`). `lemma_resolved`,
+`lemma_verified`, and `review_recommended` separate resolution, human
+verification, and review flagging; `lemma_known` is a deprecated compatibility
+alias for `lemma_resolved`.
 
 ### Lossless source alignment
 
-`SourceAlignment` keeps source mapping out of the free-form annotations dict:
+`SourceAlignment` keeps exact character spans typed outside `annotations`:
 
 | Field | Meaning |
-|---|---|
-| `document_id`, `sentence_id` | owning source and sentence identities |
-| `source_token_id` | stable identity for an unchanged exact source snapshot |
-| `original_text` | exact source slice |
-| `start_char`, `end_char` | half-open Python Unicode code-point offsets |
-| `whitespace_before` | exact Unicode whitespace since the preceding token |
-| `normalized_text` | model-facing normalized form |
-| `normalization_ops` | ordered operations, currently `unicode:nfc` when NFC changes text |
+| --- | --- |
+| `document_id`, `sentence_id` | Owning document and sentence identities |
+| `source_token_id` | Stable token identity for an unchanged source snapshot |
+| `original_text` | Exact slice from `Document.source_text` |
+| `start_char`, `end_char` | Half-open Python Unicode code-point offsets |
+| `whitespace_before` | Exact whitespace preceding this token |
+| `normalized_text` | Model-facing normalized string |
+| `normalization_ops` | Ordered normalization steps (e.g. `unicode:nfc`) |
 
-An aligned `Document` sets `source_text`; `validate_source_alignment()` checks
-every slice, gap, document ID, source-token ID, order, and overlap. Schema-2 JSON
-and SQLite preserve the value. A schema-1 corpus still loads with
+Aligned documents set `source_text`; `doc.validate_source_alignment()` verifies
+every slice, whitespace gap, ID, order, and non-overlap invariant. Schema-2 and
+schema-3 JSON and SQLite preserve alignment; schema-1 corpora load with
 `source_text=None` and `alignment=None`.
 
 ```python
-from aegean import Document
-from aegean import greek
+from aegean import Document, greek
 
 source = "  α\u0301\tλόγος."
 tokens = greek.tokenize_aligned(source, document_id="demo")
@@ -192,129 +182,122 @@ source[tokens[0].alignment.start_char:tokens[0].alignment.end_char] == "α\u0301
 
 ### Typed editorial forms and model input
 
-`Token.text` is the preferred/display token used by corpus views. When an edition
-exposes more than one spelling, `Token.form_state` keeps the distinctions explicit:
+`Token.text` holds the display token. When an edition distinguishes diplomatic
+and editorial forms, `Token.form_state` records each layer explicitly:
 
 | Field | Meaning |
-|---|---|
-| `diplomatic` | the original or diplomatic form supplied by the edition |
-| `regularized` | an optional editorial spelling, such as a corrected or expanded form |
-| `normalized` | an optional normalized form used by a preprocessing convention |
-| `model_input` | the exact string handed to an analyzer, after the selected form and any recorded operations |
-| `model_input_source` | whether that input came from `diplomatic`, `regularized`, `normalized`, or an explicit value |
-| `segments` | ordered pieces with `certain`, `restored`, `unclear`, or `lost` status and optional semantic source references |
+| --- | --- |
+| `diplomatic` | Original or diplomatic spelling from the edition |
+| `regularized` | Editorial spelling (corrected or expanded form) |
+| `normalized` | Preprocessing-normalized spelling |
+| `model_input` | Exact string passed to an analyzer after recorded operations |
+| `model_input_source` | Origin of `model_input`: `diplomatic`, `regularized`, `normalized`, or explicit |
+| `segments` | Ordered pieces tagged `certain`, `restored`, `unclear`, or `lost`, with optional source references |
 
-These fields have different evidential roles. `diplomatic`, `regularized`,
-`normalized`, and the segment statuses describe the source or an editorial
-representation. `model_input` describes a computation. It must not be read as a
-new edition reading. For `pipeline_tokens()`, selection is deterministic:
-explicit `model_input`, then `regularized`, then `normalized`, then `diplomatic`,
-then the legacy `Token.text` fallback. The returned `TokenRecord` retains the
-state and records the exact input and ordered operations, including an NFC
-operation when a neural backend changes the string's Unicode normalization.
+`diplomatic`, `regularized`, `normalized`, and `segments` describe source or
+editorial text; `model_input` records computational input rather than a new
+edition reading. `pipeline_tokens()` selects model input deterministically in
+order: explicit `model_input`, `regularized`, `normalized`, `diplomatic`, then
+`Token.text`. The resulting `TokenRecord` retains `form_state` and records
+operations applied during inference (such as NFC normalization).
 
-Token-carrier EpiDoc choices such as
-`<choice><reg>…</reg><orig>…</orig></choice>` and apparatus elements such as
-`<supplied>`, `<unclear>`, and `<gap>` populate this typed value. The generic
-EpiDoc writer emits semantic choices and apparatus, but does not promise
-byte-identical XML. A state with no apparatus can still be constructed directly
-with `TokenFormState` for a controlled preprocessing step.
+Token-carrier EpiDoc choices (`<choice><reg>…</reg><orig>…</orig></choice>`) and
+apparatus elements (`<supplied>`, `<unclear>`, `<gap>`) populate `form_state`.
+`to_epidoc()` emits semantic choices and apparatus without promising
+byte-identical XML.
 
-### CoNLL-U uses a separate lossless structural model
+### Lossless CoNLL-U structural model
 
-Treebank rows are not forced into `Corpus.Token`. `greek.UDDocument` preserves ordered
-comments and complete ten-column CoNLL-U rows through `UDSentence.rows` and
-`UDSentence.items`. Integer-ID words remain available through `UDSentence.tokens`, while
-`UDMultiwordToken`, `UDEmptyNode`, typed enhanced dependencies, and ordered MISC entries
-retain structures that are not syntactic words. `UDSentence.projection` makes the mapping
-between those two views explicit.
+Treebank files use a dedicated model (`greek.UDDocument`) rather than forcing
+non-word rows into `Corpus.Token`. `UDSentence.rows` and `UDSentence.items`
+retain ordered comments, complete ten-column CoNLL-U rows, `UDMultiwordToken`
+ranges, `UDEmptyNode` entries, enhanced dependencies, and ordered MISC entries.
+Integer-ID syntactic words remain exposed on `UDSentence.tokens`, with the
+mapping recorded on `UDSentence.projection`.
 
-`greek.load_conllu_document()` plus `greek.write_conllu()` is the exact document
-round-trip. Use `strict=True` when validation is required; the lenient default retains
-valid structure and opaque malformed rows for inspection while keeping the legacy word
-projection stable. The v3 neural model consumes only that word projection, so structural
-gold rows are never presented as its predictions.
+`greek.load_conllu_document()` and `greek.write_conllu()` perform lossless
+document round-trips. Pass `strict=True` for strict validation; lenient mode
+preserves valid structure and opaque malformed rows for inspection. The `v3`
+neural pipeline consumes only the syntactic word projection.
 
 ---
 
-## 3. `ReadingStatus`: where each status comes from
+## 3. `ReadingStatus`
 
-Every token carries an editorial certainty following Leiden / EpiDoc
-conventions. The four states are exhaustive, and unknown values are rejected
-at construction, so the enum is a real invariant:
+Every token carries a Leiden/EpiDoc editorial certainty state. Unknown values
+raise `ValueError` at construction.
 
-| Status | Meaning | Set by |
-|---|---|---|
-| `certain` | securely read | the default |
-| `unclear` | damaged but read | Leiden underdot; EpiDoc `<unclear>`; erasures (`⟦ ⟧`); illegible-sign marks in the Cypriot apparatus |
-| `restored` | editorially supplied | Leiden `[ ]`; EpiDoc `<supplied>` |
-| `lost` | not preserved / lacuna | Leiden `[---]`; EpiDoc `<gap>` or `<supplied reason="undefined">` |
+| Status | Meaning | Sources |
+| --- | --- | --- |
+| `certain` | Securely read | Default |
+| `unclear` | Damaged but legible | Leiden underdot; EpiDoc `<unclear>`; erasures (`⟦ ⟧`); illegible-sign marks in Cypriot |
+| `restored` | Editorially supplied | Leiden `[ ]`; EpiDoc `<supplied>` |
+| `lost` | Not preserved / lacuna | Leiden `[---]`; EpiDoc `<gap>` or `<supplied reason="undefined">` |
 
-Concretely: the bundled Linear A and Cypriot loaders decode their editions'
-Leiden apparatus; the six currently hosted epigraphy and papyri assets
-(`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `ddbdp`) expose aggregate
-`ReadingStatus` values, and a word touched by more than one state carries the
-most severe one. Their legacy assets do not carry the newer typed
-`TokenFormState`. A token-carrier EpiDoc import can populate both the aggregate
-status and the typed state from the same elements, and the EpiDoc writer emits
-them semantically; `Corpus.from_records` takes a `"status"` string per token (§7.1). See
-[Using Critical Editions](Using-Critical-Editions) for working with them.
+The bundled Linear A and Cypriot loaders decode their editions' Leiden
+apparatus. The eight hosted Greek epigraphy and papyri assets (`isicily`, `iip`,
+`iospe`, `igcyr`, `aphrodisias`, `crete`, `edh`, `ddbdp`) expose aggregate
+per-token `ReadingStatus` (taking the most severe state when multiple apply);
+those prebuilt assets do not carry `TokenFormState`. Token-carrier EpiDoc
+imports (`aegean.io.from_epidoc`) populate both `ReadingStatus` and
+`TokenFormState`, and `Corpus.from_records` accepts a `"status"` string per
+token (§7.1). See [Using Critical Editions](Using-Critical-Editions).
 
 ```python
-import aegean
 from collections import Counter
+import aegean
 
 corpus = aegean.load("lineara")
 print(dict(Counter(t.status.value for d in corpus for t in d.tokens)))
 print([(t.text, t.status.value) for t in corpus.get("HT23b").tokens][:8])
 ```
 
-```
+```text
 {'certain': 5734, 'lost': 552, 'unclear': 120}
 [('NI-RA', 'certain'), ('CYP', 'certain'), ('¹⁄₃', 'certain'), ('OLE', 'certain'), ('¹⁄₃', 'certain'), ('MI+JA+RU', 'certain'), ('MU', 'certain'), ('QA2+[?]+PU', 'unclear')]
 ```
 
 ---
 
-## 4. `TokenRecord` is not a `Token`
+## 4. `TokenRecord` vs `Token`
 
-A common confusion. `Token` is **corpus data**: what an edition says, stored
-in documents, persisted and cited. `greek.TokenRecord` is **pipeline output**:
-one token's analysis from `greek.pipeline()`, ephemeral, never stored in a
-corpus. Both may carry the same immutable `SourceAlignment`, but their linguistic
-fields and persistence roles are otherwise separate. Loaded annotations are source
-data, not fresh model predictions. `annotate_corpus()` returns a copy but replaces
-lemma/POS and clears prior lemma evidence and neural coverage/warnings. It writes
-fresh evidence when enabled; custom taggers and `with_evidence=False` leave those
-fields absent. Unrelated source annotations and historical review records remain;
-keep the original separately for comparison.
-`review_recommended=False` does not certify any predicted field. Only
-`lemma_verified` records an imported human lemma correction (`user`).
+`Token` holds persistent corpus data stored in documents and cited with the
+corpus. `greek.TokenRecord` holds ephemeral analysis output returned by
+`greek.pipeline()`. Both can carry the same immutable `SourceAlignment`, but
+their linguistic fields are separate.
+
+`greek.annotate_corpus()` bridges them by returning a copy of the corpus with
+pipeline predictions written into `Token.annotations`. Re-annotation replaces
+`lemma` and `upos` and clears prior lemma evidence and neural warnings (custom
+taggers or `with_evidence=False` leave evidence fields unset); unrelated source
+annotations and historical review records remain. `review_recommended=False`
+does not certify correctness; only `lemma_verified="true"` records an imported
+human decision (`user`).
 
 | `TokenRecord` field | Meaning |
-|---|---|
-| `sentence` | 0-based sentence number within the input text |
-| `index` | 1-based token position within its sentence |
-| `text` | the token |
-| `upos` | universal POS tag |
-| `lemma` | the lemma |
-| `lemma_source` | the lemma's evidence class (`LemmaSource`) |
-| `lemma_resolved` | whether a real lemma decision exists rather than a surface fallback |
-| `lemma_verified` | whether an imported human lemma correction is recorded (`user`) |
-| `review_recommended` | whether the lemma source is `identity` or `unresolved`; not a general error flag |
-| `head` | `index` of the head record in the same sentence; `0` = root, `None` = no parse |
-| `relation` | dependency relation. Note the name: it is `relation`, **not** `deprel` |
-| `xpos`, `feats` | 9-char positional tag / UD FEATS; filled by the neural pipeline only |
-| `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
-| `lemma_source_path` | neural composition path (`lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback`) |
-| `upos_confidence`, `lemma_confidence` | legacy flat confidence floats, retained without source/domain scope |
-| `token_confidence` | typed per-task `ConfidenceResult` values or explicit unavailable reasons |
-| `sentence_confidence` | typed sentence result, required component names, and optional abstention decision |
-| `alignment` | exact source identity, original/normalized text, span, and whitespace |
-| `form_state` | typed editorial forms and exact model input when records came from `pipeline_tokens()` |
-| `boundary_policy`, `boundary_policy_id` | named sentence policy and stable policy identity on the sentence's terminal record |
-| `boundary_provenance`, `boundary_confidence` | boundary evidence class; built-in rules have `None` confidence, while plugins may supply `[0, 1]` metadata |
-| `boundary_start_char`, `boundary_end_char` | half-open source span for that sentence when all token alignments prove it; otherwise `None` |
+| --- | --- |
+| `sentence` | 0-based sentence index in input |
+| `index` | 1-based token index within the sentence |
+| `text` | Token surface form |
+| `upos` | Universal POS tag |
+| `lemma` | Predicted or resolved lemma |
+| `lemma_source` | `LemmaSource` evidence class |
+| `lemma_resolved` | `True` when a lemma decision exists rather than a surface fallback |
+| `lemma_verified` | `True` only for an imported human lemma correction (`user`) |
+| `review_recommended` | `True` when `lemma_source` is `identity` or `unresolved` |
+| `head` | `index` of syntactic head (`0` = root, `None` = unparsed) |
+| `relation` | Dependency relation label (named `relation`, not `deprel`) |
+| `xpos`, `feats` | 9-character positional tag and UD FEATS (neural pipeline only) |
+| `lemma_known` | Deprecated alias for `lemma_resolved` |
+| `lemma_source_path` | Neural lemma composition route (`lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback`) |
+| `upos_confidence`, `lemma_confidence` | Legacy flat confidence floats without source/domain scope |
+| `token_confidence` | Typed per-task `ConfidenceResult` values or explicit unavailable reasons |
+| `sentence_confidence` | Typed sentence confidence, required component names, and optional abstention decision |
+| `alignment` | Exact source identity, original/normalized text, span, and whitespace |
+| `form_state` | Typed editorial forms and exact model input (when called via `pipeline_tokens()`) |
+| `boundary_policy`, `boundary_policy_id` | Sentence segmentation policy name and ID on each sentence's terminal record |
+| `boundary_provenance`, `boundary_confidence` | Boundary evidence class (`None` confidence for built-in rules; `[0, 1]` optional for plugins) |
+| `boundary_start_char`, `boundary_end_char` | Half-open source span for the sentence when provable from alignments; else `None` |
 
 ```python
 from aegean import greek
@@ -327,7 +310,7 @@ for r in records:
           f"head={r.head} relation={r.relation} xpos={r.xpos} feats={r.feats}")
 ```
 
-```
+```text
 0 1 ὁ          DET    ὁ          seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
 0 2 λόγος      NOUN   λόγος      seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
 0 3 σὰρξ       NOUN   σὰρξ       unresolved     resolved=False verified=False review=True  head=None relation=None xpos=None feats=None
@@ -339,56 +322,46 @@ for r in records:
 0 9 .          PUNCT  .          punct          resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
 ```
 
-### Typed confidence and review policy
+### Typed confidence and abstention policy
 
-The confidence fields are additive model evidence. `token_confidence` contains one
-`ConfidenceResult` for each supported task (UPOS, XPOS, FEATS, lemma, head, and relation),
-and `sentence_confidence` records its named components. A result is either an available
-value with model/source/domain scope, a calibration id, sample count, and measured ECE or
-Brier score, or an unavailable result with a stable reason such as `missing_calibration`,
-`unsupported_task`, `unsupported_source`, `unsupported_domain`, or
-`confidence_unavailable`. An unavailable value records the absence of a calibrated
-estimate, so it must not be read as a zero score. The compatibility
-`upos_confidence`/`lemma_confidence` fields do not acquire this scope retroactively.
+`token_confidence` holds one `ConfidenceResult` per task (UPOS, XPOS, FEATS,
+lemma, head, relation), and `sentence_confidence` lists its required components.
+Each entry is either available (carrying model, source, domain, calibration ID,
+sample size, and measured ECE/Brier score) or unavailable with a reason code
+(`missing_calibration`, `unsupported_task`, `unsupported_source`,
+`unsupported_domain`, or `confidence_unavailable`). An unavailable entry means
+no calibrated estimate exists, not a probability of zero.
 
-`confidence_domain=` is an explicit query label, not an automatic genre or OOD detector.
-`greek.use_calibration_registry()` loads the bundled Schema-2 `CalibrationRegistry`
-covering all six tasks across both `literary` and `documentary_native` domains; resolution
-first tries an exact source/domain entry and only uses a broader entry when that entry is
-explicitly marked as a fallback. An `AbstentionPolicy` supplied through
-`confidence_policy=` applies caller-selected task thresholds, none of them bundled, and
-returns `accept`, `review`, or `unavailable`; its canonical `policy_sha256` travels with
-each decision. For the shipped canonical runtime, schema-4 `AnalysisReceipt` output records
-calibration/policy hashes, runtime-variant evidence, and the composed output/post-processing
-identity. Schemas 1 through 3 remain readable for current hosted evidence without fabricating
-fields they did not record.
+`confidence_domain=` is an explicit caller-supplied label, not an automatic
+domain classifier. `greek.use_calibration_registry()` activates the bundled
+Schema-2 `CalibrationRegistry` covering all six tasks across `literary` and
+`documentary_native` domains; lookup prefers exact source/domain entries and
+uses a broader entry only if explicitly marked as a fallback. Passing a
+caller-defined `AbstentionPolicy` via `confidence_policy=` yields `accept`,
+`review`, or `unavailable` along with `policy_sha256`. Schema-4
+`AnalysisReceipt` records calibration/policy hashes, runtime-variant evidence,
+and composed output/post-processing identity (schemas 1–3 remain readable
+without synthesizing missing fields).
 
 ### Sentence boundaries and precedence
 
-`greek.segment_text()` returns a `SegmentationResult` containing the exact source,
-ordered `SentenceBoundary` values, a named policy, a stable `policy_id`, and a
-`provenance` value (`rule`, `explicit`, or `plugin`). Boundary `start`/`end` (also
-exposed as `start_char`/`end_char`) are half-open Python code-point offsets. The
-rich result retains punctuation in each source slice; `greek.sentences()` remains
-the compatibility projection with trimmed strings and terminal marks removed.
-`SegmentationResult.to_json()` and `.from_json()` use a strict schema and verify
-that boundary text, spans, policy, and IDs agree.
+`greek.segment_text()` returns a `SegmentationResult` containing the exact
+source string, ordered `SentenceBoundary` entries (half-open `start`/`end` or
+`start_char`/`end_char` code-point offsets retaining punctuation), policy name,
+`policy_id`, and `provenance` (`rule`, `explicit`, or `plugin`).
+`greek.sentences()` remains a trimmed string projection with terminal marks
+removed. `SegmentationResult.to_json()` and `.from_json()` validate that
+boundary slices, spans, policy, and IDs agree.
 
-For raw `pipeline()` input, `sentence_policy` selects the named rules before
-tokenization. For `pipeline_tokens()` input, complete contiguous runs of
-`Token.alignment.sentence_id` are explicit sentence metadata and take precedence
-over punctuation, the named policy, and any segmenter callback. Partial,
-non-contiguous, or cross-document IDs are rejected. If explicit IDs are absent,
-the selected policy is applied to the typed token stream; editorial punctuation
-whose status is `UNCLEAR`, `RESTORED`, or `LOST` does not create an observed boundary.
-Only the terminal record receives `boundary_*` metadata. A missing source span means
-the alignments did not prove one, not that an approximate offset was invented.
+For `pipeline()`, `sentence_policy` runs before tokenization. For
+`pipeline_tokens()`, complete contiguous runs of `Token.alignment.sentence_id`
+take precedence over punctuation, named policies, and custom segmenters
+(partial, non-contiguous, or cross-document IDs raise `ValueError`). Without
+explicit IDs, the selected policy runs on the token stream, and editorial
+punctuation marked `UNCLEAR`, `RESTORED`, or `LOST` does not create a boundary.
+Only each sentence's terminal record carries `boundary_*` fields.
 
-When no rule or table applies, the baseline returns the surface form as the
-lemma with source `unresolved`. A rule or lookup that does apply can still be
-wrong in context. Joint neural predictions record `neural_lookup`, `neural_edit`,
-or `identity` as appropriate; those sources do not certify correctness. The
-evidence classes are visible one form at a time too:
+### Single-form lemmatization evidence
 
 ```python
 from aegean import greek
@@ -398,42 +371,34 @@ for form in ['ἀνθρώπου', 'δούλου', 'γράφομεν', 'ἐσκή
     print(f'{form:12} -> {lemma:12} {source.value:12} needs_review={greek.needs_review(source)}')
 ```
 
-```
+```text
 ἀνθρώπου     -> ἄνθρωπος     seed         needs_review=False
 δούλου       -> δούλος       rule         needs_review=False
 γράφομεν     -> γράφω        rule         needs_review=False
 ἐσκήνωσεν    -> ἐσκήνωσεν    unresolved   needs_review=True
 ```
 
-The bridge between the two worlds is `greek.annotate_corpus` (§7.3): it runs
-the active pipeline over a corpus's existing word tokens and writes `lemma`,
-`upos`, and the evidence class into `Token.annotations`, so pipeline output
-becomes corpus data you can export, review, and persist. For reading parses
-themselves, see [Reading a Parse](Reading-a-Parse) and [Greek NLP](Greek-NLP).
+See [Reading a Parse](Reading-a-Parse) and [Greek NLP](Greek-NLP) for full
+parsing and neural runtime details.
 
 ---
 
-## 5. What `fingerprint()` covers and what `copy()` guarantees
+## 5. `fingerprint()` and `copy()`
 
-`corpus.fingerprint()` is a stable sha256 over everything a **token-level
-analysis** can see: the script id, the provenance `data_version`, each
-document's id, and every token's `text`, `kind`, `status`, `signs`, `glyphs`,
-`alt`, and `annotations` (plus source alignment and typed form state when
-present, and any `subset:` / `merged:` / `appended:` provenance note). Fields
-are length-prefixed, so no crafted value can collide
-two corpora. It deliberately **excludes** document metadata (site, period, …),
-`lines`, `line_no`, `position`, translations, and transcriptions: two corpora
-with equal fingerprints have the same analysable content in the same token
-order, which is why it is the cache key for `aegean.cache`-memoised analyses.
-It is not a byte-equality check on the whole object.
+`corpus.fingerprint()` computes a length-prefixed SHA-256 over all token-level
+analysable content: `script_id`, data identity (`provenance.data_version` when
+it names the dataset rather than a package release), document IDs, every token's
+`text`, `kind`, `status`, `signs`, `glyphs`, `alt`, `annotations`, optional
+`alignment` and `form_state`, and `subset:`/`merged:`/`appended:` provenance
+notes. It excludes document metadata (`site`, `period`, ...), `lines`,
+`line_no`, `position`, translations, transcriptions, and the installed package
+version. Two corpora with the same fingerprint have identical analysable token
+streams, so `aegean.cache` uses it as its cache key.
 
-`corpus.copy()` returns a structurally independent corpus: fresh document,
-token, line, and translation containers, and (the part that matters) a fresh
-`annotations` dict per token and `attrs` dict per sign. Mutating a copy never
-leaks into the original, a sibling copy, or a later `load()` of the same
-cached corpus; `load()` itself hands out a copy for exactly this reason. The
-frozen scalars, `DocumentMeta`, and `Provenance` are shared, which is safe
-because they are immutable.
+`corpus.copy()` returns an independent copy with fresh document, token, line,
+translation, `Token.annotations`, and `Sign.attrs` containers while sharing
+immutable `DocumentMeta` and `Provenance` instances. `aegean.load()` returns a
+copy so caller edits never mutate the cached corpus.
 
 ```python
 import aegean
@@ -441,20 +406,17 @@ import aegean
 a = aegean.load("lineara")
 b = a.copy()
 print("same fingerprint after copy:", a.fingerprint() == b.fingerprint())
-# the hash folds provenance.data_version, so it is stable within a release but
-# changes across releases — compare fingerprints, never hard-code the hex value
+# Stable across releases unless the corpus content or data_version changes.
 
-# annotations is the one mutable slot on a (frozen) Token — and the copy owns its own dicts
 b.get("HT13").tokens[0].annotations["my_note"] = "checked against GORILA"
 print("original untouched:", a.get("HT13").tokens[0].annotations)
 print("fingerprints now differ:", a.fingerprint() != b.fingerprint())
 
-# a fresh load is unaffected too: load() itself hands out a copy
 c = aegean.load("lineara")
 print("fresh load clean:", c.get("HT13").tokens[0].annotations == {})
 ```
 
-```
+```text
 same fingerprint after copy: True
 original untouched: {}
 fingerprints now differ: True
@@ -465,38 +427,29 @@ fresh load clean: True
 
 ## 6. Persistence contracts
 
-Three formats, three different promises:
-
-- **JSON (`to_json` / `from_json`) is lossless.** Every token field, optional
-  source alignment and exact source text, optional typed form state, the lines,
-  full document metadata, the sign inventory, and provenance survive exactly.
-  (`to_dict` is the *lossy* quick-interop summary; don't round-trip through it.)
-- **SQLite (`to_sql` / `from_sql`, `aegean.db`) is lossless and adds FTS
-  search.** The tokens table carries an explicit `token_order` column: the
-  token's index in the document's list, written at save time. Reload order
-  comes from `token_order`, never from `position`, so a `position=None` token
-  (SQL `NULL`, which would otherwise sort first) or out-of-order positions
-  survive in place. Databases written before 0.19.4 lack the column; they are
-  read via a `position` fallback and migrated in place on the first
-  `append=True` write. Schema-1 databases also lack the source and alignment
-  columns; they load with absent values and migrate to schema 2 on append.
-  Schema-1 and schema-2 databases have no form-state column; an append migrates
-  them to schema 3 atomically, and old rows keep `form_state=None`. For large
-  SQLite-backed corpora, `aegean.db.annotate_sqlite_job` (`aegean db annotate`)
-  runs durable, resumable document-by-document annotation with lease protection
-  and progress inspection via `aegean.db.job_status`.
-- **Schema versions gate forward-compatibility only.** `SCHEMA_VERSION`
-  (stored as `_meta.schemaVersion` in JSON, `schema_version` in the SQLite
-  `meta` table and on `Provenance`) is bumped only for changes an older reader
-  would *misread*. Loading a file with a **newer** version raises a
-  `ValueError` naming the fix; an older or missing version loads normally.
-  Additive optional fields (e.g. `edition_fidelity`) deliberately do not bump
-  it. A schema-1 or schema-2 JSON corpus loads with no typed form state even if
-  unrelated future-looking keys are present; it is not silently interpreted as
-  schema 3.
+- **JSON (`Corpus.to_json` / `Corpus.from_json`) is lossless.** All token
+  fields, optional `alignment`, `source_text`, and `form_state`, `lines`,
+  `DocumentMeta`, `sign_inventory`, and `provenance` round-trip exactly.
+  (`Corpus.to_dict()` is a lossy summary dictionary and not a round-trip
+  format.)
+- **SQLite (`Corpus.to_sql` / `Corpus.from_sql`, `aegean.db`) is lossless and
+  supports FTS5.** The `tokens` table stores an explicit `token_order` column so
+  tokens with `position=None` or non-monotonic positions reload in list order.
+  Pre-0.19.4 databases fall back to `position` on read and migrate on the first
+  `append=True` write; schema-1 and schema-2 databases load with absent
+  alignment/form-state values and migrate atomically to schema 3 on append. For
+  large corpora, `aegean.db.annotate_sqlite_job` (`aegean db annotate`) runs
+  resumable document-by-document annotation with lease protection, inspected via
+  `aegean.db.job_status`.
+- **Schema versions guard forward compatibility.** `SCHEMA_VERSION` (currently
+  `3`; stored as `_meta.schemaVersion` in JSON and `schema_version` in SQLite)
+  increments only for changes an older reader would misread. Loading a newer
+  schema version raises `ValueError`; older or missing versions load cleanly
+  without interpreting unrecognized keys as schema-3 fields.
 
 ```python
-import aegean
+import pathlib
+import tempfile
 from aegean import Corpus
 
 corpus = Corpus.from_records([
@@ -504,33 +457,29 @@ corpus = Corpus.from_records([
     {"id": "X2", "lines": [["A-DU", {"text": "5", "status": "unclear"}]]},
 ], script_id="lineara")
 
-# JSON: lossless both ways
 back = Corpus.from_json(corpus.to_json())
 print("JSON round-trip lossless:", back.fingerprint() == corpus.fingerprint())
 print("status survived:", back.get("X2").tokens[1].status)
 
-# SQLite: same contract, via a file
-import tempfile, pathlib
-db = pathlib.Path(tempfile.mkdtemp()) / "myfind.db"
-corpus.to_sql(db)
-again = Corpus.from_sql(db)
+db_path = pathlib.Path(tempfile.mkdtemp()) / "myfind.db"
+corpus.to_sql(db_path)
+again = Corpus.from_sql(db_path)
 print("SQLite round-trip lossless:", again.fingerprint() == corpus.fingerprint())
 ```
 
-```
+```text
 JSON round-trip lossless: True
 status survived: ReadingStatus.UNCLEAR
 SQLite round-trip lossless: True
 ```
 
-And the `token_order` contract under stress: a hand-built document whose
-middle token has no position at all.
+Token list order is preserved even when `position` is `None`:
 
 ```python
-import pathlib, tempfile
+import pathlib
+import tempfile
 from aegean import Corpus, Document, Provenance, Token, TokenKind
 
-# a document whose SECOND token has no position (e.g. an editorial insertion)
 doc = Document(
     id="D1", script_id="custom",
     tokens=[
@@ -542,14 +491,14 @@ doc = Document(
 )
 corpus = Corpus([doc], provenance=Provenance(source="demo"), script_id="custom")
 
-db = pathlib.Path(tempfile.mkdtemp()) / "order.db"
-corpus.to_sql(db)
-back = Corpus.from_sql(db)
-print([ (t.text, t.position) for t in back.get("D1").tokens ])
+db_path = pathlib.Path(tempfile.mkdtemp()) / "order.db"
+corpus.to_sql(db_path)
+back = Corpus.from_sql(db_path)
+print([(t.text, t.position) for t in back.get("D1").tokens])
 print("list order preserved:", back.fingerprint() == corpus.fingerprint())
 ```
 
-```
+```text
 [('alpha', 0), ('beta', None), ('gamma', 1)]
 list order preserved: True
 ```
@@ -558,22 +507,21 @@ list order preserved: True
 
 ## 7. Extension points
 
-### 7.1 Build a corpus from your own records
+### 7.1 Building a corpus from records
 
-`Corpus.from_records` converts plain dicts into a standard `Corpus`: each
-record needs an `"id"` and its text as `"lines"` (list of lines, each a list
-of tokens), `"words"` (one flat line), or `"text"` (whitespace-tokenized). A
-token is a string or a dict `{"text": …, "kind": …, "status": …, "alt": …}`;
-kind is inferred when omitted (numerals by parseability, the rest words), and
-hyphenated tokens get their `signs` split. It maintains the invariants of §7.4
-for you: positions are assigned sequentially and lines index correctly. The
-`corpus` built in §6 is exactly this. If your material is a text file or CSV,
-the `aegean.io` importers and `aegean import` build the same structure.
+`Corpus.from_records` converts plain dictionaries into a `Corpus`. Each record
+requires `"id"` plus `"lines"` (list of token lists), `"words"` (flat list), or
+`"text"` (whitespace-tokenized string). Individual tokens may be strings or
+dicts (`{"text": ..., "kind": ..., "status": ..., "alt": ...}`). Omitted `kind`
+is inferred (numerals by parseability, others as words), hyphenated tokens split
+into `signs`, positions are assigned sequentially, and `lines` indices are built
+automatically. For files and CSVs, use `aegean.io.from_text`,
+`aegean.io.from_csv`, or `aegean import`.
 
-### 7.2 Register a loader
+### 7.2 Registering a custom loader
 
-A loader makes your corpus loadable by name everywhere a registered id works
-(Python, CLI, TUI, MCP). Attach a real `Provenance` so citations stay honest:
+Registering a loader exposes a custom corpus to `aegean.load(...)` across
+Python, CLI, TUI, and MCP:
 
 ```python
 import aegean
@@ -581,7 +529,7 @@ from aegean import Corpus, Provenance
 from aegean.core.corpus import register_loader
 
 prov = Provenance(
-    source="My 2026 field notebook",
+    source="Field notebook 2026",
     license="CC BY 4.0",
     citation="Pavlicek, R. (2026). Inscriptions from My Site.",
 )
@@ -595,64 +543,58 @@ loaded = aegean.load("myfind")
 print(len(loaded), "document(s):", loaded.get("MS1").words[0].text)
 print(loaded.cite())
 
-# load() returns a copy, so a caller's edits never reach the registered instance
 loaded.get("MS1").tokens[0].annotations["scratch"] = "x"
 print("registered instance clean:", aegean.load("myfind").get("MS1").tokens[0].annotations == {})
 ```
 
-```
+```text
 1 document(s): KU-RO
 Pavlicek, R. (2026). Inscriptions from My Site.
 registered instance clean: True
 ```
 
-(A new *script*, as opposed to a new corpus, is a plugin: subclass
-`aegean.core.Script`, `register()` it, and register a loader; the core never
-imports scripts. See [Architecture](Architecture).)
+To add a new script rather than a new corpus, subclass `aegean.core.Script`,
+call `register()`, and register a loader (see [Architecture](Architecture)).
 
-### 7.3 Add annotations without breaking round-trips
+### 7.3 Adding annotations and review round-tripping
 
-Adding keys to `Token.annotations` is always round-trip-safe through JSON and
-SQLite; the built-in machinery only ever adds keys, never strips unknown ones.
-The review CSV also carries guarded `form_*` columns and a `form_state_json`
-column when a token has typed editorial forms. Applying corrections refuses a
-row whose typed state no longer matches the exported corpus, while an older
-review file without those columns remains compatible.
-`to_review_table` accepts `selection="all"` (the default), `"flagged"` (the
-existing review flag), or `"unverified"` (words without an explicit
-`lemma_verified=true`). Unverified rows include resolved predictions and source
-annotations lacking verification metadata. The selection changes which rows
-are exported, not their flags or annotations.
-`decision_lemma`, `decision_pos`, and `decision_morph` accept `accept`, `correct`,
-`defer`, or `reject`. Acceptance verifies the unchanged displayed prediction;
-correction requires a different nonempty `correct_*` value. Defer/reject retain
-the prediction and leave the field unverified. Explicit decisions reject a
-prediction that changed since export. Blank decisions retain the legacy behavior:
-blank or unchanged correction cells do nothing and never imply acceptance.
-Review state is per field: the POS columns write `upos_*`, and morphology writes
-`morph_*` or `feats_*` as applicable. `reviewer_evidence` preserves sources;
-`review_history` retains dated decisions and original prediction provenance,
-including individual field attribution after merged review.
+Custom keys in `Token.annotations` survive JSON and SQLite round-trips
+untouched; built-in writers never strip unknown keys.
 
-Accepting a lemma retains its prediction source while setting `lemma_verified`;
-a correction becomes `lemma_source="user"` and preserves its prior source.
-Reannotation replaces lemma/POS predictions, marks their current decisions
-`stale`, and retains reviewer details and history. It does not invalidate an
-unchanged source-morphology review or transfer old approval to new predictions.
+Review CSVs (`to_review_table` / `from_review_table`) support:
 
-The full annotate → export → correct → apply loop, showing the `<field>__pred`
-audit trail land on the token:
+- `selection="all"` (default), `"flagged"` (existing review flag), or
+  `"unverified"` (words lacking `lemma_verified="true"`), plus
+  `priority="calibrated_risk"` and `budget=N` when calibrated confidence is
+  present.
+- Per-field decisions (`decision_lemma`, `decision_pos`, `decision_morph`):
+  `accept`, `correct`, `defer`, or `reject`. Accepting verifies the unchanged
+  displayed prediction; correcting requires a nonempty different `correct_*`
+  value and records `lemma_source="user"` while preserving `<field>__pred`;
+  `defer` and `reject` leave the field unverified. Explicit decisions fail if
+  the target prediction changed since export. Blank decisions keep legacy
+  behavior (blank or unchanged cells do nothing).
+- Guarded `form_*` and `form_state_json` columns when typed editorial forms are
+  present (refusing mismatched typed state on apply while remaining compatible
+  with older CSVs).
+- `reviewer_evidence` and dated `review_history` (including per-field
+  attribution after merged multi-reviewer tables).
+- Re-annotation marks existing lemma/POS decisions `stale` without transferring
+  prior approvals to new predictions or invalidating unchanged source-morphology
+  reviews.
 
 ```python
-import csv, pathlib, tempfile
+import csv
+import pathlib
+import tempfile
 from aegean import Corpus, greek
 from aegean.io import to_review_table, from_review_table
 
 corpus = Corpus.from_records(
     [{"id": "frag1", "text": "ὁ λόγος σὰρξ ἐγένετο"}], script_id="greek"
 )
-annotated = greek.annotate_corpus(corpus)          # fills lemma/upos + evidence class
-tok = annotated.get("frag1").tokens[3]             # ἐγένετο — the baseline can't resolve it
+annotated = greek.annotate_corpus(corpus)
+tok = annotated.get("frag1").tokens[3]
 fields = ("lemma", "lemma_source", "lemma_verified", "upos")
 print("after annotate:", {key: tok.annotations[key] for key in fields})
 
@@ -660,7 +602,6 @@ work = pathlib.Path(tempfile.mkdtemp())
 n = to_review_table(annotated, work / "review.csv", selection="flagged")
 print("rows exported:", n)
 
-# simulate the reviewer: fill correct_lemma on the ἐγένετο row
 with open(work / "review.csv", encoding="utf-8-sig", newline="") as f:
     rows = list(csv.DictReader(f))
 for row in rows:
@@ -680,7 +621,7 @@ print("original prediction:", tok.annotations["lemma__pred"])
 print("provenance note:", fixed.provenance.notes[-1].split(" (")[0])
 ```
 
-```
+```text
 after annotate: {'lemma': 'ἐγένετο', 'lemma_source': 'unresolved', 'lemma_verified': 'false', 'upos': 'NOUN'}
 rows exported: 2
 after apply: {'lemma': 'γίγνομαι', 'lemma_source': 'user', 'lemma_verified': 'true', 'upos': 'VERB'}
@@ -688,64 +629,56 @@ original prediction: ἐγένετο
 provenance note: review: 1 tokens corrected by RP
 ```
 
-Note what the loop relies on: an aligned token has a stable source-token ID and
-its exported source span is verified on apply. Older unaligned tables fall back
-to `doc_id` + `position`; a token without a position is excluded, and the
-applied-to corpus must still have the same token text (a mismatch raises rather
-than landing a correction on the wrong word). The full workflow, including the CLI form, is on
-[When the Tool Is Wrong](When-the-Tool-Is-Wrong).
+Aligned tokens join on `source_token_id` and verify source spans on apply;
+unaligned tables join on `doc_id` plus `position` and raise `ValueError` on
+token text mismatch. See [When the Tool Is Wrong](When-the-Tool-Is-Wrong).
 
-### 7.4 Invariants your extension must hold
+### 7.4 Invariants for hand-constructed corpora
 
-If you construct `Document`/`Token` objects yourself (rather than through
-`from_records` or the importers), these are the contracts the rest of the
-toolkit assumes:
+When building `Document` and `Token` objects directly instead of via
+`from_records`:
 
-- **Every `lines` index is a valid token index** (`0 ≤ i < len(tokens)`). The
-  JSON and SQLite readers validate this and refuse a malformed file by name;
-  an in-memory violation surfaces later as an `IndexError` from `line_tokens`
-  or an export.
-- **`position` should be the token's index in the document's list, unique per
-  document.** Persistence tolerates `None` and disorder (§6). Source-aware
-  review prefers `source_token_id`; older tables use `doc_id` + `position`, so
-  a `None` drops the token from review export and a duplicated position can
-  land one legacy correction on more than one token.
-- **`status` must be one of the four `ReadingStatus` values** and `kind` one
-  of the six `TokenKind` values; unknown strings raise at construction, so
-  invent nothing here.
-- **`kind` must be honest**: word-level analysis, review export, and
-  annotation all gate on `TokenKind.WORD`.
-- **Keep `annotations` values strings**, and stay off the reserved
-  conventions (`<field>__pred`, `lemma_source`, `lemma_resolved`,
-  `lemma_verified`, `review_recommended`, `lemma_known`,
-  `review_status`, `reviewed_by`, `review_note`, `review_evidence`, `review_history`,
-  and the per-field review/verification keys) unless you mean them.
-- **Document ids must be unique** within a corpus (duplicates collapse with a
-  warning, keeping the last).
+- **Valid `lines` indices.** Every index must satisfy `0 ≤ i < len(tokens)`.
+  JSON and SQLite readers reject out-of-range indices on load; in-memory
+  violations raise `IndexError` in `line_tokens` or exporters.
+- **Unique sequential `position` values.** Persistence tolerates `None` and
+  out-of-order positions (§6), but unaligned review export skips `position=None`
+  tokens and relies on unique `(doc_id, position)` keys.
+- **Valid enum members.** `status` must be a `ReadingStatus` member and `kind` a
+  `TokenKind` member; invalid strings raise `ValueError`.
+- **Accurate `TokenKind`.** Word-level analysis, review export, and annotation
+  select `TokenKind.WORD` tokens.
+- **String values in `annotations`.** Avoid writing reserved keys
+  (`<field>__pred`, `lemma_source`, `lemma_resolved`, `lemma_verified`,
+  `review_recommended`, `lemma_known`, `review_status`, `reviewed_by`,
+  `review_note`, `review_evidence`, `review_history`, and per-field review keys)
+  unless following their contract.
+- **Unique document IDs.** Duplicate IDs within one `Corpus` collapse with a
+  warning, keeping the last.
 
-The failure modes are deliberately loud rather than silent:
+Invalid structures raise `ValueError`:
 
 ```python
 import json
 from aegean import Corpus, Document, Token, TokenKind
 
-# (a) a lines entry pointing past the token list: caught at load, named by document
+# (a) Out-of-range line index rejected on read
 bad = Corpus([Document(id="D1", script_id="custom",
                        tokens=[Token(text="alpha", kind=TokenKind.WORD, position=0)],
                        lines=[[0, 7]])], script_id="custom")
-blob = json.loads(bad.to_json())          # serializes fine — the writer doesn't validate
+blob = json.loads(bad.to_json())
 try:
     Corpus.from_dict(blob)
 except ValueError as e:
     print("ValueError:", e)
 
-# (b) an unknown status value: rejected before a Token is ever built
+# (b) Unknown ReadingStatus rejected at construction
 try:
     Corpus.from_records([{"id": "X", "lines": [[{"text": "A", "status": "probable"}]]}])
 except ValueError as e:
     print("ValueError:", e)
 
-# (c) a corpus file from a future pyaegean: refused with the fix named
+# (c) Future schema version rejected with upgrade message
 blob["_meta"]["schemaVersion"] = 99
 try:
     Corpus.from_dict(blob)
@@ -753,21 +686,21 @@ except ValueError as e:
     print("ValueError:", e)
 ```
 
-```
+```text
 ValueError: document 'D1': line 0 references token index 7, but the document has 1 token(s); the source is malformed
 ValueError: 'probable' is not a valid ReadingStatus
 ValueError: this corpus file uses schema version 99, but this pyaegean understands up to 3 — upgrade pyaegean to read it
 ```
 
-The one sharp edge that is *not* loud, worth restating: an invalid `lines`
-list on an in-memory corpus you built by hand serializes without complaint
-(example (a) above writes fine and only fails on read). Validate by
-round-tripping once (`Corpus.from_json(corpus.to_json())`) before you ship a
-corpus file to anyone else.
+One validation gap to check before publishing a hand-built corpus: `to_json()`
+does not validate `lines` indices on write (example (a) fails on read). Run a
+single `Corpus.from_json(corpus.to_json())` round-trip check before distributing
+custom corpus files.
 
 ---
 
 **See also:** [Architecture](Architecture) · [For Specialists](For-Specialists) ·
 [Using Critical Editions](Using-Critical-Editions) ·
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong) · [Reading a Parse](Reading-a-Parse) ·
-[Data & Provenance](Data-and-Provenance) · [Greek NLP](Greek-NLP)
+[Data & Provenance](Data-and-Provenance) · [Greek NLP](Greek-NLP) ·
+[Interoperability](Interoperability)

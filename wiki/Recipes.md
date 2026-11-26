@@ -1,26 +1,24 @@
 # Recipes
 
-Short, copy-pasteable end-to-end workflows: each one goes from a question to a
-citable result, in Python and (where natural) from the [command line](CLI).
-Every snippet on this page has been **run against the shipped library and
-corpora; the outputs shown are real.** Treat this as a cookbook: skim the table
-below, jump to the recipe you need, copy it, change the corpus or the word.
+Copy-pasteable workflows from question to citable result, in Python and on the
+[command line](CLI). Every snippet and output below was executed against the
+shipped library and corpora.
 
-A thread runs through most of them: **finish with `cite()`**, so the exact data
-you used lands in your paper's references. If you're brand new, start with
-[Getting Started](Getting-Started); for the full command reference see [CLI](CLI).
+Most workflows end with `cite()` so the exact dataset and subset reach your
+bibliography. For installation and terminal setup, see
+[Getting Started](Getting-Started); for the full command surface, see [CLI](CLI).
 
 ## What's on this page
 
 | # | Recipe | Corpus / track | Needs a fetch? |
 |---|--------|----------------|----------------|
-| 1 | [Reconcile a corpus' accounting, export the discrepancies](#1--reconcile-the-accounting-of-a-whole-corpus-export-the-discrepancies) | Linear A | no |
+| 1 | [Reconcile the accounting of a whole corpus, export the discrepancies](#1--reconcile-the-accounting-of-a-whole-corpus-export-the-discrepancies) | Linear A | no |
 | 2 | [Map a word's distribution](#2--map-a-words-distribution) | Linear A | no (GeoJSON needs `[geo]`) |
 | 3 | [Lemmatize and cite a chapter](#3--lemmatize-and-cite-a-chapter) | Greek | yes (the work) |
 | 4 | [What vocabulary distinguishes a site? (keyness)](#4--what-vocabulary-distinguishes-a-site-keyness) | Linear B / DAMOS | yes (DAMOS) |
 | 5 | [Sound-match a syllabic word against Greek](#5--sound-match-a-syllabic-word-against-greek) | cross-script | no |
-| 6 | [Mine word-families from an undeciphered corpus](#6--mine-word-families-from-an-undeciphered-corpus-and-cache-it) | Linear A | no |
-| 7 | [Ask a grounded question — and audit the answer](#7--ask-a-grounded-question--and-audit-the-answer) | any | API key |
+| 6 | [Mine word-families from an undeciphered corpus (and cache it)](#6--mine-word-families-from-an-undeciphered-corpus-and-cache-it) | Linear A | no |
+| 7 | [Ask a grounded question and audit the answer](#7--ask-a-grounded-question-and-audit-the-answer) | any | API key |
 | 8 | [Scan a line of verse](#8--scan-a-line-of-verse) | Greek | no |
 | 9 | [Type Greek without a Greek keyboard, then syllabify](#9--type-greek-without-a-greek-keyboard-then-syllabify) | Greek | no |
 | 10 | [Read a deciphered syllabic word as Greek (the bridge)](#10--read-a-deciphered-syllabic-word-as-greek-the-bridge) | Linear B / Cypriot | no |
@@ -41,10 +39,11 @@ you used lands in your paper's references. If you're brand new, start with
 | 25 | [Find a work in the catalogue, or bring in your own text](#25--find-a-work-in-the-catalogue-or-bring-in-your-own-text) | Greek | no |
 | 26 | [Choose a Greek AI translation workflow](#26--choose-a-greek-ai-translation-workflow) | Greek | API key (generation only) |
 | 27 | [Search 57,000 papyri without loading them (DDbDP)](#27--search-57000-papyri-without-loading-them-ddbdp) | Greek papyri / DDbDP | yes (DDbDP, ~219 MB) |
+| 28 | [Package, verify, and hydrate a portable research bundle](#28--package-verify-and-hydrate-a-portable-research-bundle) | any | no (pointer corpora optional) |
+| 29 | [Review annotations and adjudicate conflicts in the TUI](#29--review-annotations-and-adjudicate-conflicts-in-the-tui) | any | no (`[tui]` extra) |
 
-Those are the single moves. For whole projects there is a second index:
-[Workflows: end to end](#workflows-end-to-end), just below, chains the recipes
-into eight walkthroughs, one per kind of reader:
+For multi-step projects, [Workflows: end to end](#workflows-end-to-end) chains
+these recipes into eight role-based walkthroughs:
 [the epigraphist](#a--the-epigraphist-from-a-site-filter-to-a-citable-subset),
 [the papyrologist](#b--the-papyrologist-ddbdp-without-loading-it),
 [the literary classicist](#c--the-literary-classicist-catalogue-metre-gloss-citation),
@@ -54,44 +53,31 @@ into eight walkthroughs, one per kind of reader:
 [the AI-assisted translator](#g--the-ai-assisted-translator-key-gated), and
 [the toolsmith](#h--the-toolsmith-one-database-and-tools-for-agents).
 
-Throughout, the `--json` flag is your friend: the reporting commands take it and
-emit clean JSON on stdout, so you can pipe into [`jq`](https://jqlang.github.io/jq/)
-or load it straight into Python/pandas. Two families do without it: the commands
-whose whole job is to write a file take `-o` instead (`export`, `db build`,
-`db add`, `review export`/`review apply`, and the `plot` family), and the
-interactive entry points (`repl`, `tui`, `workbench`, `quickstart`) have no
-machine-readable mode.
+Reporting commands accept `--json` for piping into
+[`jq`](https://jqlang.github.io/jq/) or Python/pandas. Commands whose primary job
+is file output take `-o` (`export`, `db build`, `db add`, `review export`/`review
+apply`, `plot`), and interactive entry points (`repl`, `tui`, `workbench`,
+`quickstart`) have no JSON mode.
 
-One thing worth knowing before you start, because the last few recipes lean on
-it: **anywhere a command takes a corpus, it takes more than an id.** A registered
-id (`lineara`), a Greek work id (`tlg0012.tlg001`), a path to a saved `.json` or
-`.db` corpus, or `-` for JSON on stdin all work the same way, so you can build a
-database straight from a work (`aegean db build tlg0012.tlg001 -o iliad.db`), run
-`aegean stats iliad.json`, or `aegean export tlg0012.tlg002 -f csv -o odyssey.csv`
-without writing any Python. In Python the equivalent is
-`aegean.read_corpus(spec)`. That one rule is what lets recipes 22–24 chain
-commands together.
+Every CLI corpus argument resolves through `aegean.read_corpus(spec)`: a
+registered id (`lineara`), a Greek work id (`tlg0012.tlg001`), a saved `.json` or
+`.db` file, or `-` for JSON on stdin. That lets commands chain directly (for
+example, `aegean db build tlg0012.tlg001 -o iliad.db`, `aegean stats iliad.json`,
+or `aegean export tlg0012.tlg002 -f csv -o odyssey.csv`).
 
 ---
 
 ## Workflows: end to end
 
-The numbered recipes below are single moves; this section chains them into
-whole working sessions. Eight walkthroughs, one per kind of reader, each
-running from a research question to a citable result, in the CLI and in Python
-as each step is most natural. Every output shown is real, produced against the
-shipped corpora; the steps that touch the network (a first-time fetch) or need
-an API key are marked. Each walkthrough ends with links back to the task
-recipes it builds on. To match your audience or goal (teaching, research,
-exploratory, benchmarking) to a workflow, see [Choosing a Workflow](Choosing-a-Workflow).
+Eight complete sessions chaining individual recipes from question to citable
+output. Steps requiring a first-time download or an API key are marked. For help
+matching a goal to a workflow, see [Choosing a Workflow](Choosing-a-Workflow).
 
 ### A · The epigraphist: from a site filter to a citable subset
 
-*You work on Sicilian epigraphy and want the Greek of one city: Kamarina.*
-Filter the I.Sicily corpus by find-site, read an inscription, ask what
-vocabulary sets the site apart, and leave with a citable subset. (Add
-`--period` to any of these commands to narrow by date as well; the period
-strings are the editors' own.)
+*Extract the Greek inscriptions of Kamarina from I.Sicily, inspect a text, compute
+characteristic vocabulary, and save a citable subset.* Add `--period` to narrow
+by the editors' date strings.
 
 ```bash
 aegean load isicily --site Kamarina --limit 3
@@ -101,7 +87,7 @@ aegean load isicily --site Kamarina --limit 3
 #  ISic001479   Kamarina   Second half of the 6th century BCE   1
 #  ISic001480   Kamarina   4th or 2nd century BCE               6
 
-aegean show isicily ISic003022                # a verse epitaph for Hippo
+aegean show isicily ISic003022                # verse epitaph for Hippo
 # ISic003022  site=Kamarina  period=350 BCE — early 3rd century BCE
 #   1: σωφροσύνην τιμῶσα
 #   2: δικαιοσύνην τε σέβουσα
@@ -122,15 +108,13 @@ aegean cite kamarina.json
 #   — https://github.com/ISicily/ISicily [subset: filter(site='Kamarina') → 174 of 2855 documents]
 ```
 
-The keyness table is the city's lead phratry tablets speaking: φράτρα itself
-and the Doric feminine ordinals that number the phratries (τετάρτα, δεκάτα).
-Text is kept as inscribed, so fragmentary tokens (τα, ευτέρα) rank alongside
-whole words: inspect before you interpret.
+The top keyness terms reflect Kamarina's lead phratry tablets (`φράτρα` and Doric
+feminine ordinals `τετάρτα`, `δεκάτα`). Tokens remain as inscribed, so fragments
+(`τα`, `ευτέρα`) rank alongside complete words and must be inspected before
+drawing conclusions.
 
-**Bring your own EpiDoc.** The same path works for editions pyaegean does not
-ship. Any EpiDoc TEI file whose tokens are carried by `<w>`/`<num>`/`<g>`/`<pc>`/`<seg>`
-elements imports directly; this is the edition div of `myinscription.xml`
-(its TEI header carries the `<idno>` and `<origPlace>`):
+**Bring your own EpiDoc.** Any token-carrier EpiDoc XML file (`<w>`, `<num>`,
+`<g>`, `<pc>`, `<seg>`) imports directly into the same workflow:
 
 ```xml
 <div type="edition" xml:lang="grc">
@@ -150,8 +134,8 @@ aegean show mine.json "MyColl 1"
 #   2: χαῖρε
 ```
 
-The imported corpus takes every command above (`stats`, `keyness`, `export`,
-`cite`), and its provenance honestly records a local EpiDoc import.
+The saved JSON accepts `stats`, `keyness`, `export`, and `cite`, with provenance
+recording a local EpiDoc import.
 
 **Task recipes used:**
 [4 · keyness](#4--what-vocabulary-distinguishes-a-site-keyness) ·
@@ -161,11 +145,10 @@ The imported corpus takes every command above (`stats`, `keyness`, `export`,
 
 ### B · The papyrologist: DDbDP without loading it
 
-*You want every papyrus addressed στρατηγῷ, "to the strategos".* The Duke
-Databank (`ddbdp`, 57,331 papyri) ships as a SQLite database, so the working
-method is search and stream, never `aegean.load("ddbdp")` (which materialises
-~4.4M tokens in RAM). Search is instant (the first use fetches the database,
-~219 MB):
+*Find every papyrus addressed `στρατηγῷ` ("to the strategos").* `ddbdp` (57,331
+papyri, ~4.4M tokens) ships as a SQLite database with FTS5. Search and stream it
+instead of calling `aegean.load("ddbdp")`. First use fetches ~219 MB; queries
+after that are instant:
 
 ```bash
 aegean db search ddbdp "στρατηγῷ" --limit 5
@@ -177,22 +160,21 @@ aegean db search ddbdp "στρατηγῷ" --limit 5
 #  bgu.1.125        1     στρατηγῷ
 ```
 
-In Python, collect every hit, then stream the matched documents into a corpus
-of their own. The stream is one pass over all 57,331 papyri (a minute or two;
-memory stays flat), and the subset you save is small and instant ever after:
+In Python, gather all hits and stream matching documents in constant memory into
+a reusable sub-database:
 
 ```python
 import aegean
 from aegean import db
 from aegean.scripts.greek import ddbdp_db
 
-path = ddbdp_db()                              # the fetched SQLite file
-hits = db.search(path, "στρατηγῷ", limit=0)    # limit 0 = every hit
+path = ddbdp_db()                              # cached SQLite file
+hits = db.search(path, "στρατηγῷ", limit=0)    # limit=0 returns all matches
 print(len(hits), "attestations in", len({h[0] for h in hits}), "papyri")
 # 1398 attestations in 1092 papyri
 
 wanted = {doc_id for doc_id, pos, text in hits}
-picked = [d for d in db.stream(path) if d.id in wanted]   # flat-memory pass
+picked = [d for d in db.stream(path) if d.id in wanted]   # constant-memory scan
 
 subset = aegean.Corpus(picked, script_id="greek", provenance=aegean.Provenance(
     source="DDbDP, Duke Databank of Documentary Papyri (papyri.info): papyri attesting στρατηγῷ",
@@ -205,9 +187,7 @@ print(subset.cite())
 #   — https://github.com/papyri/idp.data
 ```
 
-Now `strategos.db` is an ordinary corpus: read a house-share declaration to the
-strategos of the Arsinoite nome, or run any statistic, without touching the big
-database again:
+Inspect and analyze `strategos.db` directly:
 
 ```bash
 aegean show strategos.db bgu.1.125
@@ -233,9 +213,9 @@ aegean stats strategos.db --top 5
 
 ### C · The literary classicist: catalogue, metre, gloss, citation
 
-*You want a passage of Homer: read it, scan it, gloss it, cite the edition.*
-Finding the work is offline (the catalogue is bundled metadata); fetching its
-text is the one networked step, done once and then cached, commit-pinned:
+*Locate a passage of Homer, scan it, gloss it with Cunliffe, and cite the
+commit-pinned edition.* Catalogue lookup is offline; fetching the TEI work
+touches the network once and caches locally:
 
 ```python
 from aegean import greek
@@ -244,7 +224,7 @@ greek.catalog("iliad")[0]
 ```
 
 ```bash
-aegean greek work tlg0012.tlg001         # network on first use; cached after
+aegean greek work tlg0012.tlg001         # fetches once; cached after
 #  documents      24
 #  tokens         127339
 #  first          tlg0012.tlg001:1
@@ -253,8 +233,8 @@ aegean greek work tlg0012.tlg001         # network on first use; cached after
 #  data_version   PerseusDL/canonical-greekLit@d4fab69a2c26
 ```
 
-Read the opening, gloss the first words from Cunliffe's Homeric lexicon (a
-small one-time index fetch), and cite the edition:
+Load lines 1.1–1.7, gloss with Cunliffe's Homeric lexicon (small one-time index
+fetch), and cite:
 
 ```python
 from aegean import greek
@@ -282,10 +262,9 @@ aegean greek scan "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλ�
 # hexameter: dactyl, dactyl, spondee, dactyl, dactyl, final; caesura: penthemimeral
 ```
 
-The citation pins the exact source commit, so the text you quote is the text
-anyone else will get. The offline lemmatizer is the honest baseline tier;
-activate the treebank or neural tiers for higher measured accuracy
-([Greek NLP](Greek-NLP)).
+The citation pins the exact upstream commit. The offline lemmatizer is the
+zero-download baseline; activate the treebank or neural backends for higher
+measured accuracy ([Greek NLP](Greek-NLP)).
 
 **Task recipes used:**
 [25 · find a work in the catalogue](#25--find-a-work-in-the-catalogue-or-bring-in-your-own-text) ·
@@ -295,16 +274,15 @@ activate the treebank or neural tiers for higher measured accuracy
 
 ### D · The New Testament scholar: gold morphology to concordance
 
-*Trace ἀγάπη through 1 John with the gold annotations.* The NT (Nestle 1904,
-CC0) carries curated lemma, Robinson morphology, Strong's number, and a gloss
-on every token; it is a small fetch on first use (fully offline, the bundled
-sample covers John 1 and Philemon). Start from the verse every scholar checks
-first:
+*Trace `ἀγάπη` through 1 John using Nestle 1904 gold annotations.* Nestle 1904
+(CC0) carries curated lemma, Robinson morphology, Strong's number, and gloss per
+token (fetched once on first use; pass `offline=True` for the bundled John 1 and
+Philemon 1 sample):
 
 ```python
-import aegean
+from aegean.greek import bible
 
-jn = aegean.greek.load_nt("1 John")
+jn = bible.load_nt("1 John")
 verse = [t for t in jn.documents[3].tokens if t.annotations.get("ref") == "1John.4.8"]
 for t in verse[-4:]:
     a = t.annotations
@@ -315,9 +293,9 @@ for t in verse[-4:]:
 # ἐστίν.   εἰμί   V-PAI-3S  Strong's 1510  I am, exist
 ```
 
-A concordance is the query engine plus a context window (and the bundled Dodson
-lexicon glosses any Koine word offline: `greek.use_dodson()`, then
-`greek.gloss_nt("ἀγάπη")` returns `love`):
+Build a KWIC concordance with the query engine (and gloss any Koine word offline
+with `bible.strongs_entry("ἀγάπη").gloss`, returning `'love'`, or
+`greek.use_lexicon("dodson")` + `greek.gloss("ἀγάπη", dictionary="dodson")`):
 
 ```python
 from aegean.analysis import FilterRow
@@ -343,8 +321,7 @@ for row in rows[:3]:
 # 1John.3.17                   αὐτοῦ, πῶς ἡ  ἀγάπη  τοῦ Θεοῦ μένει
 ```
 
-From the shell, the same subset saves and exports as a one-row-per-token table
-(lemma, morphology, Strong's, gloss, reference; recipe 17 shows the columns):
+Save and export the token table from the shell (recipe 17 lists all columns):
 
 ```bash
 aegean query nt --where ins-contains-word=ἀγάπη -o agape.json
@@ -366,9 +343,9 @@ aegean cite agape.json
 
 ### E · The corpus linguist: numbers with a receipt
 
-*Frequency, dispersion, keyness, and collocation on the full Mycenaean corpus,
-with a reproducibility trail.* DAMOS (~5,900 tablets, CC BY-NC-SA) is a
-one-time ~3 MB fetch:
+*Run frequency, dispersion, keyness, and collocation over the DAMOS Linear B
+corpus (~5,900 tablets, CC BY-NC-SA, ~3 MB one-time fetch) and record exact
+provenance.*
 
 ```bash
 aegean stats damos --top 5
@@ -401,25 +378,24 @@ item,target_count,target_total,reference_count,reference_total,log_likelihood,lo
 a-ko-da-mo,9,811,0,13680,51.9889272376043,8.324150018999573,5.581449320930576e-13
 ```
 
-The numbers tell one story three ways: *o-na-to* ("lease plot") is frequent
-(154), clumped (DP 0.873, the Pylos land-tenure series), and locked to
-*ko-to-na* (joint count 49, Fisher's p ≈ 3.9e-82); the Thebes keys are the
-Fq-series vocabulary. The receipt that makes the table citable:
+*o-na-to* ("lease plot") is frequent (154 tokens), concentrated (DP 0.873,
+reflecting the Pylos land-tenure series), and tightly co-occurring with
+*ko-to-na* (49 shared tablets, Fisher's p ≈ 3.9e-82); the Thebes top keys come
+from the Fq series. Record the version, corpus fingerprint, and citation:
 
 ```python
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.67.0
+print(aegean.__version__)          # 0.72.0
 print(damos.fingerprint()[:16])    # ca93e51fd26a8f6c
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
 #   attested language. Procedia - Social and Behavioral Sciences, 198, 21-31. — https://damos.hf.uio.no
 ```
 
-`aegean data versions` adds the dataset's own pin (the row
-`fetched/damos-corpus  eab9ccdfc4324b62…  cached`): paste those lines into your
-methods section and the analysis is reconstructible.
+Run `aegean data versions` to add the pinned SHA-256 (`fetched/damos-corpus
+eab9ccdfc4324b62… cached`) to your methods section.
 
 **Task recipes used:**
 [4 · keyness](#4--what-vocabulary-distinguishes-a-site-keyness) ·
@@ -430,10 +406,9 @@ methods section and the analysis is reconstructible.
 
 ### F · The Aegean-scripts researcher: exploratory, and labeled as such
 
-*Structure-hunting in Linear A without pretending it reads.* Linear A is
-undeciphered: everything here is a lead, and the tools label their own output
-exploratory. Start from what is secure (the accounting shape), mine structure,
-then test a hunch against a null model:
+*Analyze structure in undeciphered Linear A, test a structural hypothesis against
+a null model, and map find-sites.* All exploratory commands label their output as
+unverified leads:
 
 ```bash
 aegean balance lineara HT13
@@ -454,9 +429,8 @@ aegean analyze clusters lineara --top 3       # exploratory word families
 #  I-DA  → I-DA, I-DA-A, I-DA-DA, I-DA-MI
 ```
 
-A null model keeps the pattern-hunting honest. Are doubled adjacent signs (the
-SA-SA of JA-SA-SA-RA-ME) more common in real Linear A words than chance would
-make them?
+Test pattern hypotheses against a null model. Are adjacent repeated signs (as in
+`JA-SA-SA-RA-ME`) more common in Linear A words than expected by chance?
 
 ```python
 import aegean
@@ -476,9 +450,9 @@ print(f"observed {res.observed:.4f}  null mean {res.null_mean:.4f}  p = {res.p_v
 # observed 0.0384  null mean 0.0424  p = 0.782
 ```
 
-No: the observed rate sits inside the null band, and a negative is a result
-too. For the deciphered contrast, Linear B reads as Greek (Linear A has no such
-bridge), and any word maps geographically:
+The observed rate falls well within the null distribution (p = 0.782). For the
+deciphered Linear B script, the Greek-reading bridge applies directly, and any
+word's attestations map geographically:
 
 ```bash
 aegean bridge linearb ko-wo
@@ -501,15 +475,14 @@ aegean geo lineara --word KU-RO
 
 ### G · The AI-assisted translator (key-gated)
 
-*(Grounding runs locally once its selected model and dictionary assets are
-cached; generation needs a hosted provider key or a no-key local server.)* Supply
-provisional local analysis to the model and keep the exploratory label.
-The grounding is fully inspectable before generation:
+*(Grounding runs locally once its model and dictionary assets are cached;
+generation requires a hosted provider key or a local server.)* Inspect the local
+provisional analysis before sending any request:
 
 ```python
 from aegean import greek, translate
 
-neural = greek.GreekPipeline.neural()  # [neural]: contextual model predictions + UD parse
+neural = greek.GreekPipeline.neural()  # [neural]: contextual predictions + UD parse
 for item in translate.grounding_for(
     "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς.", "greek",
     mode="morphology", greek_pipeline=neural,
@@ -517,41 +490,39 @@ for item in translate.grounding_for(
     print(item.render())  # content, evidence status, source, and provenance
 ```
 
-The first item reports backend availability and coverage. Token evidence retains
-raw UD features; clause evidence preserves the supplied dependency links,
-including subordinate predicates and explicit coordination. These are
-predictions, and an omitted or wrong attachment is not silently repaired.
+The opening item reports backend availability and coverage. Token lines retain
+raw UD features; clause evidence preserves dependency links, including
+subordinate predicates and explicit coordination. All items remain predictions,
+and omitted or erroneous attachments are passed as predicted without hidden
+rewrites.
 
-With a key configured (recipe 7 lists the providers), translate with that
-grounding, then again with the post-hoc check that drafts first and repairs
-against the analysis:
+With a provider configured (recipe 7), run grounded translation and optional
+post-hoc checking:
 
 ```bash
 aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --greek-backend neural
 aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --greek-backend neural --verify --trace
-# output is provider- and model-dependent, so none is shown here; every result
-# arrives labeled [EXPLORATORY · translate · <provider>/<model>]. Translation
-# text exports include the audit trace; JSON retains the data and checking draft.
+# Output depends on provider and model; every response carries the
+# [EXPLORATORY · translate · <provider>/<model>] header. Translation .txt
+# exports append the audit trace; .json retains audit data and checking draft.
 ```
 
-Every answer is a labeled hypothesis rather than an attested reading; `result.trace()` separates
-the provisional evidence the model received from the backend configuration it did
-not receive. Mode, backend, failure-policy choice, and what grounding can and cannot
-fix are covered in recipe 26.
+`result.trace()` separates prompted provisional evidence from post-hoc runtime
+configuration. See recipe 26 for selecting grounding modes, backends, and
+failure policies.
 
 **Task recipes used:**
 [26 · choose a Greek AI translation workflow](#26--choose-a-greek-ai-translation-workflow) ·
-[7 · ask a grounded question](#7--ask-a-grounded-question--and-audit-the-answer)
+[7 · ask a grounded question](#7--ask-a-grounded-question-and-audit-the-answer)
 
 ### H · The toolsmith: one database, and tools for agents
 
-*Build one searchable database out of several corpora, then expose the toolkit
-to an AI agent.* `combine` resolves each source like any corpus argument and
-merges provenance honestly; full-text search comes free with the `.db`
-extension:
+*Combine multiple corpora into one FTS-indexed SQLite file and expose the
+toolkit over MCP.* `combine` resolves every source through `read_corpus`,
+merges provenance across all inputs, and builds an FTS5 index when saving `.db`:
 
 ```bash
-aegean combine isicily igcyr -o west.db     # Sicily + Cyrenaica, one database
+aegean combine isicily igcyr -o west.db     # Sicily + Cyrenaica in one database
 # wrote 3852 documents to west.db (merged 2 sources)
 
 aegean db search west.db "Δάματρι" --limit 4
@@ -567,10 +538,9 @@ aegean cite west.db
 #   [merged: 2 corpora → 3852 documents]
 ```
 
-One query, two Doric provinces: the dative Δάματρι (to Demeter) surfaces in
-Sicilian and Cyrenaican dedications alike. The same corpus surface is available
-to AI agents as an MCP server (`pip install "pyaegean[mcp]"`, then point your
-client at the `aegean-mcp` command):
+One search queries both Doric regions (`Δάματρι`, dative of Demeter, across
+Sicily and Cyrenaica). To expose the toolkit to AI agents over MCP, install
+`pip install "pyaegean[mcp]"` and configure your client to run `aegean-mcp`:
 
 ```python
 from aegean.mcp_server import TOOLS
@@ -578,9 +548,8 @@ print(len(TOOLS), "tools:", ", ".join(t.__name__ for t in TOOLS[:6]), "…")
 # 29 tools: list_corpora, corpus_info, show_document, search_signs, search_text, balance_accounts, query_corpus …
 ```
 
-The tools address corpora by registry name only (never by filesystem path) and
-return structured errors an agent can act on; setup and the full tool table are
-on [MCP](MCP).
+MCP tools accept registry and catalogue ids only (never arbitrary filesystem
+paths) and return structured error dicts. See [MCP](MCP).
 
 **Task recipes used:**
 [22 · all of Homer in one database](#22--put-all-of-homer-in-one-searchable-database) ·
@@ -592,9 +561,8 @@ on [MCP](MCP).
 
 ## 1 · Reconcile the accounting of a whole corpus, export the discrepancies
 
-*Do the stated totals (KU-RO) on the Haghia Triada tablets match the sums of
-their entries?* Reconcile every account, keep the failures, and cite the exact
-subset:
+*Check whether stated `KU-RO` totals on Haghia Triada tablets match the sums of
+their line items, export discrepancies, and cite the subset:*
 
 ```python
 import json
@@ -620,27 +588,24 @@ print(ht.cite())
 
 ```bash
 aegean balance lineara --json | jq '[.[] | select(.balances | not)]' > discrepancies.json
-aegean plot balance lineara -o balance.png      # the same picture: stated vs computed
+aegean plot balance lineara -o balance.png      # stated vs computed scatter plot
 ```
 
-The reconciliation is heuristic (section boundaries are inferred); a
-discrepancy is a lead to inspect, not a verdict. See
-[Linear A → Accounting](Linear-A).
+Reconciliation infers section boundaries heuristically; inspect discrepancies
+against the editions. See [Linear A](Linear-A).
 
-For rational equality, use `balance_check(doc, exact=True)` or
-`aegean balance lineara --exact --json`. The default `balances` retains its
-`1e-6` float cutoff. `account_eligible` is a separate teaching selection: intact
-text and at least one qualifying total. Its default allowance is
-`max(1, 0.10 * abs(stated_total))`; `--tolerance 0` still retains the absolute-one
-floor, while `--exact` removes the allowance. JSON retains the rational
-`exact_difference`, `exact_balances`, and eligibility policy. A total can fail
-arithmetic equality while the document qualifies under the teaching tolerance;
-neither result verifies readings or metrology.
+For exact rational equality, pass `balance_check(doc, exact=True)` or
+`aegean balance lineara --exact --json` (default `balances` uses a `1e-6` float
+tolerance). `account_eligible` selects intact documents with at least one
+qualifying total using default allowance `max(1, 0.10 * abs(stated_total))`;
+`--tolerance 0` retains the absolute-one floor, while `--exact` removes the
+allowance. JSON output records rational `exact_difference`, `exact_balances`, and
+the eligibility policy.
 
 ## 2 · Map a word's distribution
 
-*Where does KU-RO occur?* Count attestations by find-site, then place them:
-every aligned site carries a [Pleiades](https://pleiades.stoa.org/) id:
+*Count `KU-RO` attestations by find-site and look up Pleiades-aligned
+coordinates:*
 
 ```python
 from collections import Counter
@@ -657,22 +622,21 @@ print(coord.lat, coord.lon, coord.pleiades_uri)
 # 35.06 24.79 https://pleiades.stoa.org/places/589672
 ```
 
-With the `[geo]` extra (`pip install "pyaegean[geo]"`), `geo.word_distribution(corpus,
-"KU-RO")` returns the same thing as a GeoDataFrame (EPSG:4326) ready for any
-mapping stack, and `aegean geo lineara --output sites.geojson` writes GeoJSON
-from the shell. See [Geography](Geography).
+With `[geo]` installed (`pip install "pyaegean[geo]"`),
+`geo.word_distribution(corpus, "KU-RO")` returns an EPSG:4326 GeoDataFrame, and
+`aegean geo lineara --output sites.geojson` writes GeoJSON. See
+[Geography](Geography).
 
 ## 3 · Lemmatize and cite a chapter
 
-*Lemmatize a passage of the Iliad and cite the edition.* `load_work` fetches the
-complete work (commit-pinned, cached after the first fetch), `pipeline` runs the
-whole stack per token:
+*Fetch the Iliad (commit-pinned, cached after first download), lemmatize the
+opening tokens, and cite the edition:*
 
 ```python
 import aegean
 
-iliad = aegean.greek.load_work("tlg0012.tlg001")     # the Iliad, Perseus edition
-doc = iliad.documents[0]                              # Book 1
+iliad = aegean.greek.load_work("tlg0012.tlg001")     # Iliad, Perseus edition
+doc = iliad.documents[0]                             # Book 1
 text = " ".join(t.text for t in doc.tokens[:40])
 
 for r in aegean.greek.pipeline(text)[:3]:
@@ -684,12 +648,11 @@ print(iliad.cite())
 ```
 
 ```bash
-aegean greek work tlg0012.tlg001 -o iliad.json       # the work as a corpus file
-aegean greek pipeline "μῆνιν ἄειδε θεά" --json       # per-token records
+aegean greek work tlg0012.tlg001 -o iliad.json       # save work as Corpus JSON
+aegean greek pipeline "μῆνιν ἄειδε θεά" --json       # per-token analysis records
 ```
 
-The catalog of well-known works you can pass to `load_work` / `aegean greek work`
-(`aegean greek works` prints it):
+Selected well-known works (`aegean greek works` prints all 25):
 
 | id | author | title |
 |----|--------|-------|
@@ -705,19 +668,17 @@ The catalog of well-known works you can pass to `load_work` / `aegean greek work
 | `tlg0059.tlg002` | Plato | Apology |
 | `tlg0086.tlg010` | Aristotle | Nicomachean Ethics |
 
-That's a curated subset (25 works in all); the full canon is at
-[Scaife](https://scaife.perseus.org). Narrow a fetch with `--ref`, e.g.
-`aegean greek work tlg0012.tlg001 --ref 1.1-1.10`.
+Restrict a fetch with `--ref`, such as
+`aegean greek work tlg0012.tlg001 --ref 1.1-1.10`. The full canon is indexed at
+[Scaife](https://scaife.perseus.org) and offline in `greek.catalog()` (recipe 25).
 
-The offline pipeline is the honest baseline; activate `--treebank` or
-`--neural` (the `[neural]` extra) for attested-gold or measured neural lemmas:
-see [Greek NLP](Greek-NLP) for the measured accuracy of each tier.
+The offline pipeline is the baseline tier; pass `--treebank` or `--neural`
+(`[neural]` extra) for higher measured accuracy ([Greek NLP](Greek-NLP)).
 
 ## 4 · What vocabulary distinguishes a site? (keyness)
 
-*What makes the Pylos tablets different from the rest of the Mycenaean corpus?*
-Load the full Linear B corpus (DAMOS, ~5,900 tablets, fetched ~3 MB), split
-Pylos against everything else, and ask:
+*Compare Pylos against the rest of the DAMOS Linear B corpus (~5,900 tablets, ~3
+MB fetch):*
 
 ```python
 import aegean
@@ -729,7 +690,7 @@ rest = [d for d in damos.documents if d.meta.site != "Pylos"]
 
 for r in keyness(pylos, rest)[:3]:
     print(f"{r.item:10} G²={r.log_likelihood:.0f}  log-ratio={r.log_ratio:+.1f}")
-# pe-mo      G²=254  log-ratio=+8.5     ('seed' — the land-tenure series)
+# pe-mo      G²=254  log-ratio=+8.5     ('seed' — land-tenure series)
 # o-na-to    G²=226  log-ratio=+8.4     ('lease plot')
 # to-so-de   G²=210  log-ratio=+8.3
 
@@ -747,17 +708,15 @@ aegean keyness damos --site Pylos --top 5
 aegean plot keyness damos --site Pylos -o pylos.png
 ```
 
-The textbook Ventris & Chadwick land-tenure result surfaces immediately. Read
-G² (significance) together with the log-ratio (effect size) and
-`aegean dispersion`: see [Analysis → Corpus statistics](Analysis).
+Interpret G² (significance) together with log-ratio (effect size) and
+`aegean dispersion` ([Analysis](Analysis)).
 
-The same split works **by scribal hand** (DAMOS v2 carries the curated hand on
-`meta.scribe`): *what does the most prolific Knossos scribe write about?*
+Keyness also splits by scribal hand (`meta.scribe` in DAMOS v2):
 
 ```python
-h117 = damos.filter(scribe="117")            # Hand 117
+h117 = damos.filter(scribe="117")
 rest117 = [d for d in damos.documents if d.meta.scribe != "117"]
-keyness(h117, rest117)[:5]                    # the hand's characteristic vocabulary
+keyness(h117, rest117)[:5]
 ```
 
 ```bash
@@ -765,52 +724,47 @@ aegean keyness damos --scribe 117 --top 10
 aegean analyze hands damos                    # rank every recorded hand
 ```
 
-DAMOS is **CC BY-NC-SA 4.0 (NonCommercial)** and is fetched, never bundled: see
+DAMOS carries CC BY-NC-SA 4.0 (NonCommercial) and is fetched on demand. See
 [Linear B](Linear-B) and [Data & Provenance](Data-and-Provenance).
 
 ## 5 · Sound-match a syllabic word against Greek
 
-*Which Greek word does Linear B `qa-si-re-u` sound like?* Cross-script
-comparison romanizes both sides to one phoneme alphabet and ranks by weighted
-distance:
+*Compare Linear B `qa-si-re-u` phonetically against Greek candidates:*
 
 ```python
 from aegean.analysis import nearest, phonetic_compare
 
 cmp = phonetic_compare("qa-si-re-u", "linearb", "βασιλεύς", "greek")
-print(round(cmp.similarity, 2))                    # 0.56
-print([(c.a, c.b, c.op) for c in cmp.alignment][:2])  # [('k', '', 'del'), ('w', 'b', 'sub-far')] — the qʷ→b reflex
+print(round(cmp.similarity, 2))                       # 0.56
+print([(c.a, c.b, c.op) for c in cmp.alignment][:2])  # [('k', '', 'del'), ('w', 'b', 'sub-far')] — qʷ→b reflex
 
 candidates = ["ποιμήν", "βασιλεύς", "πατήρ", "θεός", "δοῦλος"]
 print(nearest("qa-si-re-u", "linearb", candidates, "greek", top=2, fold_aspiration=True))
-# [('βασιλεύς', 0.4375), ('πατήρ', 0.6625)] — the true cognate first, by a clear margin
+# [('βασιλεύς', 0.4375), ('πατήρ', 0.6625)]
 ```
 
 ```bash
 aegean analyze compare qa-si-re-u βασιλεύς
 aegean analyze nearest po-me greek --top 5
-aegean analyze distance qa-si-re-u pa-si-re-u        # 0.100 — just the [0,1] distance
+aegean analyze distance qa-si-re-u pa-si-re-u        # 0.100 (already romanized)
 ```
 
-The **ranking** is the signal: defective syllabic spelling inflates absolute
-distances (see the caution in [Analysis → Cross-script comparison](Analysis)).
-The candidate list matters: rank against a lexicon or wordlist relevant to your
-question, not just whatever corpus is at hand. Note the division of labour among
-the three commands: `compare` and `nearest` name a script per side and romanize
-for you, while `distance` scores two strings that are already romanized, so hand
-it transliterations rather than Greek script.
+Use the relative ranking rather than absolute distances, because defective
+syllabic spelling inflates raw edit distance ([Analysis](Analysis)). Choose a
+candidate lexicon matched to your research question. `compare` and `nearest`
+take script ids and romanize automatically; `distance` compares already-romanized
+strings directly.
 
 ## 6 · Mine word-families from an undeciphered corpus (and cache it)
 
-*Which Linear A words share a stem with a productive suffix?* Morphological
-clustering is exploratory (no known grammar) but a strong lead-generator, and
-the slowest analysis here, so switch on the opt-in cache if you'll rerun it:
+*Group Linear A words sharing stems and productive suffixes, enabling the opt-in
+analysis cache for repeated runs:*
 
 ```python
 import aegean
 from aegean.analysis import find_morphological_clusters
 
-aegean.cache.enable()      # optional; or PYAEGEAN_ANALYSIS_CACHE=1
+aegean.cache.enable()      # optional; or set PYAEGEAN_ANALYSIS_CACHE=1
 
 clusters = find_morphological_clusters(aegean.load("lineara").word_frequencies())
 print(len(clusters), "clusters")          # 81
@@ -820,15 +774,14 @@ print(clusters[0].stem, "→", [m.word for m in clusters[0].members[:4]])
 
 ```bash
 aegean analyze clusters lineara --top 10
-aegean cache                              # see what's cached; --clear to wipe
+aegean cache                              # inspect cache; --clear wipes it
 ```
 
-## 7 · Ask a grounded question — and audit the answer
+## 7 · Ask a grounded question and audit the answer
 
-*(Hosted generation needs a provider extra, e.g.
-`pip install "pyaegean[anthropic]"`, and its API key. The `local` provider instead
-needs a running OpenAI-compatible server and no key.)* Ground the model in corpus
-facts, then **audit** what it was given with the provenance trace:
+*(Hosted providers require an extra such as `pip install "pyaegean[anthropic]"`
+and an API key; `local` requires an OpenAI-compatible local server and no key.)*
+Supply local corpus evidence, then inspect the provenance trace:
 
 ```python
 import aegean
@@ -838,17 +791,17 @@ corpus = aegean.load("lineara")
 grounding = ai.corpus_context(corpus, limit=10) + ai.cooccurrence_evidence(corpus, "KU-RO")
 
 r = ai.ask("What can be said about the function of KU-RO?", grounding=grounding)
-print(r.labeled())     # [EXPLORATORY · ask · …] — the unmissable tag
-print(r.trace())       # every corpus/analysis fact the answer rested on, by source
+print(r.labeled())     # [EXPLORATORY · ask · …]
+print(r.trace())       # grounding facts grouped by source
 ```
 
 ```bash
 aegean ai ask "What is KU-RO?" --corpus lineara --trace
 aegean ai providers             # anthropic · gemini · grok · local · openai · openrouter
-aegean ai eval                  # grounding-fidelity scores for your provider
+aegean ai eval                  # grounding-fidelity eval
 ```
 
-The registered providers and the extra that activates each:
+Registered providers and extras:
 
 | provider | extra | example model family |
 |----------|-------|----------------------|
@@ -856,17 +809,17 @@ The registered providers and the extra that activates each:
 | `openai` | `pip install "pyaegean[openai]"` | GPT |
 | `gemini` | `pip install "pyaegean[gemini]"` | Gemini |
 | `grok` | `pip install "pyaegean[grok]"` | Grok |
-| `openrouter` | `pip install "pyaegean[openrouter]"` | many vendors via one key (`vendor/model` ids) |
-| `local` | `pip install "pyaegean[local]"` | a local server (Ollama/LM Studio/llama.cpp; uses the OpenAI SDK), no key |
+| `openrouter` | `pip install "pyaegean[openrouter]"` | multiple vendors via `vendor/model` ids |
+| `local` | `pip install "pyaegean[local]"` | Ollama / LM Studio / llama.cpp (OpenAI SDK), no key |
 
-Every generative result is a labeled hypothesis rather than an attested reading: see
-[AI Layer](AI-Layer) and, if you can judge the answer, the
+Every generative output is an exploratory hypothesis. See [AI Layer](AI-Layer)
+and the
 [validation issue form](https://github.com/ryanpavlicek/pyaegean/issues/new/choose).
 
 ## 8 · Scan a line of verse
 
-*Scan the first line of the Odyssey, foot by foot.* The scanner uses fixed
-quantity templates per metre; synizesis is lexical, not guessed:
+*Scan dactylic hexameter and iambic trimeter using fixed metrical templates and
+curated lexical synizesis:*
 
 ```python
 from aegean import greek
@@ -891,12 +844,12 @@ aegean greek scan "$(cat line.txt)" --json | jq '.feet[].name'
 aegean greek quantities "μῆνιν"        # per-syllable heavy/light/common
 ```
 
-The metres `--meter` accepts:
+Supported `--meter` values:
 
 | meter | line | note |
 |-------|------|------|
-| `hexameter` | dactylic hexameter | epic; the default |
-| `pentameter` | elegiac pentameter | the elegiac couplet's second line |
+| `hexameter` | dactylic hexameter | epic (default) |
+| `pentameter` | elegiac pentameter | second line of elegiac couplet |
 | `trimeter` | iambic trimeter | spoken tragedy/comedy |
 | `glyconic` | glyconic | aeolic lyric (fixed template) |
 | `pherecratean` | pherecratean | aeolic |
@@ -906,13 +859,13 @@ The metres `--meter` accepts:
 | `alcaic_enneasyllable` | alcaic enneasyllable | aeolic |
 | `alcaic_decasyllable` | alcaic decasyllable | aeolic |
 
-A line that only fits via synizesis on a word outside the curated lexicon exits
-non-zero with the reason rather than guessing. See [Meters](Meters).
+Lines requiring unlisted synizesis exit non-zero with a diagnostic instead of
+guessing. See [Meters](Meters).
 
 ## 9 · Type Greek without a Greek keyboard, then syllabify
 
-*Enter polytonic Greek from plain ASCII, then break it into syllables with its
-accent.* No Greek keyboard needed: use [Beta Code](Greek-NLP#normalization--beta-code):
+*Convert ASCII Beta Code to polytonic Unicode, syllabify, inspect accentuation,
+transcribe to IPA, and list candidate morphological parses:*
 
 ```python
 from aegean import greek
@@ -923,7 +876,7 @@ greek.accentuation("λόγος").classification     # 'paroxytone'
 greek.strip_diacritics("μῆνιν")                # 'μηνιν'
 greek.to_ipa("λόγος")                          # 'loɡos' (reconstructed)
 
-# candidate morphological parses (offline, ambiguity preserved):
+# offline candidate morphological analyses (ambiguity retained):
 for cand in greek.analyze("λόγος"):
     print(cand.lemma, cand.pos, cand.case, cand.number, cand.gender)
 # λόγος NOUN nom sg masc
@@ -931,7 +884,7 @@ for cand in greek.analyze("λόγος"):
 ```
 
 ```bash
-aegean greek betacode "mh=nin"           # μῆνιν   (--reverse goes back to Beta Code)
+aegean greek betacode "mh=nin"           # μῆνιν (--reverse converts back to Beta Code)
 aegean greek syllabify "ἄνθρωπος"
 aegean greek accent "λόγος"
 aegean greek strip "μῆνιν"
@@ -939,14 +892,13 @@ aegean greek ipa "λόγος"
 aegean greek morph "λόγος"               # λόγος [NOUN nom sg masc] / [NOUN nom sg fem]
 ```
 
-If accents look like boxes in a bare Windows terminal that's the terminal font,
-not pyaegean: see the note in [Getting Started](Getting-Started#seeing-greek-correctly).
+If polytonic accents render as boxes on Windows, configure a polytonic terminal
+font ([Getting Started → Seeing Greek correctly](Getting-Started#seeing-greek-correctly)).
 
 ## 10 · Read a deciphered syllabic word as Greek (the bridge)
 
-*Spell out a Linear B or Cypriot word as the Greek it stands for.* The
-Greek-reading bridge applies the script's known sound values plus the spelling
-conventions (final consonants, clusters):
+*Map Linear B or Cypriot words to Greek using known phonetic values and spelling
+rules:*
 
 ```bash
 aegean bridge linearb po-me
@@ -958,16 +910,13 @@ aegean bridge cypriot pa-si-le-u-se
 aegean bridge linearb qa-si-re-u --json | jq '.greek'
 ```
 
-This is only for the **deciphered** scripts (`linearb`, `cypriot`); Linear A and
-Cypro-Minoan are undeciphered, so there is no bridge for them: use recipe 5
-(sound-matching) as the exploratory analogue. See [Linear B](Linear-B) and
-[Cypriot](Cypriot).
+Available only for deciphered scripts (`linearb`, `cypriot`). For undeciphered
+Linear A and Cypro-Minoan, use recipe 5 for exploratory phonetic comparison. See
+[Linear B](Linear-B) and [Cypriot](Cypriot).
 
 ## 11 · Find words by sign pattern
 
-*List every two-sign Linear A word that starts with KU, or every three-sign word
-KU-?-RO.* Each `*` matches **exactly one** sign (use the query engine in the next
-recipe for an open-ended prefix):
+*Match fixed-length sign templates where each `*` matches one sign:*
 
 ```bash
 aegean search lineara "KU-*" --json | jq '.matches[] | "\(.word)\t\(.count)"'
@@ -985,24 +934,23 @@ import aegean
 from aegean.analysis import word_matches_sign_pattern
 
 corpus = aegean.load("lineara")
-freqs = corpus.word_frequencies()          # list of (word, count) pairs
+freqs = corpus.word_frequencies()
 hits = [(w, c) for w, c in freqs if word_matches_sign_pattern(w, "KU-*")]
 print(sorted(hits, key=lambda x: -x[1])[:3])
 # [('KU-RO', 37), ('KU-PA', 4), ('KU-RA', 2)]
 ```
 
 Works on any syllabic corpus (`lineara`, `linearb`, `cypriot`, `cyprominoan`,
-and the fetched `damos` / `sigla`). For an open-ended prefix (e.g. *everything*
-starting KU, including longer words like `KU-PA₃-NU`) use the query engine
-(next recipe).
+`damos`, `sigla`). For variable-length prefixes (such as `KU-PA₃-NU`), use the
+query engine in recipe 12.
 
 ## 12 · Build a compound query and pipe the JSON
 
-*Find Linear A words that start with KU, ranked by frequency: as data.* The
-query engine ANDs/ORs/negates rows; `--fields` lists what you can filter on:
+*Query Linear A words starting with `KU` with AND/OR/NOT filters and JSON
+output:*
 
 ```bash
-aegean query lineara --fields                 # the queryable fields for this corpus
+aegean query lineara --fields                 # list queryable fields
 aegean query lineara --where word-prefix=KU --output-kind words --limit 6
 #  word           count
 #  KU-RO          34
@@ -1012,43 +960,37 @@ aegean query lineara --where word-prefix=KU --output-kind words --limit 6
 #  KU-MI-NA-QE    2
 #  KU-PA₃-NA-TU   2
 
-# AND two rows; OR with the "or:" prefix; negate with "!":
+# AND by default; prefix with "or:" to OR, "!" to negate:
 aegean query lineara --where site-is="Haghia Triada" --where or:word-prefix=KU --json \
   | jq '.matched.inscriptions'         # 55
 ```
 
-`--json` respects `--limit` for the listed `inscriptions` array (default 25), so
-read the full match count from `.matched.inscriptions`; pass `--limit 0` to list
-every matched inscription.
+`--json` truncates the `inscriptions` array at `--limit` (default 25) while
+`.matched.inscriptions` holds the full count; pass `--limit 0` for all matches.
+Available fields depend on the corpus (`aegean query CORPUS --fields`). Python
+equivalent: `aegean.analysis.run_query`. See [Analysis](Analysis).
 
-The fields available depend on the corpus (`aegean query CORPUS --fields`); for
-Linear A they include `site-is`, `scribe-is`, `period-is`, `support-is`,
-`has-image`, `word-prefix`, `word-suffix`, `word-contains-sign`,
-`word-cooccurs-with`, `word-sign-pattern`, and more. The same engine is
-available in Python via `aegean.analysis.run_query`. See [Analysis](Analysis).
-
-The word table above uses **document frequency**, the default for queries;
-`KU-RO` occurs in 34 inscriptions. `--count-unit token` instead counts its 37
-tokens. `--view surface|normalized|lemma` selects explicit comparison keys;
-normalized keys preserve diacritics and iota subscript, and missing lemmas are
-excluded without generating analysis. `--statuses` filters both each word's
-reading status and every typed editorial segment. Query JSON records the
-denominator, exclusions, normalization, and count unit in `metadata`; use that
-receipt alongside the rows. Frequency tables default to token counts; obtain
-the corresponding receipt with `aegean stats ... --details --json`.
+Word query tables default to **document frequency** (`KU-RO` appears in 34
+inscriptions); pass `--count-unit token` to count all 37 tokens.
+`--view surface|normalized|lemma` controls comparison keys (normalized keeps
+diacritics and iota subscript; missing lemmas are excluded without running an
+analyzer). `--statuses` filters both token status and typed editorial segments.
+Query JSON includes denominator, exclusions, normalization, and count unit in
+`metadata`; `aegean stats ... --details --json` emits the corresponding receipt
+for token frequency tables.
 
 ## 13 · Where does a word concentrate? (dispersion)
 
-*Is KU-RO spread evenly across the corpus, or clumped?* Gries' DP runs 0 (even)
-to 1 (concentrated):
+*Measure whether `KU-RO` is evenly distributed or concentrated using Gries' DP
+(0 = even, 1 = concentrated):*
 
 ```bash
 aegean dispersion lineara KU-RO
 #  item    freq   range/parts   DP      DPnorm
 #  KU-RO   37     34/559        0.850   0.851
 
-aegean dispersion lineara --top 5            # rank the whole corpus
-aegean dispersion lineara --signs --top 5    # by individual sign instead of word
+aegean dispersion lineara --top 5            # rank corpus
+aegean dispersion lineara --signs --top 5    # by sign instead of word
 ```
 
 ```python
@@ -1060,15 +1002,13 @@ d = dispersion(corpus, "KU-RO")
 print(round(d.dp, 3), d.range, "of", d.parts)   # 0.85 34 of 559
 ```
 
-A high DP next to a high keyness G² is the interesting case: a word that is both
-*characteristic* of a subcorpus and *clumped* within it. See
-[Analysis → Corpus statistics](Analysis).
+Pair DP with keyness G² to distinguish broad subcorpus vocabulary from terms
+clumped in a handful of documents ([Analysis](Analysis)).
 
 ## 14 · Are two words associated? (collocation stats)
 
-*Do KU-RO and KI-RO turn up in the same documents more than chance?* Four
-measures at once over the whole corpus: χ², log-likelihood, Fisher's exact, and
-a PMI confidence interval:
+*Test whether `KU-RO` and `KI-RO` co-occur across documents above chance using
+χ², log-likelihood, Fisher's exact test, and a PMI confidence interval:*
 
 ```bash
 aegean analyze assoc lineara KU-RO KI-RO
@@ -1079,7 +1019,7 @@ aegean analyze assoc lineara KU-RO KI-RO
 #  fisher_p                 1.595e-06
 #  pmi_interval             [3.1720137984039996, 5.621837690118523]
 
-aegean analyze cooccur lineara KU-RO --top 5     # what shares a document with KU-RO
+aegean analyze cooccur lineara KU-RO --top 5     # top co-occurring words
 #  KI-RO        5
 #  *306-TU      4
 #  KU-PA₃-NU    4
@@ -1092,7 +1032,7 @@ import aegean
 from aegean.analysis import log_likelihood_ratio_2x2, fishers_exact
 
 corpus = aegean.load("lineara")
-docs = [{t.text for t in d.words} for d in corpus]   # one set of words per document
+docs = [{t.text for t in d.words} for d in corpus]
 total = len(docs)
 joint = sum(1 for s in docs if "KU-RO" in s and "KI-RO" in s)   # 5
 n1    = sum(1 for s in docs if "KU-RO" in s)                     # 34
@@ -1102,14 +1042,12 @@ print(round(log_likelihood_ratio_2x2(joint, n1, n2, total), 2))  # 23.94
 print(fishers_exact(joint, n1, n2, total))                       # 1.60e-06
 ```
 
-Fisher's exact is the one to trust on the small joint counts typical of these
-corpora. See [Analysis → Association](Analysis).
+Prefer Fisher's exact test when joint counts are small. See [Analysis](Analysis).
 
 ## 15 · Which signs are surprising inside a word?
 
-*Where is KU-RO improbable, sign by sign?* A token-weighted sign-bigram model
-gives per-transition surprisal in bits: a way to flag spellings that don't look
-like the rest of the corpus:
+*Score per-transition surprisal (in bits) with a token-weighted sign-bigram
+model to flag unusual spellings:*
 
 ```python
 import aegean
@@ -1124,15 +1062,14 @@ print([(s.from_, s.to, round(s.bits, 2)) for s in ws.steps])
 # [('^', 'KU', 4.03), ('KU', 'RO', 2.06), ('RO', '$', 0.39)]
 ```
 
-`^` and `$` are the word-boundary symbols, so the model also scores how typical a
-sign is at the start or end of a word. High mean surprisal on a hapax is a hint
-that it may be a foreign name, an abbreviation, or a misreading: a lead, not a
-verdict. See [Analysis](Analysis) and [Limitations](Limitations).
+`^` and `$` mark word boundaries. High surprisal on a hapax flags possible
+foreign names, abbreviations, or transcription errors for manual inspection. See
+[Analysis](Analysis) and [Limitations](Limitations).
 
 ## 16 · Classify documents by structure
 
-*How many Linear A documents read as accounts vs libation formulae vs lists?*
-A heuristic classifier sorts each document into one of five categories:
+*Triage Linear A documents into `accounting`, `libation`, `list`, `text`, or
+`other` using rule-based structural features:*
 
 ```bash
 aegean analyze structure lineara --json | jq 'to_entries | sort_by(-.value)'
@@ -1149,31 +1086,30 @@ counts = Counter(classify_structure(d) for d in corpus.documents)
 print(counts.most_common())
 ```
 
-The categories are `accounting`, `libation`, `list`, `text`, `other`. These are
-rule-based labels (numeral density, known libation words, line shape), useful for
-sampling and triage, not a typology to cite as fact. See [Linear A](Linear-A).
+These labels use heuristic cues (numeral density, libation vocabulary, line
+shape) for sampling and triage, never as a formal epigraphic typology. See
+[Linear A](Linear-A).
 
 ## 17 · Export the Greek NT as an annotated table
 
-*Get the whole Greek New Testament as one row per token, with gold lemma,
-morphology, Strong's number, and a gloss: ready for pandas or a spreadsheet.*
+*Export Nestle 1904 with gold lemma, Robinson morphology, Strong's number, and
+gloss as one row per token:*
 
 ```bash
 aegean export nt -f csv -o nt_tokens.csv --level token
 # wrote 260 documents to nt_tokens.csv (csv)
 ```
 
-This writes the 260 NT chapters as 137,779 token rows (one per token). The
-token-level columns are:
+This writes 137,779 token rows across 260 chapters with columns:
 
 | column | example | meaning |
 |--------|---------|---------|
 | `doc_id`, `line_no`, `position` | `Matt 1`, `1`, `0` | location |
-| `text` | `Βίβλος` | the surface token |
+| `text` | `Βίβλος` | surface token |
 | `kind` | `word` | token kind (`word`, `logogram`, `numeral`, `separator`, `punct`, `unknown`) |
-| `status` | `certain` | reading status from the edition |
-| `site` | (empty) | find-site, blank for a literary text |
-| `period` | `Koine` | the document's period label |
+| `status` | `certain` | editorial reading status |
+| `site` | (empty) | find-site (blank for literary texts) |
+| `period` | `Koine` | document period label |
 | `lemma` | `βίβλος` | gold dictionary headword |
 | `morph` | `N-NSF` | Robinson morphology tag |
 | `strongs` | `976` | Strong's number |
@@ -1182,82 +1118,85 @@ token-level columns are:
 | `ref` | `Matt.1.1` | canonical reference |
 | `gloss` | `a written book, roll, or volume` | short gloss |
 
-They come out in that order, and the table carries only the columns this corpus
-actually populates: `aegean export lineara -f csv --level token` writes just
-`doc_id,line_no,position,text,kind,status,site,period`, because Linear A has no
-lemma, morphology, or gloss to record.
+Only columns populated by the corpus are emitted (`aegean export lineara -f csv
+--level token` writes only `doc_id,line_no,position,text,kind,status,site,period`).
 
 ```python
 import aegean
-nt = aegean.load("nt")                 # the whole NT as a corpus
-print(len(nt.documents), "chapters")   # 260
+from aegean.greek import bible
+
+nt = aegean.load("nt")                     # full NT corpus
+print(len(nt.documents), "chapters")       # 260
 t = nt.documents[0].tokens[0]
 print(t.text, t.annotations["lemma"], t.annotations["upos"], t.annotations["strongs"])
 # Βίβλος βίβλος NOUN 976
 
-# or just one passage:
-john = aegean.greek.load_nt("John", ref="1.1-1.5")
-print(len(john.documents[0].tokens), "tokens")     # 61
+# or load one passage (pass offline=True for the bundled John 1 / Philemon 1 sample):
+john = bible.load_nt("John", ref="1.1-1.5")
+print(len(john.documents[0].tokens), "tokens")   # 61
+print(len(bible.nt_books()), "books")            # 27
 ```
 
-`--level token` works for `csv` and `parquet`; other formats are `json` (lossless),
-`epidoc` (TEI), and `sqlite`. The NT text is **CC0** (Nestle 1904 base + CC0
-morphology/lemmas/Strong's). `aegean bible books nt` lists all 27 books and the
-names `load_nt` accepts (e.g. `matthew`/`matt`/`mt`). See [Greek NLP](Greek-NLP).
+`--level token` works with `csv` and `parquet`; other formats are `json`,
+`epidoc`, and `sqlite`. The NT dataset is CC0 (Nestle 1904 base + CC0
+annotations). Run `aegean bible books nt` to list all 27 books and accepted
+aliases (`matthew`/`matt`/`mt`). See [New Testament](New-Testament) and
+[Greek NLP](Greek-NLP).
 
 ## 18 · Gloss Koine vocabulary offline
 
-*Get a quick English gloss for a Koine word with no download.* The bundled
-Dodson lexicon (CC0) ships in the package: turn it on, then look words up:
+*Look up Koine glosses and Strong's entries offline using the bundled Dodson
+lexicon (CC0):*
 
 ```python
 from aegean import greek
+from aegean.greek import bible
 
-greek.use_dodson()
-print(greek.gloss_nt("λόγος"))   # a word, speech, divine utterance, analogy
-print(greek.gloss_nt("ἀρχή"))    # ruler, beginning
+greek.use_lexicon("dodson")
+print(greek.gloss("λόγος", dictionary="dodson"))
+# λόγος: a word, speech, divine utterance, analogy
+print(greek.gloss("ἀρχή", dictionary="dodson"))
+# ἀρχή: ruler, beginning
+print(bible.strongs_entry("G3056").gloss)
+# word
 ```
 
 ```bash
-aegean bible strongs λόγος        # Strong’s / Dodson Koine gloss
+aegean bible strongs λόγος        # Strong's / Dodson Koine gloss
 ```
 
-**More dictionaries.** Dodson and LSJ are two backends in a **lexicon registry**.
-`greek.use_lexicon(id)` activates **Middle Liddell** (concise classical), **Cunliffe**
-(Homeric), **Autenrieth** (Homeric), **Abbott-Smith** (New Testament), or **LSJ**, and `greek.gloss(word,
-dictionary=id)` glosses from the one you choose (each fetches a small index on first use,
-0.1–15 MB):
+**Additional hosted dictionaries.** `greek.use_lexicon(id)` also activates
+`middle-liddell` (concise classical), `cunliffe` (Homeric), `autenrieth`
+(Homeric), `abbott-smith` (New Testament), or `lsj`, fetching a 0.1–15 MB index
+on first use:
 
 ```python
-greek.use_lexicon("cunliffe")                            # Cunliffe's Homeric lexicon
+greek.use_lexicon("cunliffe")
 print(greek.gloss("μῆνις", dictionary="cunliffe"))       # μῆνις: μῆνις ἡ. 1 Wrath, ire …
 
-greek.use_lexicon("abbott-smith")                        # Abbott-Smith's NT lexicon
+greek.use_lexicon("abbott-smith")
 print(greek.gloss("πίστις", dictionary="abbott-smith"))  # πίστις: faith; belief; trust; …
 ```
 
-For dictionaries pyaegean cannot host (Slater, Montanari, …), build a
-**Logeion deep-link** instead, which runs offline:
+For non-redistributable dictionaries (Slater, Montanari, DGE, Bailly), generate
+a Logeion deep-link offline:
 
 ```python
 greek.lexicon_link("μήνιδος")
 # 'https://logeion.uchicago.edu/%CE%BC%CE%AE%CE%BD%CE%B9%CE%B4%CE%BF%CF%82'
 ```
 
-The link targets the lemma when the active lemmatizer resolves one, and the form
-as given when it does not: here the offline baseline leaves the third-declension
-μήνιδος standing, so the link is to μήνιδος itself. Pass `lemmatize=False` to
-link the form deliberately.
-
-From the shell: `aegean greek lexica` lists the dictionaries, `aegean greek gloss μῆνις
---dict cunliffe` glosses from one, and `aegean greek lexicon-link μήνιδος` builds the link.
-Dodson is still the zero-download path. See
+`lexicon_link` targets the lemma when the active lemmatizer resolves one, and
+falls back to the surface form otherwise (pass `lemmatize=False` to force the
+surface form). Shell commands: `aegean greek lexica`,
+`aegean greek gloss μῆνις --dict cunliffe`, and
+`aegean greek lexicon-link μήνιδος`. See
 [Greek NLP → the lexicon registry](Greek-NLP#more-dictionaries-the-lexicon-registry).
 
 ## 19 · Build a SQLite database and full-text search it
 
-*Put a whole corpus in a queryable SQLite file with FTS5, then search the
-tokens.* Good for big corpora and for handing data to non-Python tools:
+*Store any corpus in SQLite with FTS5 indexing for SQL access and fast token
+search:*
 
 ```bash
 aegean db build lineara -o la.sqlite
@@ -1271,20 +1210,18 @@ aegean db search la.sqlite "KU-RO"
 #  ...
 ```
 
-The database has `documents` and `tokens` tables plus an FTS5 index, so you can
-also open it in any SQLite client and run ordinary SQL. The same file is what
-`aegean export CORPUS -f sqlite -o …` produces. Replacement of an existing
-database uses a SQLite transaction; WAL readers keep their previous snapshot.
-A busy writer or blocking reader can cause a lock error without replacing the
-existing data: finish the blocking transaction and retry. For large databases
-that you want to annotate incrementally without holding every document in memory,
-use `aegean db annotate la.sqlite --neural` (or `aegean.db.annotate_sqlite_job`),
-which saves progress document-by-document and resumes cleanly if interrupted.
-See [CLI → db](CLI).
+The schema holds `documents`, `tokens`, and `tokens_fts` tables readable by any
+SQLite client (`aegean export CORPUS -f sqlite -o …` writes the same format).
+Overwriting an existing database runs inside a SQLite online-backup transaction
+so active WAL readers keep their snapshot; a busy writer raises a lock error
+without corrupting existing data. For resumable, document-by-document annotation
+of large databases, run `aegean db annotate la.sqlite --neural` (or
+`aegean.db.annotate_sqlite_job`). See [CLI](CLI).
 
 ## 20 · Look up one sign in the inventory
 
-*What is the sign PA in Linear B: glyph, Unicode codepoint, sound value?*
+*Inspect glyph, codepoint, phonetic value, and script attributes for any
+syllabic sign:*
 
 ```bash
 aegean sign linearb pa
@@ -1305,52 +1242,48 @@ sign = inv.by_label("PA")
 print(sign.glyph, hex(sign.codepoint), sign.phonetic)   # 𐀞 0x1001e pa
 ```
 
-Works for every syllabic script (`lineara`, `linearb`, `cypriot`, `cyprominoan`).
-The corpus sizes that ship in the wheel, for reference:
+Bundled corpus sizes included inside the wheel:
 
-| corpus id | `aegean.load(...)` | what it is |
-|-----------|--------------------|-----------|
-| `lineara` | 1721 documents | full GORILA Linear A (bundled, Apache-2.0) |
-| `linearb` | 18 documents | a small bundled Linear B sample; load `damos` for the full corpus |
+| corpus id | `aegean.load(...)` | contents |
+|-----------|--------------------|----------|
+| `lineara` | 1721 documents | full GORILA Linear A (Apache-2.0) |
+| `linearb` | 18 documents | bundled Linear B sample (fetch `damos` for full corpus) |
 | `cypriot` | 180 documents | bundled Cypriot syllabic corpus |
 | `cyprominoan` | 2 documents | bundled Cypro-Minoan sample |
-| `greek` | 5 documents | bundled Greek sample passages; use `load_work` / `load_nt` for whole works |
+| `greek` | 5 documents | bundled Greek sample passages (use `greek.load_work` / `bible.load_nt` for full works) |
 
-Fetched corpora (`damos`, `nt`, `sigla`, the Greek epigraphic corpora `isicily`,
-`iip`, `iospe`, `igcyr`, `edh`, and the `ddbdp` papyri database) are larger and
-pulled on first use: see
-the next recipe and [Data & Provenance](Data-and-Provenance).
+Fetched corpora (`damos`, `nt`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`,
+`aphrodisias`, `crete`, `edh`, `ddbdp`, `patrologia`, `apostolic-fathers`,
+`pseudepigrapha`, `byzantine`, `homer-scholia`) download on first use. See
+[Data & Provenance](Data-and-Provenance).
 
 ## 21 · Lock down reproducibility (versions + sha256)
 
-*Record exactly which datasets your paper used.* Every fetchable dataset is
-sha256-verified; the manifest is one command:
+*Record exact package and dataset hashes for a methods section:*
 
 ```bash
-aegean data list                  # everything fetchable, with a downloaded column + sizes
-aegean data versions              # the reproducibility manifest: version + sha256 each
-aegean data store                 # where the local store lives and what's in it now
-aegean data fetch damos-corpus    # one-time download (a no-op once stored)
-aegean data remove damos-corpus   # delete a downloaded dataset (--all clears everything)
+aegean data list                  # fetchable datasets with downloaded status and sizes
+aegean data versions              # reproducibility manifest (version + SHA-256)
+aegean data store                 # local store path and contents
+aegean data fetch damos-corpus    # one-time download (no-op once cached)
+aegean data remove damos-corpus   # delete one dataset (--all clears all)
 ```
 
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.67.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.72.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
-Paste `aegean --version` and the relevant lines of `aegean data versions` into
-your methods section and anyone can reconstruct the exact inputs. The cache
-location is overridable with `PYAEGEAN_CACHE`. See
+Include `aegean --version` and the relevant rows from `aegean data versions` (or
+package everything into a portable research bundle in recipe 28). Set
+`PYAEGEAN_CACHE` to relocate the store. See
 [Data & Provenance](Data-and-Provenance) and [Installation](Installation).
 
 ## 22 · Put all of Homer in one searchable database
 
-*Both Homeric epics, fetched once, in a single SQLite file you can full-text
-search.* `combine` resolves each source like any corpus argument (here two Greek
-work ids), merges them, and writes one database; then `db search` runs over the
-whole thing:
+*Fetch both Homeric epics, combine them into one FTS-indexed SQLite file, and
+search across all 48 books:*
 
 ```bash
 aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db
@@ -1364,27 +1297,20 @@ aegean db search homer.db "μῆνιν" --limit 4
 #  tlg0012.tlg001:5    3629   μῆνιν
 ```
 
-(The Iliad and Odyssey are 24 books each, so the merged database holds 48
-documents; the doc id is the work id plus the book number.)
+The Iliad and Odyssey contribute 24 books each with distinct ids (`<work>:<book>`).
+On colliding ids, `--on-conflict first|last|suffix` sets resolution (default
+`error`). `aegean cite homer.db` credits both editions.
 
-The two works keep distinct document ids, so nothing collides; if they ever did,
-`--on-conflict first|last|suffix` decides what wins (the default is `error`, so a
-clash is loud rather than silent). The merged corpus records a provenance note
-that names **every** source, so `aegean cite homer.db` still credits both
-editions.
-
-Already built the database and want to fold in a third work later? `db add`
-upserts by document id: matching ids are replaced, new ones appended, the FTS5
-index refreshed: without rebuilding:
+To append additional works to an existing database without rebuilding, use
+`aegean db add` (upserts by document id and updates affected FTS rows):
 
 ```bash
-aegean db build tlg0012.tlg001 -o homer.db      # start with the Iliad
-aegean db add tlg0012.tlg002 -o homer.db        # then add the Odyssey
+aegean db build tlg0012.tlg001 -o homer.db      # Iliad
+aegean db add   tlg0012.tlg002 -o homer.db      # append Odyssey
 # added/updated 24 documents in homer.db
 ```
 
-The same moves in Python: `read_corpus` does the fetching, `combine` (or
-`Corpus.merge`) does the joining:
+Python equivalent:
 
 ```python
 import aegean
@@ -1394,29 +1320,24 @@ homer = aegean.combine([
     aegean.read_corpus("tlg0012.tlg002"),       # Odyssey
 ])
 print(len(homer.documents), "books")            # 48
-homer.to_sql("homer.db")                         # one searchable database
-print("merged" in homer.cite())                  # True — both sources named
+homer.to_sql("homer.db")
+print("merged" in homer.cite())                 # True
 
-# Corpus.merge(*others, dedupe=...) is the method form; Corpus.subset(ids) is
-# the inverse, carving a named subset back out by document id.
+# Corpus.merge(*others, dedupe=...) is the method form; Corpus.subset(ids)
+# extracts selected document ids back out.
 ```
 
-The Greek-work fetch needs the network the first time (then it's cached); the
-`combine` / `merge` / `db add` mechanics themselves are offline. See
-[CLI → db](CLI) and [Greek NLP](Greek-NLP).
+First-time work fetches use the network; combining, merging, and `db add` run
+offline on cached corpora. See [CLI](CLI) and [Greek NLP](Greek-NLP).
 
 ## 23 · Save a stats or keyness table to CSV
 
-*Get a frequency or keyness table straight onto disk as a spreadsheet: no
-pandas, no jq, no copy-paste.* `stats`, `keyness`, `dispersion`, `search`, and
-the `analyze` family all take `--output/-o`; the extension decides the format
-(`.csv`, `.json`, or `.txt`):
+*Write frequency, keyness, dispersion, search, or `analyze` outputs directly to
+`.csv`, `.json`, or `.txt` using stdlib writers (no pandas required):*
 
 ```bash
 aegean stats lineara --top 5 -o freq.csv
 ```
-
-That writes a plain, stdlib CSV:
 
 ```csv
 item,count
@@ -1427,8 +1348,7 @@ KI-RO,16
 A-TA-I-*301-WA-JA,11
 ```
 
-Keyness writes the full table (counts, totals, G², log-ratio, p), one row per
-item, ready to sort in any spreadsheet:
+Keyness writes counts, totals, G², log-ratio, and p-value per row:
 
 ```bash
 aegean keyness lineara --site "Haghia Triada" --top 5 -o key.csv
@@ -1443,30 +1363,23 @@ KI-RO,16,704,0,677,21.741443442187872,4.987974524296153,3.119782173367935e-06
 A-TA-I-*301-WA-JA,0,704,11,677,15.775475780295547,-4.579981551119314,7.13210199579011e-05
 ```
 
-Swap the extension for `.json` to get the same data as records, or `.txt` for the
-human-readable table you'd see on screen. The same `-o` is on the `ai` commands
-too (`aegean ai translate … -o out.json`), where the file keeps the exploratory
-flag, provenance, structured data, and any checking draft. Translation `.txt`
-exports include the labeled text and full audit trace automatically, even in
-concise style. Other AI `.txt` exports contain the labeled response; see
-[AI Layer](AI-Layer). See
-[Analysis](Analysis) and [CLI](CLI).
+Use `.json` for structured records or `.txt` for formatted tables. The same `-o`
+option works on `aegean ai` commands (`aegean ai translate … -o out.json`),
+preserving `exploratory`, provenance, structured audit data, and any checking
+draft; translation `.txt` exports append the full trace automatically. See
+[AI Layer](AI-Layer), [Analysis](Analysis), and [CLI](CLI).
 
 ## 24 · Save a query as a reusable corpus, then reload it
 
-*Run the [compound query](#12--build-a-compound-query-and-pipe-the-json) once,
-keep the matched inscriptions as their own corpus, and feed it to any later
-command.* `query --output` writes the hits as a `.json` or `.db` corpus:
-inscriptions only, and stamps a `subset:` provenance note so the saved file
-still cites the exact query that built it:
+*Save matched inscriptions from a [compound query](#12--build-a-compound-query-and-pipe-the-json)
+to `.json` or `.db` with the query recorded in provenance:*
 
 ```bash
 aegean query lineara --where word-prefix=KU -o ku.json
 # wrote 69 inscriptions to ku.json
 ```
 
-Now `ku.json` *is* a corpus: every command that takes a corpus takes it
-(recall the rule at the top of the page):
+Pass the saved file to any corpus command:
 
 ```bash
 aegean stats ku.json --top 5
@@ -1482,8 +1395,7 @@ aegean cite ku.json
 #   — https://github.com/mwenge/lineara.xyz [subset: query(Word starts with: KU) → 69 documents]
 ```
 
-Save to a `.db` instead and you get a full-text index in the same step, so the
-subset is searchable on its own:
+Write directly to `.db` to include an FTS5 index:
 
 ```bash
 aegean query lineara --where word-prefix=KU -o ku.db
@@ -1494,43 +1406,38 @@ aegean db search ku.db "KU-RO" --limit 3
 #  HT11a   7     KU-RO
 ```
 
-In Python it's `QueryResults.to_corpus(source)` to build the subset and
-`read_corpus(path)` to reload it later:
+Python equivalent:
 
 ```python
 import aegean
 from aegean.analysis import FilterRow
 
 la = aegean.load("lineara")
-res = la.query([FilterRow("word-prefix", "KU")])   # QueryResults
-subset = res.to_corpus(la)                          # a real Corpus, with the subset: note
+res = la.query([FilterRow("word-prefix", "KU")])
+subset = res.to_corpus(la)                          # Corpus with subset: note
 print(len(subset.documents))                        # 69
 
-subset.to_json("ku.json")                          # ... later, in a fresh session ...
-again = aegean.read_corpus("ku.json")              # back as a Corpus
+subset.to_json("ku.json")
+again = aegean.read_corpus("ku.json")
 print(again.cite().split("[")[-1])
 # subset: query(Word starts with: KU) → 69 documents]
 ```
 
-Because the note travels with the file, a saved subset stays as citable as the
-full corpus it came from: exactly the reproducibility habit recipe 21 is built
-around. See [Analysis](Analysis) and [Data & Provenance](Data-and-Provenance).
+See [Analysis](Analysis) and [Data & Provenance](Data-and-Provenance).
 
 ## 25 · Find a work in the catalogue, or bring in your own text
 
-*Two ways to get to a corpus you can analyse: discover an id in the bundled
-catalogue and fetch it, or import a passage you already have.* Both start fully
-offline: the catalogue is bundled metadata and `import` reads local files; only
-the optional `load_work` step at the end touches the network.
+*Search the bundled 1,778-work Greek catalogue offline, or import local `.txt`,
+directory, or `.csv` texts into a standard `Corpus`.*
 
-**Discover an id.** `catalog()` searches every work with a Greek edition in the
-two open repos (~1,800 of them), not just the 25 in recipe 3: substring filters
-(`author=`, `title=`, `source=`) or a free-text `query`, instant and offline:
+**Search the catalogue.** `greek.catalog()` indexes all `-grc` works across
+Perseus and First1KGreek at the pinned commits (beyond the 25 curated works in
+recipe 3):
 
 ```python
 from aegean import greek
 
-len(greek.catalog())                 # 1778   (768 perseus + 1010 first1k)
+len(greek.catalog())                 # 1778 (768 perseus + 1010 first1k)
 greek.catalog("odyssey")
 # [{'id': 'tlg0012.tlg002', 'author': 'Homer', 'title': 'Odyssey',
 #   'greek_title': 'Ὀδύσσεια', 'source': 'perseus'}]
@@ -1548,20 +1455,18 @@ aegean greek catalog --author plato --limit 3
 # … and 36 more — narrow with --author/--title, or --limit 0 to list all (-o to save).
 ```
 
-The id you find (`tlg0012.tlg002`) is exactly what `load_work` /
-`aegean greek work` takes: that fetch is the only networked step (see recipe 3).
-Coverage is what the repos hold at the pinned commit, so an author the upstream
-data lacks is honestly absent: `greek.catalog("Sappho")` returns `[]`.
+Pass the discovered id (`tlg0012.tlg002`) to `greek.load_work` or
+`aegean greek work` (the only networked step; recipe 3). Coverage reflects the
+pinned commits, so authors absent upstream return empty lists
+(`greek.catalog("Sappho")` → `[]`).
 
-**Or bring your own text.** Have a passage on disk already? `import` turns a
-`.txt`/folder/`.csv` into a real corpus that then works anywhere a corpus is
-accepted (recall the rule at the top of the page): `stats`, `query`, `export`,
-the Greek pipeline, all of it. By default, imports retain decoded source text,
-punctuation, numerals, foreign text, and exact character alignment. Greek words
-remain accessible separately through `Document.words` and `Corpus.iter_words()`:
+**Import local text.** `aegean import` converts `.txt`, folders, or `.csv` into
+`.json` or `.db` corpora usable with every command. Imports default to
+`token_view="all"`, preserving decoded source text, punctuation, numerals,
+foreign text, and character spans while keeping lexical words in `Document.words`:
 
 ```bash
-# john1.txt holds: ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος.
+# john1.txt: ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος.
 aegean import john1.txt -o john1.json
 # wrote 1 document(s) to john1.json
 
@@ -1573,20 +1478,17 @@ aegean stats john1.json --top 4
 #  καὶ     2
 ```
 
-In Python the same thing is `aegean.io.from_text` (a string) or `from_text_file`
-(a path); `from_csv` / `from_text_dir` handle a spreadsheet or a folder. The
-result is a `Corpus`, so every analysis applies: here, frequency counts and the
-one-call pipeline over your own line:
+Python equivalent (`from_text`, `from_text_file`, `from_csv`, `from_text_dir`):
 
 ```python
 from aegean import io, greek
 
 text = "ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος."
 corpus = io.from_text(text, script_id="greek", doc_id="john1.1")
-print(len(corpus.documents[0].words))     # 17
-print(len(corpus.documents[0].tokens))    # 20, including two commas and a period
+print(len(corpus.documents[0].words))           # 17
+print(len(corpus.documents[0].tokens))          # 20 (includes commas and period)
 print(corpus.documents[0].source_text == text)  # True
-print(corpus.word_frequencies()[:3])      # [('λόγος', 3), ('ἦν', 3), ('ὁ', 3)]
+print(corpus.word_frequencies()[:3])            # [('λόγος', 3), ('ἦν', 3), ('ὁ', 3)]
 
 for r in greek.pipeline(text)[:3]:
     print(r.text, r.upos, r.lemma)
@@ -1595,172 +1497,236 @@ for r in greek.pipeline(text)[:3]:
 # ἦν VERB εἰμί
 ```
 
-Two things worth knowing: an imported corpus is `license="user-supplied"` in its
-provenance: it's *your* text, so `cite()` records that rather than fabricating an
-edition. And `read_corpus` / the bare `CORPUS` argument still load only `.json`
-and `.db`; a `.txt`/`.csv` must be imported first (the error message says so).
-`--split paragraph|line` makes one document per block or per line instead of one
-for the whole file. See
+Imported corpora set `license="user-supplied"` so `cite()` records local input
+instead of fabricating an edition. CLI `CORPUS` arguments accept `.json` and
+`.db` only; import `.txt`/`.csv` first (pass `--split paragraph|line` to split
+documents). Pass `token_view="words"` (`--token-view words`) only if you want
+word-only import without source text or spans. See
 [Your own corpus](Data-and-Provenance#from-a-file-you-already-have-aegean-import)
-for the import paths and
-[Finding any other work](Greek-Works-and-Books#3-finding-any-other-work) for the
-full catalogue.
+and [Finding any other work](Greek-Works-and-Books#3-finding-any-other-work).
 
-Use `token_view="words"` in the import functions or CLI `--token-view words`
-only when you want the former word-only import; it discards raw text and spans.
-The default preserves punctuation as `PUNCT`, numbers as `NUMERAL`, and foreign
-text as `UNKNOWN`, excluding them from Greek lexical counts without deleting
-them from the imported source.
-
-**Review one field at a time.** Export existing source annotations directly, or
-add `--annotate` to generate predictions before exporting. For the imported
-corpus above, a baseline review round-trip is:
+**Review one field at a time.** Export source annotations directly or add
+`--annotate` to generate predictions before exporting:
 
 ```bash
 aegean review export john1.json --annotate --annotated-output john1-analysis.json --selection unverified -o review.csv
-# Edit review.csv, then apply it to the saved analysis:
+# Edit review.csv (or triage interactively with `aegean tui --review review.csv`; see recipe 29):
 aegean review apply john1-analysis.json review.csv -o reviewed.json
 ```
 
 Set `decision_lemma`, `decision_pos`, or `decision_morph` to `accept`, `correct`,
-`defer`, or `reject`. Acceptance explicitly reviews an unchanged prediction;
-correction also requires a different `correct_*` value. Add reviewer identity,
-`reviewer_note`, and `reviewer_evidence`. Accept/correct verifies only that field;
-defer/reject preserves its prediction as unverified. Blank decisions keep the
-correction-only behavior and never imply approval. Stable token identities and
-source alignment bind the table to the same corpus; repeat any backend flags
-used at export. Predictions and decision history survive application, and
-reanalysis marks affected decisions stale. See [Greek NLP](Greek-NLP).
+`defer`, or `reject`. `accept` verifies an unchanged prediction; `correct`
+requires a differing `correct_*` value. Record `reviewer`, `reviewer_note`, and
+`reviewer_evidence`. Blank cells never approve predictions. Stable token ids and
+source alignment bind the table to the corpus; reanalysis marks superseded
+decisions stale. See [Greek NLP](Greek-NLP) and recipe 29.
 
 ---
 
 ## 26 · Choose a Greek AI translation workflow
 
-*(Grounding runs locally once its selected model and dictionary assets are
-cached; only the final generation needs a hosted provider key or a no-key local
-server.)* `translate(..., mode=...)` selects how much provisional local evidence
-to hand the model. Choose using the passage and the available analysis; a wrong
-parse or dictionary candidate can mislead the model.
+*(Grounding runs locally once model and dictionary assets are cached; generation
+requires a hosted API key or a local server.)* Select `mode` based on the passage
+and backend accuracy; erroneous parses or glosses can mislead the model.
 
 ```python
 from aegean import greek, translate
 
-neural = greek.GreekPipeline.neural()  # model-predicted morphology + UD parse
+neural = greek.GreekPipeline.neural()  # contextual morphology + UD parse
 
 text = "καὶ ἡγοῦμαι σκύβαλα εἶναι, ἵνα Χριστὸν κερδήσω."   # Philippians 3:8
 result = translate.translate(text, mode="morphology", greek_pipeline=neural)
-print(result.labeled())        # [EXPLORATORY · translate · <provider>/<model>] plus notes
+print(result.labeled())        # [EXPLORATORY · translate · <provider>/<model>] + notes
 ```
 
-The default `style="annotated"` displays model-reported uncertainty and change
-notes. `style="concise"` keeps the reading short and signals the retained notes.
-For structured responses, `result.text` is the translation alone, while
-`result.data` retains `uncertainties`, `changes` (before/after, reason, evidence),
-and the exact `raw_response`. Check `format_status` before processing these
-fields: malformed responses remain verbatim, with unavailable fields set to
-`None`, and no automatic paid repair call is made. A single complete outer JSON
-fence is decoded locally while its raw response is retained.
+`style="annotated"` (default) displays model-reported uncertainty and change
+notes; `style="concise"` prints the translation concisely while keeping audit
+details in `data`, JSON, and `trace()`. On structured responses, `result.text`
+holds only the translation and `result.data` holds `uncertainties`, `changes`
+(before/after, reason, evidence), and `raw_response`. Check `format_status`
+before reading structured fields: malformed responses stay verbatim with
+unavailable fields set to `None` and trigger no repair call.
 
-`verify=True` adds a second model call: an ungrounded draft, followed by a check
-against the selected full grounding. It remains exploratory, and the complete
-draft and its provenance survive in `result.draft`. An exact wording comparison
-flags differences omitted from the model's change report; it does not assess
-translation quality. Save `result.to_json("translation.json")` or inspect
-`result.trace()` to retain both stages. CLI `--style concise --verify -o out.json`
-keeps the same audit data; translation `.txt` exports include the full trace.
+`verify=True` runs an ungrounded draft call followed by a checking call against
+full grounding. The original draft stays in `result.draft`. Exact wording
+comparison flags edits absent from the model's change list without scoring
+linguistic accuracy. Save `result.to_json("translation.json")` or inspect
+`result.trace()` to preserve both stages; CLI `--style concise --verify -o
+out.json` preserves identical audit fields, and translation `.txt` exports append
+the full trace.
 
-Grounding is best-effort by default: required-stage failures are recorded in
-`result.grounding_runtime` and `result.trace()`. Set `grounding_failure="strict"`
-(CLI: `--grounding-failure strict`) to stop before generation when required
-analysis fails. Optional dictionaries and rarity data remain optional. See
-[AI Layer](AI-Layer#hybrid-translation).
+Grounding defaults to `best-effort` (failures logged in `grounding_runtime` and
+`trace()`). Use `grounding_failure="strict"` (`--grounding-failure strict`) to
+abort before generation when required analysis fails. See
+[AI Layer → Hybrid translation](AI-Layer#hybrid-translation).
 
 Four grounding modes:
 
-| mode | what the model is told | reach for it when |
-|------|------------------------|-------------------|
-| `"morphology"` *(default)* | available token analyses, raw features, clause links, and optional rare-word flags | a starting point for supplying provisional grammar |
-| `"full"` | morphology plus optional concise dictionary candidates | vocabulary that needs contextual lexical review |
-| `"lemma"` | lemmas + gated glosses (legacy) | reproducing older behaviour |
-| `"none"` | no automatic grounding; explicitly supplied evidence is retained | when automatic analysis is unavailable or unsuitable |
+| mode | prompt evidence | use when |
+|------|-----------------|----------|
+| `"morphology"` *(default)* | token analyses, raw UD features, clause links, optional rare-word flags, idiom glosses | general Greek passages |
+| `"full"` | morphology plus optional concise rare-word dictionary candidates | obscure, technical, or documentary vocabulary |
+| `"lemma"` | legacy lemmas + gated LSJ glosses | reproducing earlier behavior |
+| `"none"` | no automatic grounding; explicit `grounding=` items retained | bare-text baseline or custom evidence only |
 
-The grounding is fully inspectable locally without a provider key; first use of
-the selected model or dictionary can fetch its assets:
+Inspect grounding locally without an API key:
 
 ```python
-greek.use_lsj(); greek.use_lexicon("abbott-smith")   # a concise, common-sense-first dictionary
+greek.use_lsj(); greek.use_lexicon("abbott-smith")   # common-sense-first NT lexicon
 
 for item in translate.grounding_for(
     text, "greek", mode="full", greek_pipeline=neural
 ):
-    print(item.render())  # provisional analysis and dictionary candidates with provenance
+    print(item.render())
 ```
 
-The glosses in `"full"` come from **concise,
-common-sense-first** dictionaries (Middle Liddell, Cunliffe for Homer,
-Abbott-Smith for the New Testament), rarity-gated to the words that matter. They
-are deliberately *not* the first sense of LSJ, a historical lexicon whose opening
-sense is frequently the archaic one (καιρός "a row of thrums in the loom" comes
-before "the right time").
+`"full"` glosses come from common-sense-first dictionaries (Middle Liddell,
+Cunliffe, Abbott-Smith) gated to rare words, excluding LSJ's etymologically
+ordered lead sense (where καιρός opens with "a row of thrums in the loom" before
+"the right time").
 
-Dictionary matches are candidates, not verified contextual senses. Raw tense
-and aspect features retain their supplying convention; a morphological
-`Tense=Past` does not establish past event time in a subjunctive, infinitive, or
-participle, and missing aspect is not filled in as an aorist.
+Dictionary matches are candidate glosses, not disambiguated senses. Raw tense
+and aspect tags preserve their source convention (`Tense=Past` does not imply
+past event time in subjunctives, infinitives, or participles, and missing aspect
+is not filled in as aorist).
 
-Explicit source annotations and current field-level review decisions can
-supplement predictions through `grounding=...`; `ai.annotation_evidence(corpus)`
-builds such items from existing annotations. Their status and provenance reach
-the model without certifying or silently replacing automatic predictions.
+Pass `grounding=ai.annotation_evidence(corpus)` to supplement automatic
+predictions with edition annotations and current field-level review decisions
+without certifying or replacing unreviewed predictions.
 
-**What grounding does, and what it does not.** Morphology grounding can reduce
-grammatical errors (voice, subject/object, case), and `"full"` glosses can reduce
-rare-word errors. Their usefulness depends on the accuracy of the local analysis
-and on the model and passage. Grounding will not make a weak model
-an expert, and Ancient Greek translation has genuine interpretive range (no two
-published Homers agree), so every result is a **labeled, provenanced hypothesis**,
-never a verdict. `ai.grounding_regime(text, corpus=...)` gives an exploratory
-help/neutral/hurt signal; inspect the analysis and relevant source context before
-using it. No mode guarantees a better translation. See [AI Layer](AI-Layer).
+Morphology grounding can reduce grammatical mistakes (voice, subject/object,
+case), and `"full"` glosses can help on rare vocabulary, bounded by local
+analysis accuracy and model capability. Every result remains a labeled
+exploratory hypothesis. `ai.grounding_regime(text, corpus=...)` provides an
+exploratory `help`/`neutral`/`hurt` pre-call signal. See [AI Layer](AI-Layer).
 
 ## 27 · Search 57,000 papyri without loading them (DDbDP)
 
-The Duke Databank of Documentary Papyri (`ddbdp`, 57,331 papyri, ~4.4M tokens) is
-delivered as a SQLite database with a full-text index, so the right way in is
-search and streaming, not `load`:
+`ddbdp` (57,331 papyri, ~4.4M tokens) ships as an FTS5 SQLite database. Search
+and stream it instead of calling `aegean.load("ddbdp")`:
 
 ```bash
-aegean db search ddbdp "βασιλέως" --limit 3   # fetches the database on first use (~219 MB), then instant
+aegean db search ddbdp "βασιλέως" --limit 3   # fetches ~219 MB on first use; instant after
 ```
 
 ```python
 from aegean.scripts.greek import ddbdp_db
 from aegean import db
-for doc in db.stream(ddbdp_db()):   # one document at a time, flat memory
+
+for doc in db.stream(ddbdp_db()):   # one document at a time, constant memory
     ...
 ```
 
-`aegean.load("ddbdp")` still materialises the whole corpus for corpus-wide
-statistics, but it costs a couple of minutes and several GB of RAM; prefer the
-search and stream paths above.
+`aegean.load("ddbdp")` materializes the full corpus for whole-corpus statistics
+at the cost of a couple of minutes and >1 GB RAM.
+
+## 28 · Package, verify, and hydrate a portable research bundle
+
+*Package a corpus (or filtered subset), review tables, analysis receipts,
+workbench state, and citations into one deterministic, SHA-256-verified `.zip`
+archive (`aegean-research-bundle/1`), with zero extra dependencies:*
+
+```bash
+# 1. Create a bundle (add --review, --receipt, or --state to include companion files)
+aegean bundle create ht_study.zip --corpus lineara --site "Haghia Triada" \
+  --title "Haghia Triada Linear A study"
+# Created ht_study.zip (aegean-research-bundle/1, 3 members, corpus=pointer, redistributable=yes)
+
+# 2. Inspect manifest and verify archive safety + SHA-256 member checksums
+aegean bundle inspect ht_study.zip
+aegean bundle verify ht_study.zip
+# PASS: ht_study.zip (3 members verified, redistributable=yes)
+
+# 3. Verify, unpack, and reconstruct the corpus (add --fetch for uncached remote corpora)
+aegean bundle hydrate ht_study.zip ./hydrated_study
+# Hydrated ht_study.zip → ./hydrated_study (docs=1110, reviews=0, receipts=0)
+```
+
+Under the default `--embed-corpus auto` policy, redistributable corpora (such as
+`cypriot` or user-supplied JSON) embed directly as deterministic `corpus.json.gz`,
+whereas corpora carrying non-commercial (`CC BY-NC*`) or restricted license
+clauses (such as `damos` or `lineara`'s image rights string) omit the text and
+store a `CorpusReference` pointer with dataset id, version, URL, SHA-256,
+license, and filter spec so the bundle stays redistributable. Pass
+`--embed-corpus always` for a private non-redistributable snapshot
+(`redistributable=no`).
+
+Python equivalent:
+
+```python
+import aegean
+from aegean.bundle import create_bundle, verify_bundle, hydrate_bundle
+
+cypriot = aegean.load("cypriot")
+manifest = create_bundle(
+    "cypriot_study.zip",
+    corpus=cypriot,
+    dataset="cypriot",
+    title="Cypriot syllabic study",
+)
+report = verify_bundle("cypriot_study.zip")
+assert report.ok
+
+hydrated = hydrate_bundle("cypriot_study.zip", dest="./hydrated_cypriot")
+print(len(hydrated.corpus), "documents")   # 180 documents
+```
+
+## 29 · Review annotations and adjudicate conflicts in the TUI
+
+*Triage low-confidence predictions or resolve disagreements between two
+reviewers interactively in the terminal UI (`pip install "pyaegean[tui]"`):*
+
+```bash
+# 1. Export an editable review table from an analyzed corpus
+aegean review export john1.json --annotate --annotated-output john1-analysis.json \
+  --selection unverified -o review.csv
+
+# 2. Open the review table directly in the TUI
+aegean tui --review review.csv
+
+# Or pass --review twice to merge two reviewers' copies and adjudicate conflicts:
+aegean tui --review alice.csv --review bob.csv --corpus john1-analysis.json
+```
+
+Inside the Review screen (`ReviewScreen`), sentence context, morphological
+predictions, offline lexicon glosses, and conflict options display beside the
+token queue:
+
+| Key | Action |
+|-----|--------|
+| `a` | accept current prediction |
+| `e` | edit correction, note, or evidence |
+| `1` / `2` / `3` | select numbered reviewer option on a conflicted field |
+| `d` / `x` | defer or reject prediction |
+| `n` / `p` | jump to next or previous unresolved token |
+| `f` | cycle filter (`all`, `unresolved`, `conflicts`, `flagged`) |
+| `s` | save back to CSV (preserving immutable snapshot hashes and `.companion.json`) |
+
+After saving (`s`), apply the adjudicated CSV back to the saved analysis:
+
+```bash
+aegean review apply john1-analysis.json review.csv -o reviewed.json
+```
+
+See [TUI](TUI) and [Validation and Review](Validation-and-Review).
 
 ---
 
 ## Notes & limitations
 
-- **Outputs are real but corpus-version-bound.** The numbers above were produced
-  against the shipped data; a future corpus update can shift counts. The
-  `cite()` / `aegean data versions` habit in these recipes is exactly what pins
-  them.
-- **Heuristic analyses are leads, not verdicts.** Accounting reconciliation
+- **Outputs depend on dataset versions.** Counts above reflect the shipped
+  datasets and can shift on upstream updates; pin versions with `cite()`,
+  `aegean data versions`, or `aegean bundle create`.
+- **Heuristic analyses are exploratory leads.** Accounting reconciliation
   (recipe 1), structure classification (16), morphological clusters (6), and
-  sign surprisal (15) all infer structure the corpora don't mark explicitly.
-  Inspect the documents they point you at.
-- **Cross-script sound-matching reads as a ranking,** not an absolute score
-  (recipe 5); defective syllabic spelling inflates distances.
-- **The AI layer is exploratory** (recipe 7). Hosted generation needs provider
-  credentials; the local backend needs a running server. Every answer is a
-  labeled hypothesis with a provenance trace; never quote it as a reading.
+  sign surprisal (15) infer structure absent from the editions. Verify against
+  the source documents.
+- **Cross-script phonetic matching is a ranking signal**, not an absolute score
+  (recipe 5), because defective syllabic spelling inflates edit distances.
+- **AI outputs are exploratory** (recipes 7 and 26). Hosted providers require
+  credentials; `local` requires a running local server. Every result carries an
+  exploratory label and provenance trace and must never be cited as an attested
+  reading.
 
-See [Limitations](Limitations) for the full, honest list, and
-[For Specialists](For-Specialists) for the methodological fine print.
+See [Limitations](Limitations) for project-wide caveats and
+[For Specialists](For-Specialists) for methodological details.

@@ -4,6 +4,29 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.72.0 (2026-11-26)
+
+### Added
+
+- **Multi-script Aegean workbench bridge (`workbench-app-v2.1.0`, `aegean.io.to_workbench_bundle`)**:
+  - Pinned `workbench-app` to **`workbench-app-v2.1.0`** (`sha256: 9cdb0e28...`; `v2.0.0` and `v1.6.1` preserved in `_REMOTE_HISTORY`), bundling self-hosted SIL OFL 1.1 Noto Sans fonts for Linear A, Linear B, Cypriot Syllabic, and Cypro-Minoan plus Linear B `to-so` / `o-pe-ro` accounting reconciliation.
+  - Added `aegean.io.to_workbench_bundle(corpus, path=None)` emitting a schema-v1 multi-script envelope (`_meta.script`, `inscriptions`, `signs`, `phoneticMap`). Updated `from_workbench_export()` to infer `script_id` from `_meta.script` and attach the matching script sign inventory.
+  - Updated `aegean workbench --corpus <id-or-path>` to serve the multi-script bundle at `/api/local/corpus.json` and append `?script=<script_id>` automatically for Linear B, Cypriot, and Cypro-Minoan corpora.
+- **Interactive annotation & conflict review in `aegean tui` (`ReviewScreen`)**:
+  - Added `ReviewScreen` (`r` key, command palette `"Go to Annotation review"`, and CLI shortcuts `aegean tui --review <csv> [--review <csv> ...] [--corpus <id-or-path>]`) backed by the headless `ReviewSession` adapter (`aegean.tui._review_data`).
+  - Loads single review CSVs (`full` and `editable` with `.companion.json` snapshot verification), multi-reviewer conflict merges (`merge_review_tables(..., on_conflict="report")`), and live calibrated-risk queues (`to_review_table(..., priority="calibrated_risk")`).
+  - Supports filterable token queues (`all` / `unresolved` / `conflicts` / `flagged`), highlighted sentence context, diplomatic/regularized form display, offline lexicon evidence, and one-key actions (`a` accept, `e` edit fields/note/evidence, `1`/`2`/`3` pick reviewer option on conflict, `d` defer, `x` reject, `n`/`p` next/prev unresolved, `f` cycle filter, `s` save back atomically without mutating immutable snapshot hashes).
+- **Portable, reproducible research bundles (`aegean.bundle` & `aegean bundle`)**:
+  - Added zero-dependency `aegean.bundle` (`create_bundle`, `inspect_bundle`, `verify_bundle`, `extract_bundle`, `hydrate_bundle`, `is_redistributable_license`) and CLI commands `aegean bundle create|inspect|verify|extract|hydrate` (all supporting `--json`).
+  - Produces deterministic `.zip` archives (`aegean-research-bundle/1`) containing SHA-256-verified `manifest.json`, `citations.json` + `CITATIONS.bib` + `CITATIONS.txt`, optional `workbench-state.json`, `review/*` (auto-bundling editable `.companion.json` snapshots), `receipts/*`, and optional `corpus.json.gz`.
+  - Enforces a strict non-commercial (NC) license guard by default (`embed_corpus="auto"`): CC BY-NC* and restricted corpora are referenced via a `CorpusReference` retrieval pointer rather than embedded so public research bundles remain redistributable; `embed_corpus="always"` marks `redistributable=False` with an explicit notice.
+
+### Changed
+
+- **Complete 46-page wiki editorial overhaul & staleness cleanup**:
+  - Rewrote prose across all 46 pages in `wiki/` to remove hedging and formulaic filler, unified Biblical/New Testament Python examples onto the canonical `aegean.greek.bible` facade (`bible.load_nt`, `bible.nt_books`, `bible.strongs_entry`) and `aegean bible` CLI, and updated version pins and examples to `0.72.0`.
+  - Neural inference, calibration, OOV reranking, and evaluation modules are untouched; independent review reproduction (`scripts/reproduce_review.py`) remains bit-for-bit identical.
+
 ## 0.71.0 (2026-11-26)
 
 ### Added

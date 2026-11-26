@@ -1,78 +1,108 @@
 # Citing computational assistance
 
-If pyaegean helped produce a result in your work, cite what it used, so a reader can trace the
-claim: the edition or dataset, the tool and its version, the exact number, and any place a
-human corrected the automated output. This page shows how. It is a how-to for citing your own
-work, not a methods paper about pyaegean.
+When pyaegean contributes to published work, cite four items so readers can
+trace every claim: the underlying scholarly edition or dataset, the exact
+pyaegean version, the protocol behind any reported accuracy figure, and any
+human review applied to machine annotations.
 
-The guiding idea matches the rest of the toolkit: name the register. An **established** fact,
-a **measured** number, and an **exploratory** reading are three different kinds of claim, and a
-citation should make clear which one you are leaning on.
+Keep pyaegean's three evidence registers distinct in prose and tables: an
+**established** fact (from an edition or lexicon), a **measured** model output,
+and an **exploratory** hypothesis carry different epistemic weight.
 
-## Cite the corpus (or the exact subset)
+## Cite the corpus or exact subset
 
-Every corpus carries its provenance (source edition, license, citation), and any filtered
-subset carries a note recording the filter, so you cite precisely what you used:
+Every `Corpus` carries its edition provenance (source, license, citation).
+Filtered corpora and query results append the active filter or query to their
+citation output:
 
 ```python
 from aegean import load
+
 c = load("isicily")
-print(c.cite())                       # a ready citation line for the whole corpus
-print(c.provenance.bibtex())          # BibTeX
-print(c.provenance.apa())             # APA
+print(c.cite())                       # citation for the full corpus
+print(c.provenance.bibtex())          # BibTeX entry
+print(c.provenance.apa())             # APA entry
 
 sub = c.filter(site="Catina")
-print(sub.cite())                     # cites the corpus AND records "subset: filter(site='Catina')"
+print(sub.cite())                     # cites corpus and records "subset: filter(site='Catina')"
 ```
 
-A query result cites exactly the query behind it (`QueryResults.cite()`), so a table in a
-paper can point at the precise slice of the corpus that produced it. Underlying editions keep
-their own rights: cite the original edition too (each document's provenance names it).
+`QueryResults.cite()` records the exact query specification and match count.
+Always cite the underlying scholarly edition alongside the digital distribution;
+each document's provenance identifies its source edition and license.
 
-## Cite the tool and its version
+## Cite the package version
 
-Reproducibility needs the version. `aegean.__version__` and the repository's `CITATION.cff`
-(GitHub renders it as a "Cite this repository" button giving APA and BibTeX) identify the
-release. Pin the exact version in a paper so the numbers are reproducible:
+Pin the exact release version from `aegean.__version__` and the repository's
+`CITATION.cff` (rendered under GitHub's "Cite this repository" button in APA
+and BibTeX):
 
 ```python
 import aegean
+
 print(aegean.__version__)
 ```
 
-## Cite a measured number reproducibly
+## Cite measured numbers with evaluation receipts
 
-Measured claims come from a recorded protocol ([Methodology](Methodology),
-[Benchmarks](Benchmarks)). For a number you report, an **evaluation receipt**
-(`aegean.greek.eval_receipt`) is a content-addressed record of the settings that produced it,
-so the figure in your paper can be checked. Cite the number with its protocol, not on its own.
+Measured accuracy claims come from a fixed protocol ([Methodology](Methodology),
+[Benchmarks](Benchmarks)). When reporting your own benchmark or evaluation run,
+generate an evaluation receipt (`aegean.greek.eval_receipt`) capturing the
+content-addressed configuration, dataset, and scorer versions, and cite the
+figure together with its protocol.
 
-## Cite reviewed (human-corrected) output
+## Cite human-reviewed output
 
-If you exported machine annotations, corrected them, and used the corrected corpus (see
-[When the Tool Is Wrong](When-the-Tool-Is-Wrong)), that corpus records the correction: each
-corrected token keeps the machine value under a `<field>__pred` key, and the provenance gains a
-`review:` note. Say so in your methods: which fields were machine-produced, that a human
-reviewed them, and who. That is more honest than presenting corrected output as if it were
-either fully automated or fully hand-done.
+When you export automated annotations, review or correct them, and publish from
+the reviewed corpus (see [When the Tool Is Wrong](When-the-Tool-Is-Wrong)),
+pyaegean retains each machine prediction under `<field>__pred`, logs dated
+events in `review_history`, and appends a `review:` entry to corpus provenance.
+State in your methods section which fields were machine-generated, which were
+reviewed or corrected by a human, and by whom.
 
-## Cite exploratory output as exploratory
+## Cite exploratory output explicitly
 
-Exploratory results (Linear A / Cypro-Minoan structure, AI readings, generative translation)
-are labeled unverified at the point of use, and a citation should carry that label: present
-them as hypotheses generated with computational assistance, not as readings. Do not let a
-formatted table launder an exploratory result into an established one.
+Exploratory outputs (Linear A and Cypro-Minoan structural analyses, AI-layer
+hypotheses, and LLM-assisted translations) are marked unverified at the point of
+use. Present them explicitly as computationally assisted hypotheses and keep
+their exploratory status visible in tables and footnotes.
 
-## A worked phrasing
+## Packaging citations in a research bundle
 
-> Inscriptions were read from I.Sicily (Prag et al., CC BY 4.0) as distributed in pyaegean
-> vX.Y.Z; lemma and part-of-speech annotations were produced by pyaegean's neural joint
-> pipeline and reviewed by the author, with corrections recorded in the corpus provenance;
-> the reported lemma accuracy is the UD-Perseus test figure from the project's benchmark
-> protocol.
+`aegean bundle create` (or `aegean.bundle.create_bundle`) packages
+`CITATIONS.bib`, `CITATIONS.txt`, and `citations.json` automatically alongside
+analysis receipts, review CSVs (with `.companion.json` snapshots), and the
+corpus or a license-clean retrieval pointer:
+
+```bash
+aegean bundle create study-bundle.zip \
+  --corpus isicily \
+  --review review.csv \
+  --receipt eval-receipt.json
+```
+
+The generated citation files include the exact `pyaegean` version, the corpus
+or dataset provenance (URL, license, BibTeX, and plain-text citation), and any
+extra references passed to `create_bundle(..., citations=...)`. Every member is
+hashed in `manifest.json` and verifiable with `aegean bundle verify`; see
+[Validation & Review](Validation-and-Review).
+
+## Sample methods wording
+
+> Inscriptions were read from I.Sicily (Prag et al., CC BY 4.0) via pyaegean
+> v0.72.0. Lemma and part-of-speech annotations were generated by pyaegean's
+> neural joint pipeline (`grc-joint-v3`) and reviewed by the author, with
+> pre-review predictions and editorial changes preserved in the corpus
+> provenance and archived in a verified `aegean-research-bundle/1` bundle.
+> Baseline lemma accuracy follows the UD-Perseus test protocol reported in
+> pyaegean's benchmarks.
 
 ## See also
 
-- [Data & Provenance](Data-and-Provenance): what provenance records and how to pin a data snapshot.
-- [For Specialists](For-Specialists): the register model in full.
-- [Benchmarks](Benchmarks) and [Methodology](Methodology): the measured numbers and the protocol.
+- [Data & Provenance](Data-and-Provenance): provenance fields and dataset
+  version manifests
+- [Validation & Review](Validation-and-Review): interactive TUI review and
+  reproducible research bundles
+- [For Specialists](For-Specialists): evidence registers and subset citations
+- [Benchmarks](Benchmarks) and [Methodology](Methodology): measured scores and
+  evaluation protocols

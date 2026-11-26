@@ -1,204 +1,246 @@
 # Validation and review
 
-This page is an honest record of how pyaegean's quality is checked, and, just as
-important, how it is not. It is a transparency record, not a methods paper and
-not a claim of external certification. The goal is that you can calibrate how far
-to trust a result before you rely on it: what the toolkit checks against itself,
-what rests on externally peer-reviewed scholarship, and what has had no outside
-review at all.
+This page records how pyaegean verifies its code, benchmarks, and data, how to
+review annotations interactively, how to package reproducible research bundles,
+and which parts of the project have received outside peer review.
 
-pyaegean already documents its methodology in one place
-([Methodology](Methodology)), its measured numbers and protocol in another
-([Benchmarks](Benchmarks)), and its data and licences in a third
-([Data & Provenance](Data-and-Provenance)). This page sits alongside them and
-answers a narrower question: who and what has actually reviewed this, and how you
-add your own review to the record.
+Related documentation covers the evaluation protocol
+([Methodology](Methodology)), measured scores ([Benchmarks](Benchmarks)), and
+dataset licensing ([Data & Provenance](Data-and-Provenance)).
 
 ---
 
-## At a glance
+## Summary
 
-| The question | The honest answer | Where to look |
+| Question | Status | Reference |
 | --- | --- | --- |
-| Are the accuracy numbers reproducible? | Yes, from a recorded protocol on held-out data, with the commands to re-run them. | [Benchmarks](Benchmarks), [Methodology](Methodology) |
-| Is the test set kept out of training? | Yes, by an exclusion manifest and a licence split. | [Methodology](Methodology#3-leakage-control) |
-| Does each public function have a test that checks its output? | Yes, that is a project rule, not an aspiration. | [CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md#tests) |
-| Are the numbers guarded against silent drift? | Yes, every published number is pinned to a registry that a test enforces per commit. | [The claims registry](#the-claims-registry) |
-| Has the software had external scholarly peer review? | No. | [What has had outside review](#what-has-had-outside-review-and-what-has-not) |
-| Has it had a formal external software audit? | No. | [What has had outside review](#what-has-had-outside-review-and-what-has-not) |
-| How do I report an error or challenge a result? | Use the Correction, Validation, Data-contribution, or Reproduction-discrepancy form that matches it. | [How to submit a finding](#how-to-submit-a-finding-or-a-correction) |
+| Are accuracy figures reproducible? | Yes, via a fixed protocol on held-out folds with reproduction commands. | [Benchmarks](Benchmarks), [Methodology](Methodology) |
+| Is the test set excluded from training? | Yes, via an exclusion manifest and a license split. | [Methodology](Methodology#3-leakage-control) |
+| Do public functions have output-checking tests? | Yes, required for all public APIs. | [CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md#tests) |
+| Are published numbers guarded against drift? | Yes, pinned to a JSON registry checked on every commit. | [Claims registry](#claims-registry) |
+| Has the software undergone external scholarly peer review? | No. | [External review status](#external-review-status) |
+| Has it undergone a formal external software audit? | No. | [External review status](#external-review-status) |
+| How are errors or challenges submitted? | Through the Correction, Validation, Data-contribution, or Reproduction-discrepancy issue forms. | [Reporting errors and submitting findings](#reporting-errors-and-submitting-findings) |
 
 ---
 
-## What runs against the codebase
+## Internal verification
 
-Several checks run against pyaegean itself. They are internal (part of the
-project, not commissioned from outside), and together they are what "checked"
-means when the toolkit says a result is measured or established. The full test
-suite, linting, and type-checking run in continuous integration on every
-supported Python version before a release.
+The checks below run inside the project repository and in continuous
+integration across all supported Python versions prior to release, alongside
+linting and type-checking.
 
-### The correctness-test rule
+### Output-checking tests
 
-Every public function ships with a test that verifies its actual output: against
-gold data, a hand-computed answer, or a property that must hold (a round-trip, a
-range bound, a symmetry). A test that only confirms the call runs without error
-does not count. The rule applies to the existing surface as well as new code, so
-a function is not considered done until it has one. This is the difference
-between "it runs" and "it is right": two shipped defects (a dead elision entry
-and a wrong dative-plural accent) both passed a run-without-error check before
-this rule caught the class.
+Every public function must have a test asserting its output against gold data,
+a hand-computed value, or a formal invariant (round-trip preservation, range
+bound, or symmetry). A test that only checks that a call runs without raising an
+exception is insufficient. Two earlier defects (a dead elision entry and an
+incorrect dative-plural accent) passed execution-only checks before output
+assertions caught them.
 
-### The benchmark protocol and leakage controls
+### Benchmark protocol and leakage controls
 
-The UD-Perseus and UD-PROIEL test folds are scored with the official CoNLL 2018
-evaluator (sha256-pinned), over each fold's gold tokenization, with bootstrap
-confidence intervals. The Nestle 1904 New Testament is a separate out-of-domain
-check, scored against its gold lemmas and reconciled POS as plain accuracy (it
-carries no dependency trees, so no UAS/LAS or bootstrap). Out-of-domain results are
-reported alongside in-family figures.
+UD-Perseus and UD-PROIEL test folds are scored with the official CoNLL 2018
+evaluator (SHA-256-pinned) over gold tokenization, accompanied by 95% bootstrap
+confidence intervals. The Nestle 1904 Greek New Testament provides an additional
+out-of-domain check scored as plain accuracy for lemmas and reconciled UPOS
+(the NT gold lacks dependency trees). Out-of-domain figures are always reported
+alongside in-family scores.
 
-The numbers are kept honest against leakage two ways: an exclusion manifest
-(`greek.agdt_ud_overlap()`) resolves every evaluation sentence to its training
-source and removes it from training, and the treebanks the models train on are
-separated by licence from the treebanks used only for evaluation, so the
-evaluation folds are never trained on. The full protocol, the metric definitions,
-and the leakage controls are on [Methodology](Methodology) and
-[Benchmarks](Benchmarks); this page does not restate the figures.
+Two controls prevent test leakage: `greek.agdt_ud_overlap()` maps every
+UD-Perseus dev and test sentence back to its AGDT source and removes it from
+training, and models train only on CC BY-SA treebanks while CC BY-NC-SA
+treebanks remain strictly evaluation-only. Full details appear on
+[Methodology](Methodology) and [Benchmarks](Benchmarks).
 
-### The claims registry
+### Claims registry
 
-Every published number lives in a single registry
-(`training/results/published-claims.json`). A test
-(`tests/test_benchmark_claims.py`) pins the documentation to that registry on
-every commit, so a number cannot change in the docs without changing the
-registry, and a re-measurement script (`scripts/check_benchmarks.py`) re-derives
-the offline-stack rows from it. A legitimate re-measurement updates the registry,
-the docs, and the evidence together. This is what prevents a figure from drifting
-quietly as the model or data underneath it changes.
+Every published benchmark number is recorded in
+`training/results/published-claims.json`. `tests/test_benchmark_claims.py`
+asserts that documentation echoes match that registry on every commit, and
+`scripts/check_benchmarks.py` re-measures the offline-stack rows against it.
+Any updated measurement lands with its evidence file, registry update, and
+documentation update in the same commit.
 
 ### Adversarial internal audits
 
-Periodically the whole project is audited adversarially: the audit tries to break
-the toolkit rather than confirm it, from several angles at once. These include
-correctness, regressions introduced by recent changes, whether a fix reached
-every place the same class of bug occurs, behaviour on hostile or malformed
-input, whether the documented example outputs still match the live code, and
-scholarly correctness against standard authorities (Smyth, LSJ, the editions).
-Each candidate finding is independently reproduced before it is accepted, so a
-mistaken finding is refuted rather than acted on (a false report of a Greek error
-is treated as worse than a miss). Confirmed findings are tracked as defects;
-completed fixes carry regression tests that pin the corrected behaviour.
+Before major milestones, the repository undergoes internal adversarial reviews
+targeting correctness, regressions in recent diffs, propagation of bug fixes
+across sibling code paths, handling of malformed or hostile inputs, agreement
+between documented examples and live execution, and philological accuracy
+against standard authorities (Smyth, LSJ, and published editions). Every
+candidate finding is reproduced independently before changing code, and
+confirmed fixes ship with regression tests.
 
 ---
 
-## What these internal checks are, and are not
+## External review status
 
-These checks are automated and adversarial. They are not external scholarly
-peer review, and they are not a
-substitute for it. An adversarial internal audit can find a fabricated lemma, a
-stale documented number, or an unhandled input; it cannot confer the authority
-that comes from an independent expert in the field examining the work. Where this
-page says a result is "checked," it means checked by the process above, not
-endorsed by an outside reviewer.
+Internal automated tests and audits catch code regressions, stale numbers, and
+data defects, but they do not constitute external scholarly peer review or an
+independent software audit.
+
+**Upstream scholarship.** Established-tier data (sign values, Greek lexica and
+morphology, bundled transliterations, treebank annotations, and evaluation
+golds) derives from published, externally reviewed scholarly editions and
+datasets (GORILA, Perseus AGDT, LSJ, Nestle 1904, DAMOS, epigraphic corpora,
+and the CoNLL 2018 evaluator). Every record cites its source, and errors in
+transcription or mapping are corrected against that authority.
+
+**pyaegean software and derived results.** The codebase, its integration of
+upstream sources, its measured benchmark numbers, and its exploratory outputs
+have not received external scholarly peer review or an external software audit.
+Measured numbers are reproducible from the recorded protocol, not externally
+certified. Undeciphered-script analyses (Linear A and Cypro-Minoan) and all
+AI-layer outputs carry explicit exploratory labels at the point of use. See
+[For Specialists](For-Specialists) and [Limitations](Limitations).
 
 ---
 
-## What has had outside review, and what has not
+## Interactive annotation and disagreement review in the TUI
 
-The distinction that matters for trust is between pyaegean's own software and the
-scholarship it carries.
+Automated annotations can be audited and adjudicated directly in the terminal
+using `aegean tui` (requires `pip install 'pyaegean[tui]'`) without leaving the
+review workflow or editing raw CSV columns by hand.
 
-**Rests on externally peer-reviewed scholarship.** The established-tier data is
-not pyaegean's own judgement: the sign values, the Greek lexicon and morphology,
-the bundled transliterations, the treebank annotations, and the gold evaluation
-data all come from editions, lexica, and datasets produced and reviewed by their
-authors and editors (for example GORILA, the Perseus AGDT, LSJ, Nestle 1904,
-DAMOS, and the epigraphic corpora). Each cites its source, and a wrong value
-there is a correction against that source. The evaluation datasets and the scorer
-are community-standard resources maintained outside this project.
+Launch directly into the review workspace with one review table or multiple
+reviewers' copies of the same export:
 
-**Has not had external review.** pyaegean's own code, the way it wires those
-sources together, its measured numbers, and its exploratory output have not been
-through external scholarly peer review or a formal external software audit. The
-measured numbers are reproducible, but reproducible is not the same as externally
-certified: nobody outside the project has been commissioned to re-run or sign off
-on them. The undeciphered-script analyses (Linear A and Cypro-Minoan) and all
-AI-layer output are exploratory by construction, labeled unverified at the point
-of use, and are hypotheses rather than validated readings. See
-[For Specialists](For-Specialists) and [Limitations](Limitations) for the
-register model in full.
+```bash
+# Review a single exported CSV (full schema or --layout editable with .companion.json)
+aegean tui --review review.csv
 
-This is a plain statement of the current position, not a gap waiting on a
-publication. The methodology is already written down and reproducible
-([Methodology](Methodology), [Benchmarks](Benchmarks),
-[Data & Provenance](Data-and-Provenance), and the training evidence linked from
-Methodology), so the way to add external review is to reproduce a number,
-challenge it, confirm or refute a hypothesis, or file a correction. Those are the
-paths below.
+# Adjudicate disagreements between two reviewers against the source corpus
+aegean tui --review alice.csv --review bob.csv --corpus nt
+```
+
+From anywhere inside `aegean tui`, press **`r`** to open the Annotation Review
+screen. You can type a single CSV path, comma-separated CSV paths to merge and
+adjudicate, or a corpus ID (such as `nt`) to generate a live review queue sorted
+by calibrated risk when calibrated confidence annotations are present.
+
+When two or more CSVs are loaded, pyaegean merges them with
+`merge_review_tables(..., on_conflict="report")` and presents each genuine
+disagreement as numbered one-key choices (`1`, `2`, `3`). Screen bindings:
+
+- `a`: accept current prediction
+- `e`: edit lemma, POS, morphology, dependency fields, or reviewer note
+- `1` / `2` / `3`: pick a conflict resolution option
+- `d`: defer token
+- `x`: reject token
+- `n` / `p`: jump to next or previous unresolved token
+- `f`: cycle status filters
+- `s`: save changes
+
+Saving preserves the immutable snapshot hashes and companion metadata so the
+saved CSV passes straight into `aegean review apply`. See [TUI](TUI) and
+[When the Tool Is Wrong](When-the-Tool-Is-Wrong).
+
+---
+
+## Reproducible research bundles
+
+To share a study with collaborators, reviewers, or an archive, package all
+inputs, human review artifacts, receipts, and citations into a single
+deterministic, SHA-256-verified `.zip` archive (`aegean-research-bundle/1`)
+using `aegean bundle` or the Python `aegean.bundle` module:
+
+```bash
+# Create a license-clean bundle with corpus, review CSVs, and evaluation receipts
+aegean bundle create study-bundle.zip \
+  --corpus isicily \
+  --title "Sicilian funerary lemmas" \
+  --review review.csv \
+  --receipt eval-receipt.json
+
+# Inspect manifest metadata and member hashes without extracting
+aegean bundle inspect study-bundle.zip
+
+# Verify archive path safety and SHA-256 checksums for every member
+aegean bundle verify study-bundle.zip
+
+# Unpack and reconstruct corpus + workspace (pass --fetch for pointer corpora)
+aegean bundle hydrate study-bundle.zip ./reproduced-study --fetch
+```
+
+By default (`--embed-corpus auto`), redistributable corpora are embedded as
+`corpus.json.gz`, while NonCommercial or restricted corpora (such as `damos`,
+`sigla`, `iip`, `igcyr`, `crete`, or `homer-scholia`) are recorded as
+license-clean retrieval pointers (`CorpusReference`) so the bundle remains
+redistributable; `aegean bundle hydrate --fetch` reconstructs the exact corpus
+from its pinned upstream asset. Passing `--embed-corpus always` embeds an NC
+corpus for private archival and marks `manifest.redistributable = false` with an
+explicit warning.
+
+Every bundle automatically includes:
+
+- `manifest.json` with `pyaegean` version, policy flags, and per-member SHA-256
+  digests
+- any supplied review CSVs alongside their `.companion.json` snapshots
+- any supplied analysis or evaluation receipts and optional workbench state
+  backups (`--state`)
+- generated citations in `CITATIONS.bib`, `CITATIONS.txt`, and `citations.json`
+
+The same operations are available in Python via `aegean.bundle`
+(`create_bundle`, `inspect_bundle`, `verify_bundle`, `extract_bundle`, and
+`hydrate_bundle`).
 
 ---
 
 ## One-command evidence check
 
-An independent reviewer can begin from a clean source checkout with:
+An independent reviewer can verify the repository's public evidence records from
+a clean source checkout with:
 
 ```bash
 python scripts/reproduce_review.py
 ```
 
-The command verifies the canonical public evidence records by SHA-256 and reproduces
-one small, project-authored offline result without network access, model execution,
-bytecode, or cache writes. It reports exact manifest and result digests. A pass is a
-bounded integrity and regression receipt, not external certification and not a rerun
-of the neural benchmark. [Independent Review](Independent-Review) explains the output,
-model and data cards, limitations, and discrepancy path.
+The script checks every file in `review/review-manifest-v1.json` by SHA-256 and
+reproduces one small, project-authored offline result without network access,
+neural model execution, bytecode writes, or cache creation. A pass confirms
+file integrity and offline regression parity; it does not rerun the neural
+benchmarks or establish external certification. See
+[Independent Review](Independent-Review) for the model card, data card, and
+discrepancy reporting workflow.
 
 ---
 
-## How to submit a finding or a correction
+## Reporting errors and submitting findings
 
-External review is tracked directly in the evidence record: a contributed fact
-keeps its source, and a refutation carries the same weight as a confirmation. There are
-four lightweight paths, each a GitHub issue form (New issue, then pick a
+External corrections and refutations are recorded with their source citations.
+Four GitHub issue forms cover the standard cases (New issue → select a
 template):
 
-| Path | Use it when | What to include |
+| Form | Use when | Include |
 | --- | --- | --- |
-| **Correction** | an established fact is wrong (a sign value, gloss, lemma, bridge reading, or a benchmark item) | the exact value and a source or authority |
-| **Validation** | you have confirmed or refuted an exploratory result | the result, your verdict, and your reasoning and sources |
-| **Data contribution** | you have a single, sourced, openly-licensed fact to add | the fact and its citation |
-| **Reproduction discrepancy** | the review command, a benchmark protocol, or a recorded digest does not match | exact identities, environment, expected and observed output, and every local modification |
+| **Correction** | An established fact is wrong (sign value, gloss, lemma, bridge reading, or benchmark item) | Exact value and published source |
+| **Validation** | Confirming or refuting an exploratory result | Output, verdict, reasoning, and `trace()` |
+| **Data contribution** | Adding a single sourced, openly licensed fact | Fact and citation |
+| **Reproduction discrepancy** | Review script, benchmark protocol, or digest fails to match | Versions, hashes, environment, expected and observed output, and local edits |
 
-Before filing, [Limitations](Limitations) records what is already known not to
-work, and [For Specialists](For-Specialists) (section 6) walks through each path
-with the file each kind of fact lives in and the test that guards it. To correct
-automated output in your own copy first (export, fix, re-import), and to see the
-*shape* of the errors to expect rather than a single accuracy number, see
-[When the Tool Is Wrong](When-the-Tool-Is-Wrong). When a computationally-assisted
-result feeds your own work, cite it with its register named, so a reader can tell
-an established fact from a measured number from an exploratory reading: see
-[Citing Computational Assistance](Citing-Computational-Assistance).
-
-Start the appropriate form from the
-[issue chooser](https://github.com/ryanpavlicek/pyaegean/issues/new/choose); the
+Check [Limitations](Limitations) for known boundaries before filing, and see
+[For Specialists](For-Specialists) (§6) for target file paths and tests. Open a
+form from the
+[issue chooser](https://github.com/ryanpavlicek/pyaegean/issues/new/choose), or
+review the
 [contribution menu](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md#good-first-contributions-a-menu)
-in CONTRIBUTING gives each kind of fact an obvious home and the test it must pass.
+for pull requests.
 
 ---
 
 ## See also
 
-- [For Specialists](For-Specialists): the established / measured / exploratory
-  register and the community review and contribution paths in full.
-- [Benchmarks](Benchmarks) and [Methodology](Methodology): the measured numbers,
-  the protocol, the leakage controls, and the claims registry.
-- [Independent Review](Independent-Review): the bounded reproduction command, model
-  and data cards, receipt map, and discrepancy form.
-- [When the Tool Is Wrong](When-the-Tool-Is-Wrong): the error-shape view and the
-  human-in-the-loop review loop.
-- [Citing Computational Assistance](Citing-Computational-Assistance): naming the
-  register when you cite a result.
-- [Data & Provenance](Data-and-Provenance) and [Limitations](Limitations): where
-  every source comes from, and the candid register of what the toolkit can and
-  cannot claim.
+- [For Specialists](For-Specialists): evidence tiers and contribution paths
+- [Benchmarks](Benchmarks) and [Methodology](Methodology): measured scores,
+  evaluation protocol, and leakage controls
+- [Independent Review](Independent-Review): bounded verification command, model
+  and data cards, and discrepancy form
+- [When the Tool Is Wrong](When-the-Tool-Is-Wrong): error analysis and
+  review CSV workflows
+- [TUI](TUI): terminal browser, workbench, and interactive annotation review
+- [Citing Computational Assistance](Citing-Computational-Assistance): citing
+  editions, versions, receipts, and bundles
+- [Data & Provenance](Data-and-Provenance) and [Limitations](Limitations):
+  upstream datasets, licenses, and documented limits

@@ -1,50 +1,50 @@
 # Greek Works and Books
 
-This page is the reference for **loading real Greek texts** into pyaegean: the
-classical literary corpus (Homer, Plato, Herodotus…) and the Greek New Testament.
-You'd come here when you want to stop typing Greek by hand and instead pull a whole
-work (or a single book, chapter, or line-range) straight into a `Corpus` you can
-tokenize, scan, tag, and count.
+This page covers loading complete Ancient Greek texts into pyaegean as standard
+`Corpus` objects ready for tokenization, scansion, tagging, and frequency
+analysis.
 
-Three doors lead in:
+Three loaders cover the main Greek collections:
 
-- **`greek.load_work("tlg0012.tlg001")`**: any work in the Perseus
-  canonical-greekLit / First1KGreek collections (1,778 Greek works), addressed by a **CTS id** (the
-  `tlgAAAA.tlgBBB` scheme explained below).
-- **`greek.load_nt("John")`** (and `aegean.greek.bible`): 9 Greek New Testament editions, 55 Swete
+- **`greek.load_work("tlg0012.tlg001")`**: any of 1,778 Greek works in Perseus
+  `canonical-greekLit` and `First1KGreek`, addressed by CTS ID
+  (`tlgAAAA.tlgBBB`).
+- **`aegean.greek.bible` (`bible.load_nt(...)`, `bible.load_lxx(...)`,
+  `bible.load_witness(...)`)**: 9 Greek New Testament editions, 55 Swete
   Septuagint books, 13 early manuscript witnesses, and 86 patristic commentaries.
-- **`aegean.load(...)`** for dedicated hosted Greek collections: `apostolic-fathers` (15 works),
-  `pseudepigrapha` (44 Second Temple Greek works), `patrologia` (33 *Patrologia Graeca* volumes,
-  6.79M words), `byzantine` (12 medieval/early-modern vernacular texts), and `homer-scholia`
-  (Venetus A *Iliad* + 54 HMT scholia documents). Install them in groups with `aegean library install patristic` or `literary`.
+- **`aegean.load(...)`** for dedicated hosted Greek collections:
+  `apostolic-fathers` (15 works), `pseudepigrapha` (44 Second Temple Greek
+  works), `patrologia` (33 *Patrologia Graeca* volumes, 6.79M words),
+  `byzantine` (12 medieval and early-modern vernacular texts), and
+  `homer-scholia` (54 documents: 24 books of the Venetus A *Iliad* plus Venetus
+  A, Venetus B, and Escorial Homeric scholia). Install them in groups with
+  `aegean library install biblical`, `patristic`, or `literary`.
 
-Both fetch their text once to a local cache and then work offline, and both return
-the same standard `Corpus` object you get everywhere else in pyaegean. Once a work
-is loaded, everything on [Greek NLP](Greek-NLP) applies to it.
+Each path caches fetched files locally for subsequent offline use and returns a
+standard `Corpus`. Every analysis stage on [Greek NLP](Greek-NLP) runs directly
+on the result.
 
-> **A work id works anywhere a corpus is accepted.** You can hand a Greek work id
-> straight to almost any `aegean` command: no Python required. `aegean stats
-> tlg0012.tlg001`, `aegean export tlg0012.tlg002 -f csv -o odyssey.csv`, and
-> `aegean db build tlg0012.tlg001 -o iliad.db` all resolve the id through
-> `load_work` for you. Anywhere a command takes a `CORPUS` argument it now accepts
-> a registered id (`lineara`, `nt`, …), a Greek work id (`tlg0012.tlg001`), a path
-> to a saved `.json`/`.db` corpus, or `-` for JSON on stdin. [§5](#5-put-works-into-a-database)
-> below puts that to work.
+> **Work IDs work anywhere a corpus is accepted.** Commands taking a `CORPUS`
+> argument accept a registered corpus ID (`lineara`, `nt`, …), a Greek CTS work
+> ID (`tlg0012.tlg001`), a path to a saved `.json` or `.db` corpus, or `-` for
+> JSON on stdin. For example, `aegean stats tlg0012.tlg001`, `aegean export
+> tlg0012.tlg002 -f csv -o odyssey.csv`, and `aegean db build tlg0012.tlg001 -o
+> iliad.db` all resolve the work ID automatically through `load_work`. See
+> [§5](#5-put-works-into-a-database).
 
-> New to all this? Start with [Getting Started](Getting-Started), then the
-> [Tutorial](Tutorial): it walks through loading the Iliad end to end. For the
-> command-line forms, see [CLI](CLI); for the licences and cache details, see
+> New to pyaegean? Start with [Getting Started](Getting-Started) and the
+> [Tutorial](Tutorial), which walks through loading the *Iliad*. For CLI options
+> see [CLI](CLI); for licences and cache layout see
 > [Data & Provenance](Data-and-Provenance).
 
 ---
 
-## 1. The `tlgAAAA.tlgBBB` work-id scheme, in plain language
+## 1. The `tlgAAAA.tlgBBB` work-id scheme
 
-Every classical Greek work has a stable catalogue address. pyaegean uses the same
-one the scholarly world uses: the **CTS** ("Canonical Text Services") id, so the
-id you find in a citation or in the Scaife Viewer is exactly the id you paste here.
+Classical Greek works are addressed by their **CTS** (Canonical Text Services)
+ID, the same identifier used in citations and the Scaife Viewer.
 
-A work id has two halves joined by a dot:
+A work ID consists of two parts separated by a dot:
 
 ```
 tlg0012 . tlg001
@@ -54,31 +54,24 @@ tlg0012 . tlg001
            that author
 ```
 
-- The **first half** (`tlg0012`) names the **author / text group**: Homer.
-- The **second half** (`tlg001`) names **one work** by that author: `tlg001` is
-  the Iliad, `tlg002` is the Odyssey.
+- The first half (`tlg0012`) identifies the author or text group (Homer).
+- The second half (`tlg001`) identifies a specific work (`tlg001` = *Iliad*,
+  `tlg002` = *Odyssey*).
 
-So `tlg0012.tlg001` is read as "Homer, work 1 = the Iliad." The numbers are
-arbitrary catalogue numbers, not anything you'd guess: you look them up. The
-`tlg` prefix comes from the *Thesaurus Linguae Graecae*, whose numbering this
-scheme inherits. (A few First1KGreek works use a `stoa` prefix instead of `tlg`;
-the dotted shape is the same.)
+The `tlg` prefix derives from the *Thesaurus Linguae Graecae* numbering scheme;
+a few First1KGreek works use a `stoa` prefix with the same dotted structure.
 
-You never have to memorise these. The next two sections show how to **list the
-common ones** (built in) and **find any other** (one website).
-
-> The dot matters. `load_work` splits on it: the part before the dot is the author
-> directory, the part after is the work file. Pass something without a dot and you
-> get a clear error telling you the expected shape (`tlgGROUP.tlgWORK`).
+> The dot is required: `load_work` uses the prefix as the author directory and
+> the suffix as the work file. Passing an ID without a dot raises a clear error
+> specifying the `tlgGROUP.tlgWORK` format.
 
 ---
 
-## 2. The built-in catalogue — `popular_works()`
+## 2. The curated shortlist: `popular_works()`
 
-pyaegean ships a small, **hand-verified** catalogue of well-known works so you can
-discover ids without leaving Python. Every id below was confirmed to resolve
-against the live source. It's a *starting point*, not the whole canon (see
-[§3](#3-finding-any-other-work) for everything else).
+pyaegean ships a hand-verified shortlist of 25 common works so you can look up
+their IDs offline. Every entry resolves against the live collections; for the
+full 1,778-work index, see [§3](#3-finding-any-other-work).
 
 ### Python
 
@@ -90,8 +83,8 @@ len(works)            # 25
 works[0]              # {'id': 'tlg0012.tlg001', 'author': 'Homer', 'title': 'Iliad'}
 ```
 
-`popular_works()` is **pure metadata: no download**, so it works offline and is
-instant. Each entry is a plain dict with `id`, `author`, and `title`.
+`popular_works()` reads bundled metadata with no network access and returns a
+list of dicts with `id`, `author`, and `title`.
 
 ### CLI
 
@@ -99,7 +92,7 @@ instant. Each entry is a plain dict with `id`, `author`, and `title`.
 aegean greek works
 ```
 
-…prints the same catalogue as a table and a copy-paste hint:
+Output:
 
 ```
                         Popular Greek works
@@ -115,13 +108,11 @@ Load one with, e.g.:  aegean greek work tlg0012.tlg001 --ref 1.1-1.10
 This is a curated subset — the full canon is at https://scaife.perseus.org
 ```
 
-Add `--json` for machine-readable output: `aegean greek works --json`.
+Pass `--json` for machine-readable output (`aegean greek works --json`).
 
-### The full catalogue (id → author → title)
+### All 25 curated entries
 
-This is the complete list, pulled from the live `popular_works()` function:
-
-| id | author | title |
+| ID | Author | Title |
 |----|--------|-------|
 | `tlg0012.tlg001` | Homer | Iliad |
 | `tlg0012.tlg002` | Homer | Odyssey |
@@ -149,91 +140,78 @@ This is the complete list, pulled from the live `popular_works()` function:
 | `tlg0059.tlg030` | Plato | Republic |
 | `tlg0086.tlg010` | Aristotle | Nicomachean Ethics |
 
-Notice the pattern: works by one author share the first half of the id. All four
-Sophocles plays are `tlg0011.tlg00x`; all four Plato dialogues here are
-`tlg0059.tlg0xx`. That's the `tlgAAAA` group at work.
-
-This is the curated short list. To search the **full** 1,778-work discovery index
-in-package, use `catalog()` / `aegean greek catalog`: see
-[§3](#3-finding-any-other-work).
+Works by the same author share the first prefix: all four Sophocles plays start
+with `tlg0011`, and all four Plato dialogues start with `tlg0059`. To search all
+1,778 loadable works offline, use `catalog()` / `aegean greek catalog` below.
 
 ---
 
 ## 3. Finding any other work
 
-`load_work` accepts **any** Perseus canonical-greekLit / First1KGreek CTS id, not
-just the 25 above. There are two ways to find an id: a built-in search, and the
-official web browser.
+`load_work` accepts any CTS ID present in Perseus `canonical-greekLit` or
+`First1KGreek`, beyond the 25 shortlisted works above. You can find IDs offline
+with `catalog()` or online in the Scaife Viewer.
 
-### The built-in catalogue — `catalog()` / `aegean greek catalog`
+### Full discovery index: `catalog()` / `aegean greek catalog`
 
-pyaegean bundles a **complete discovery index** of every work that has a Greek
-(`-grc`) edition in those two collections: **1,778 works** (768 from Perseus
-canonical-greekLit, 1,010 from First1KGreek), far more than the 25 highlights in
-`popular_works()`. It is pure bundled metadata (id, author, English title, Greek
-title, source), so searching it needs **no network** and is instant. Anything it
-lists, `load_work` can fetch.
+pyaegean bundles a complete index of every Greek (`-grc`) edition in both
+repositories: **1,778 works** (768 from Perseus `canonical-greekLit`, 1,010 from
+`First1KGreek`). Because it is bundled metadata (`id`, `author`, English
+`title`, `greek_title`, `source`), searching requires no network connection.
+Every indexed work is fetchable by `load_work`.
 
-`catalog(query=None, *, author=None, title=None, source=None)` returns a list of
-dicts, each with `id`, `author`, `title`, `greek_title`, and `source`. The filters
-combine (all must match); `query` is free-text across id, author, and either title.
+`catalog(query=None, *, author=None, title=None, source=None)` returns matching
+dicts; all supplied filters combine via AND, and `query` matches across ID,
+author, and both titles:
 
 ```python
 from aegean import greek
 
 len(greek.catalog())                       # 1778   (768 perseus + 1010 first1k)
-len(greek.catalog(author="plato"))         # 39     — every Plato work in the open repos
-greek.catalog(title="Ἀντιγόνη")            # search by Greek title too
-# → [{'id': 'tlg0011.tlg002', 'author': 'Sophocles', 'title': 'Antigone',
-#     'greek_title': 'Ἀντιγόνη', 'source': 'perseus'}]
-len(greek.catalog("herodotus"))            # 2      — free-text across id/author/title
-len(greek.catalog(source="first1k"))       # 1010   — limit to one collection
+len(greek.catalog(author="plato"))         # 39     (all Plato works in the open repos)
+greek.catalog(title="Ἀντιγόνη")            # search by Greek title
+# [{'id': 'tlg0011.tlg002', 'author': 'Sophocles', 'title': 'Antigone',
+#   'greek_title': 'Ἀντιγόνη', 'source': 'perseus'}]
+len(greek.catalog("herodotus"))            # 2      (free-text across id/author/title)
+len(greek.catalog(source="first1k"))       # 1010   (limit to one collection)
 
 greek.catalog()[0]
-# → {'id': 'tlg0001.tlg001', 'author': 'Apollonius Rhodius',
-#    'title': 'Argonautica', 'greek_title': 'Argonautica', 'source': 'perseus'}
+# {'id': 'tlg0001.tlg001', 'author': 'Apollonius Rhodius',
+#  'title': 'Argonautica', 'greek_title': 'Argonautica', 'source': 'perseus'}
 ```
 
-From the shell, `aegean greek catalog [QUERY]` mirrors it (`--author`/`-a`,
-`--title`/`-t`, `--source`, `--limit`/`-n` rows to show, `--output`/`-o` to save,
-`--json`):
+From the shell, `aegean greek catalog [QUERY]` supports `--author`/`-a`,
+`--title`/`-t`, `--source`, `--limit`/`-n`, `--output`/`-o`, and `--json`:
 
 ```bash
-aegean greek catalog --author plato        # filter by author (39 matches)
-aegean greek catalog sappho                # free-text query (a no-match is reported plainly)
+aegean greek catalog --author plato                      # filter by author (39 matches)
+aegean greek catalog sappho                              # free-text query
 aegean greek catalog --author homer -o homer_works.csv   # wrote 49 works to homer_works.csv
 ```
 
-A query with no matches reports it plainly rather than printing an empty table:
+Queries with zero matches print an explicit message:
 
 ```bash
 aegean greek catalog sappho
 # No works match. Try a looser filter, or browse https://scaife.perseus.org
 ```
 
-(`sappho` returns nothing because Sappho's Greek text isn't openly digitized in
-either collection: see the coverage note below.)
+> **Catalogue scope.** The index reflects exactly what the two open repositories
+> hold at their pinned commits, not the entire surviving Greek corpus. Authors
+> whose Greek texts are not openly digitized in those repos (such as Sappho) are
+> absent.
 
-> **Scope of the catalogue.** It lists exactly what these open
-> repositories hold at the pinned commit, not the entire classical
-> canon. Authors whose Greek text is not openly digitized there (e.g. Sappho)
-> do not appear; the catalogue matches the exact set `load_work` can fetch.
+### Scaife Viewer
 
-### The Scaife Viewer (the web browser for these collections)
+To browse texts or confirm an edition on the web:
 
-For the canonical web view (or to confirm an edition) use Scaife:
+1. Open the [Scaife Viewer](https://scaife.perseus.org).
+2. Navigate to the author and work.
+3. Extract the CTS ID from the URN or URL: in
+   `urn:cts:greekLit:tlg0012.tlg001.perseus-grc2`, pass `tlg0012.tlg001` to
+   `load_work` (omitting `urn:cts:greekLit:` and the edition suffix).
 
-1. Go to the **Scaife Viewer**: **<https://scaife.perseus.org>**. This is the
-   official browser for these exact collections.
-2. Search for your author or work and open it.
-3. Read the CTS id out of the URL or the work's citation. A Scaife URN looks like
-   `urn:cts:greekLit:tlg0012.tlg001.perseus-grc2`: the `tlg0012.tlg001` middle is
-   the id you pass to `load_work` (drop the `urn:cts:greekLit:` prefix and the
-   trailing edition label).
-
-That's it: there's no separate registry to install. If you pass an id that can't
-be found in either collection, you get an actionable error rather than a silent
-empty result:
+Passing an unresolvable ID raises `DataNotAvailableError`:
 
 ```python
 greek.load_work("tlg9999.tlg999")
@@ -241,18 +219,18 @@ greek.load_work("tlg9999.tlg999")
 # Works are addressed as 'tlgGROUP.tlgWORK', e.g. tlg0012.tlg001 (Iliad).
 ```
 
-### Picking the edition and the source
+### Selecting an edition and source
 
-Some works exist in more than one digital edition, and a few exist in both
-collections. Two optional arguments let you steer:
+When a work appears in multiple digital editions or both collections, use
+`source` and `edition` to disambiguate:
 
-| argument | values | what it does |
-|----------|--------|--------------|
-| `source` | `"auto"` (default), `"perseus"`, `"first1k"` | which collection to search. `"auto"` tries Perseus first, then First1KGreek. |
-| `edition` | a full filename, or a fragment like `"perseus-grc2"` | pin a specific edition file when a work has several; otherwise the highest-numbered `-grc*` Greek edition wins. |
+| Argument | Values | Behavior |
+|----------|--------|----------|
+| `source` | `"auto"` (default), `"perseus"`, `"first1k"` | Collection search order (`"auto"` tries Perseus, then First1KGreek). |
+| `edition` | Full filename or substring such as `"perseus-grc2"` | Pin a specific edition file; otherwise the highest-numbered `-grc*` edition is selected. |
 
 ```python
-# force the First1KGreek copy, and a specific edition file fragment
+# select the First1KGreek copy and a specific edition file
 greek.load_work("tlg0086.tlg005", source="first1k", edition="1st1K-grc1")
 ```
 
@@ -262,111 +240,107 @@ greek.load_work("tlg0086.tlg005", source="first1k", edition="1st1K-grc1")
 
 ### Whole work
 
-With no `ref`, you get the whole work as **one `Document` per top-level part**: a
-book of the Iliad, a chapter run of a prose work.
+Calling `load_work` without `ref` returns the full work with **one `Document`
+per top-level division** (such as a book of the *Iliad* or a prose book/chapter
+group):
 
 ```python
 from aegean import greek
 
-corpus = greek.load_work("tlg0012.tlg001")   # network on first use, then cached
-len(corpus)                                   # 24   (the 24 books of the Iliad)
-corpus.documents[0].id                        # 'tlg0012.tlg001:1'
-corpus.documents[0].meta.name                 # 'Ἰλιάς — Book 1'
-sum(len(d.tokens) for d in corpus)            # 127339
+corpus = greek.load_work("tlg0012.tlg001")   # fetched on first use, then cached
+len(corpus)                                  # 24 (the 24 books of the Iliad)
+corpus.documents[0].id                       # 'tlg0012.tlg001:1'
+corpus.documents[0].meta.name                # 'Ἰλιάς — Book 1'
+sum(len(d.tokens) for d in corpus)           # 127339
 ```
 
 ### Selecting a section with `ref`
 
-`ref` is a **citation address** that matches the work's own structure. The shape
-mirrors how classicists cite: book, then chapter or line, separated by dots, with
-an optional range after a hyphen.
+`ref` uses dot-separated citation coordinates matching the work's structure,
+with an optional hyphenated range:
 
-| `ref` | meaning | example work |
-|-------|---------|--------------|
-| `"1"` | one top-level part (a book) | Iliad book 1 |
-| `"1.2"` | a nested division (book 1, chapter 2) | Herodotus 1.2 |
-| `"1.1-1.50"` | a verse line-range across two full addresses | Iliad book 1, lines 1–50 |
-| `"1.1-50"` | the same range, shorthand (the hi end inherits the lo prefix) | Iliad book 1, lines 1–50 |
+| `ref` | Meaning | Example |
+|-------|---------|---------|
+| `"1"` | single top-level division | *Iliad* Book 1 |
+| `"1.2"` | nested division (book 1, chapter 2) | Herodotus 1.2 |
+| `"1.1-1.50"` | full line range | *Iliad* 1.1–50 |
+| `"1.1-50"` | shorthand line range (upper end inherits prefix) | *Iliad* 1.1–50 |
 
-A worked, **verified** example (the opening of the Iliad):
+Opening lines of the *Iliad*:
 
 ```python
 from aegean import greek
 
 corpus = greek.load_work("tlg0012.tlg001", ref="1.1-1.10")
-len(corpus)                          # 1   (one Document for the selected range)
+len(corpus)                          # 1 (single Document for the range)
 doc = corpus.documents[0]
 doc.id                               # 'tlg0012.tlg001:1.1-1.10'
 doc.meta.name                        # 'Ἰλιάς — 1.1-1.10'
 len(doc.lines)                       # 10
-# first verse, joined back to text:
 " ".join(t.text for t in doc.tokens if t.line_no == 0)
 # 'μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος'
 ```
 
-For a prose work, the middle component is a chapter rather than a verse line:
+In prose works, the second coordinate is typically a chapter:
 
 ```python
-greek.load_work("tlg0016.tlg001", ref="1.2")   # Herodotus, book 1, chapter 2
+greek.load_work("tlg0016.tlg001", ref="1.2")   # Herodotus, Book 1, Chapter 2
 ```
 
 ### Citation schemes: how a work is addressed
 
-A `ref` is only meaningful against the work's **declared citation scheme**: the ordered
-levels the edition names in its TEI `<refsDecl>`. pyaegean reads that scheme straight from
-each edition (no author-specific guessing), so the shape of a `ref` differs by genre. The
-patterns below are typical; the authority is always the edition's own structure, which is
-why the levels are read, not assumed:
+Every `ref` resolves against the work's declared TEI `<refsDecl>` citation
+scheme. pyaegean reads the hierarchy directly from each edition's XML header
+rather than guessing by author:
 
-| genre | scheme (levels) | a `ref` looks like | verified example |
-|-------|-----------------|--------------------|------------------|
-| epic / elegy (verse) | `book.line` | `1`, `1.1`, `1.1-1.50` | Iliad → `['book', 'line']` |
-| drama | `line` | `1`, `1-50` | Antigone, Medea → `['line']` |
-| Plato (Stephanus-paged) | `section` | `17` | Apology, Crito → `['section']` |
-| Aristotle | `chapter.subchapter` | `1`, `1.2` | Poetics → `['chapter', 'subchapter']` (Aristotle varies: the Nicomachean Ethics is `['book', 'section']`) |
-| multi-book prose | `book.chapter.section` | `1`, `1.2`, `1.2.3` | Herodotus, Xenophon's Anabasis → `['book', 'chapter', 'section']` |
+| Genre | Typical levels | Example `ref` | Verified work |
+|-------|----------------|---------------|---------------|
+| Epic / elegy (verse) | `book.line` | `1`, `1.1`, `1.1-1.50` | *Iliad* → `['book', 'line']` |
+| Drama | `line` | `1`, `1-50` | *Antigone*, *Medea* → `['line']` |
+| Plato (Stephanus-paged) | `section` | `17` | *Apology*, *Crito* → `['section']` |
+| Aristotle | `chapter.subchapter` | `1`, `1.2` | *Poetics* → `['chapter', 'subchapter']` (*Nicomachean Ethics* uses `['book', 'section']`) |
+| Multi-book prose | `book.chapter.section` | `1`, `1.2`, `1.2.3` | Herodotus, Xenophon's *Anabasis* → `['book', 'chapter', 'section']` |
 
-Discover a work's scheme before loading with `greek.citation_scheme(id)`, which returns the
-ordered levels exactly as the edition declares them (fetches the TEI once, like `load_work`):
+Inspect a work's exact levels with `greek.citation_scheme(id)` (fetches the TEI
+once, like `load_work`):
 
 ```python
 greek.citation_scheme("tlg0012.tlg001")   # ['book', 'line']   (Homer, Iliad)
 greek.citation_scheme("tlg0059.tlg002")   # ['section']        (Plato, Apology)
-greek.citation_scheme("tlg0032.tlg006")   # ['book', 'chapter', 'section']  (Xenophon, Anabasis)
+greek.citation_scheme("tlg0032.tlg006")   # ['book', 'chapter', 'section'] (Xenophon, Anabasis)
 ```
 
-Because the scheme is read from the edition, a `ref` that resolves nowhere reports the
-work's **own** scheme rather than only that the ref missed (`… cited by book.line`), so the
-error tells you how to address the work. Two rules follow from the scheme: a hyphen
-**range** must stay inside one top-level part (`1.1-1.50` is fine; `1.1-2.50`, which crosses
-from book 1 into book 2, is rejected: load each book and `Corpus.merge`, or use a comma
-list), and a **comma list** (`1.1,1.5` or `1,3`) selects siblings, or ranges that would
-cross a textpart, as one `Document` each, in source order.
+When a `ref` misses, the error names the work's actual citation scheme (such as
+`… cited by book.line`). Two structural rules apply:
 
-Some editions print finer references in the margin, in TEI `<milestone>` markers that live
-**outside** the CTS `<div>` scheme: a Stephanus sub-page (`17a`) or a Bekker line (`1447a10`,
-column `a` of page `1447`, line `10`). `--ref` now addresses these too: it extracts the span
-between the named marker and the next marker of its kind, so `aegean greek work tlg0086.tlg034
---ref 1447a10` (the *Poetics*) returns the run from line 10 up to the next marked line.
-Perseus marks only every fifth Bekker line, so `1447a10` yields lines 10-14 and only the
-marked line numbers are addressable: `1447a11`-`1447a14` resolve to nothing. A whole Bekker
-page-*column* resolves the same way (`1447a` = column `a` of page 1447); the whole physical
-page is its two columns as a **comma list** (`1447a,1447b`), and milestone refs may appear
-in any comma list (`17a,17b`), one `Document` each. A hyphen **range** of milestones is
-**not yet** supported: only a single milestone ref is addressable; a range falls through to
-the scheme-naming error, so use a comma list of the individual markers instead.
+- Hyphen ranges must stay within one top-level division (`1.1-1.50` works;
+  `1.1-2.50` across books is rejected; load each book separately and call
+  `Corpus.merge`, or use a comma list).
+- Comma lists (`1.1,1.5` or `1,3`) select multiple siblings or cross-division
+  segments as separate `Document` objects in source order.
 
-### The same thing on the command line
+Editions also place finer references in TEI `<milestone>` markers outside the
+`<div>` hierarchy, such as Stephanus sub-pages (`17a`) or Bekker lines
+(`1447a10`, column `a` of page `1447`, line `10`). `--ref` addresses these
+milestones directly by extracting the span from the named marker up to the next
+marker of the same kind. For example,
+`aegean greek work tlg0086.tlg034 --ref 1447a10` (Aristotle's *Poetics*) returns
+the span from line 10 to the next marked line. Because Perseus marks every fifth
+Bekker line, `1447a10` yields lines 10–14 and unmarked lines (`1447a11`–`1447a14`)
+resolve to nothing. A Bekker page-column resolves the same way (`1447a` = column
+`a` of page 1447); request a full physical page as a comma list of both columns
+(`1447a,1447b`). Milestone refs can be combined in comma lists (`17a,17b`),
+returning one `Document` per marker. Hyphen ranges of milestones are not yet
+supported; use a comma list of individual markers instead.
+
+### Command-line usage
 
 ```bash
-# list the well-known ids first if you need one
-aegean greek works
-
-# then load a section
-aegean greek work tlg0012.tlg001 --ref 1.1-1.10
+aegean greek works                               # list the 25 curated works
+aegean greek work tlg0012.tlg001 --ref 1.1-1.10  # load a section
 ```
 
-Output (verified, from cache):
+Output:
 
 ```
                           tlg0012.tlg001
@@ -382,108 +356,96 @@ Output (verified, from cache):
 └──────────────┴───────────────────────────────────────────┘
 ```
 
-`aegean greek work` flags:
+`aegean greek work` options:
 
-| flag | meaning | default |
-|------|---------|---------|
-| `WORK_ID` (argument) | the CTS id, e.g. `tlg0012.tlg001` | required |
-| `--ref` | section to select: `1`, `1.2`, `1.1-1.50` | whole work |
+| Option | Meaning | Default |
+|--------|---------|---------|
+| `WORK_ID` | CTS ID, e.g. `tlg0012.tlg001` | required |
+| `--ref` | Citation selection (`1`, `1.2`, `1.1-1.50`, `1447a,1447b`) | whole work |
 | `--source` | `auto`, `perseus`, or `first1k` | `auto` |
-| `--edition` | pick a specific edition file | best `-grc*` |
-| `--output` / `-o` | write the corpus to a JSON file | print summary |
-| `--json` | machine-readable summary on stdout | table |
+| `--edition` | Specific edition file fragment | best `-grc*` |
+| `--output` / `-o` | Write corpus to a JSON file | print summary |
+| `--json` | Machine-readable summary on stdout | table |
 
-Save a whole work to disk to reuse without re-fetching:
+Save a work to disk to avoid re-parsing TEI on subsequent commands:
 
 ```bash
 aegean greek work tlg0012.tlg001 -o iliad.json   # wrote 24 documents to iliad.json
 ```
 
-### Fetch a whole author, and manage the downloads
+### Bulk-fetching an author and managing cached works
 
-`all` in place of a work id bulk-fetches every catalogued work by an author
-(case-insensitive), skipping anything already cached, so an interrupted run
-resumes where it stopped:
+Pass `all` as the work ID to fetch every catalogued work by an author
+(case-insensitive). Already-cached files are skipped, so interrupted fetches
+resume cleanly:
 
 ```bash
-aegean greek work all homer --dry-run    # preview what would be fetched
-aegean greek work all homer --yes        # fetch it; --limit N caps new downloads
+aegean greek work all homer --dry-run    # preview works to fetch
+aegean greek work all homer --yes        # fetch them (--limit N caps new downloads)
 ```
 
-`aegean greek works --downloaded` lists the works already fetched to your local
-cache, and `--remove <id>`, `--remove-author <name>`, or `--remove-all` delete
-downloaded works you no longer need. The Python equivalents are
-`greek.fetch_works`, `greek.list_fetched_works()`, and
+List cached works with `aegean greek works --downloaded`, and clear them with
+`--remove <id>`, `--remove-author <name>`, or `--remove-all`. The Python
+equivalents are `greek.fetch_works`, `greek.list_fetched_works()`, and
 `greek.remove_fetched_works(...)`.
 
-### Notes carried along
+### Editorial notes, source text, and speaker labels
 
-Editorial `<note>` and `<bibl>` material is **not dropped and not mixed into the
-running text**: it rides along in `doc.meta.notes` so the text you analyse is clean
-while the apparatus stays available.
+TEI `<note>` and `<bibl>` elements are kept out of the running token stream and
+stored in `doc.meta.notes`, preserving apparatus information without polluting
+lexical counts.
 
 `Document.source_text` holds the whitespace-normalized selected TEI reading
-(not the original XML bytes), and
-tokens retain aligned source spans, punctuation, foreign text, and numerals.
-Use `doc.words` for lexical analysis. Structured dramatic speaker labels are
-retained as `UNKNOWN` tokens, excluded from word counts;
-`who`, `speaker_label`, and `speech_id` annotations preserve their source context.
+(rather than raw XML bytes), and tokens retain aligned source spans,
+punctuation, foreign text, and numerals. Use `doc.words` for lexical analysis.
+Dramatic speaker labels are preserved as `UNKNOWN` tokens excluded from word
+counts, with `who`, `speaker_label`, and `speech_id` annotations retaining their
+context.
 
 ---
 
 ## 5. Put works into a database
 
-Loading a work re-parses its cached TEI every run. For anything you'll come back
-to (searching it, joining it with another work, sharing it) write it once into a
-**SQLite database** and read from that. The database carries the documents and their
-tokens, plus an FTS5 full-text index, so searches are instant and need no network.
+Loading via `load_work` re-parses cached TEI XML each run. For repeated queries,
+multi-work analysis, or sharing, materialize the corpus into a **SQLite
+database** with an FTS5 full-text index. Because `aegean db build`, `combine`,
+`stats`, and `export` accept Greek CTS work IDs directly, no Python script is
+required.
 
-`aegean db build` (and `combine`, `stats`, `export`, …: anything taking a
-`CORPUS`) accepts a **Greek work id directly**, so you can do
-all of this without writing a line of Python.
-
-### One work → one database
+### One work to one database
 
 ```bash
 aegean db build tlg0012.tlg001 -o iliad.db
-# fetches/parses the Iliad once, then:  wrote 24 documents to iliad.db
+# wrote 24 documents to iliad.db
 ```
 
-`tlg0012.tlg001` is resolved through `load_work` for you (network on first use, then
-the cache). Add `--no-fts` to skip the full-text index if you only want the raw
-tables.
-
-The Python equivalent: load it yourself, then save:
+Pass `--no-fts` to omit the full-text index when only raw tables are needed.
+In Python:
 
 ```python
 from aegean import greek
 greek.load_work("tlg0012.tlg001").to_sql("iliad.db")   # fts=True by default
 ```
 
-### All of Homer in one database — `combine`
+### Merging multiple works: `combine`
 
-`aegean combine` merges several corpora into a single saved corpus. Each source is
-resolved like any other corpus argument, so two work ids become one database:
+`aegean combine` merges multiple corpora (work IDs, registered corpora, or saved
+`.json`/`.db` files) into one `.db` or `.json` file while recording every input
+source in provenance:
 
 ```bash
 aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db
 # wrote 48 documents to homer.db (merged 2 sources)
 ```
 
-That's the Iliad (24 books) and the Odyssey (24 books), all of Homer, in one
-file. Write `-o homer.json` instead for a portable JSON corpus rather than a
-database. The merged corpus's provenance names **every** source it was built from,
-so the trail back to Perseus stays intact.
-
-If two sources share a document id, `--on-conflict` decides what happens:
-`error` (the default, refuse and tell you), `first`, `last`, or `suffix` (keep both,
-disambiguating the later id):
+Control duplicate document IDs with `--on-conflict`: `error` (default), `first`,
+`last`, or `suffix` (retain both with disambiguated IDs):
 
 ```bash
 aegean combine a.json b.json -o merged.db --on-conflict last
 ```
 
-The same thing in Python: `combine([...])`, or `Corpus.merge(*others)`:
+In Python, use `aegean.combine([...])` or `Corpus.merge(*others)`:
 
 ```python
 from aegean import greek, combine
@@ -492,18 +454,18 @@ iliad   = greek.load_work("tlg0012.tlg001")
 odyssey = greek.load_work("tlg0012.tlg002")
 
 homer = combine([iliad, odyssey])          # dedupe="error" by default
-len(homer)                                  # 48
-homer.provenance.source                     # 'Merged corpus (aegean.combine)'
+len(homer)                                 # 48
+homer.provenance.source                    # 'Merged corpus (aegean.combine)'
 homer.to_sql("homer.db")
 
-# equivalently, from one corpus:
+# equivalent method form:
 homer = iliad.merge(odyssey, dedupe="error")
 ```
 
-### Search the database — `db search`
+### Full-text search: `db search`
 
-Once it's a database, full-text search is one command and needs no network. It
-prints the document, the token position, and the matched text:
+Once built, `aegean db search` runs offline against the FTS5 index, reporting
+document ID, token position, and matched token:
 
 ```bash
 aegean db search homer.db μῆνιν
@@ -518,12 +480,11 @@ aegean db search homer.db μῆνιν
 └────────────────┴─────┴───────┘
 ```
 
-`μῆνιν`: "wrath", the very first word of the Iliad. Add `--limit N` to cap hits
-(default 50) or `--json` for machine-readable output. The query matches a whole token
-literally (so `KU-RO` finds the token `KU-RO`, never `PO-TO-KU-RO`); pass `--substring`
-to match within tokens instead.
+Pass `--limit N` (default 50) or `--json` for structured output. Queries match
+whole tokens literally (`KU-RO` matches `KU-RO`, not `PO-TO-KU-RO`); pass
+`--substring` to match within tokens.
 
-(Here it is on a small offline corpus, so you can run it yourself end to end:)
+Offline runnable example using the bundled Linear A corpus:
 
 ```bash
 aegean db build lineara -o lineara.db        # wrote 1721 documents to lineara.db
@@ -538,33 +499,29 @@ aegean db search lineara.db KU-RO --limit 3
 #  └───────┴─────┴───────┘
 ```
 
-### Grow an existing database — `db add`
+### Appending to an existing database: `db add`
 
-To extend a database you've already built (say you started with the Iliad and now
-want the Odyssey in the same file) `db add` **upserts** the new source: documents
-whose id already exists are replaced, new ids are added, and the FTS index is
-refreshed.
+`aegean db add` upserts additional documents into an existing `.db` file
+(replacing matching IDs, inserting new ones, and updating FTS rows):
 
 ```bash
 aegean db build tlg0012.tlg001 -o homer.db   # start with the Iliad
 aegean db add  tlg0012.tlg002 -o homer.db    # added/updated 24 documents in homer.db
 ```
 
-The source can be a work id, a registered corpus id, a `.json`/`.db` file, or `-`.
-In Python it's the `append=True` flag on either saver:
+In Python, pass `append=True` to `to_sql()`:
 
 ```python
 from aegean import greek
 
-greek.load_work("tlg0012.tlg001").to_sql("homer.db")              # build
-greek.load_work("tlg0012.tlg002").to_sql("homer.db", append=True) # upsert in
+greek.load_work("tlg0012.tlg001").to_sql("homer.db")
+greek.load_work("tlg0012.tlg002").to_sql("homer.db", append=True)
 ```
 
-### Taking just part of a corpus — `subset`
+### Subsetting a corpus: `Corpus.subset()`
 
-`Corpus.subset(ids)` returns a new corpus with only the documents you name: handy
-before saving or combining. It records a `subset: N of M documents by id` note in
-the provenance so the slice stays honest:
+`Corpus.subset(ids)` creates a smaller `Corpus` containing only the requested
+document IDs and appends a `subset: N of M documents by id` note to provenance:
 
 ```python
 from aegean import greek
@@ -576,46 +533,49 @@ books_1_3.provenance.notes[-1]       # '...subset: 3 of 24 documents by id'
 books_1_3.to_sql("iliad_opening.db")
 ```
 
-> **The reverse direction, too.** A `query` over the inscription corpora can save
-> its matches as a reusable corpus: `aegean query lineara --where word-prefix=KU
-> -o ku_words.db` writes the matched inscriptions as a `.json`/`.db` you can then
-> `db search` or `combine`. See [CLI](CLI) for the full query language.
+> Query results can also be saved directly as corpora:
+> `aegean query lineara --where word-prefix=KU -o ku_words.db` writes matching
+> documents to a `.json` or `.db` file ready for `db search` or `combine`. See
+> [CLI](CLI).
 
 ---
 
-## 6. The Greek New Testament — `load_nt()`
+## 6. The Greek New Testament and Biblical texts: `aegean.greek.bible`
 
-> See the dedicated [New Testament](New-Testament) page for the full NT tooling.
+> For multi-edition comparison, early manuscript witnesses, Extended Strong's
+> root trees, Septuagint (LXX) search, Psalm conversion, and patristic
+> commentaries, see [New Testament](New-Testament) and
+> [CLI: Biblical & Koine Greek](CLI-Bible).
 
-`greek.load_nt(...)` is the Koine counterpart to `load_work`. It returns a `Corpus`
-of the Greek NT (Nestle 1904) where **every token already carries gold
-annotations**: a `lemma`, a Robinson-style `morph` parse, a `strongs` number, a
-reconciled UD `upos`, the `normalized` form, and (where available) a short `gloss`.
-You don't have to run a tagger: it's all there.
+`bible.load_nt(...)` loads the Greek New Testament as a standard `Corpus` with
+one `Document` per chapter. The default edition (`nestle1904`) carries gold
+annotations on every token: `lemma`, Robinson `morph`, `strongs`, reconciled UD
+`upos`, `normalized`, `ref`, and a brief `gloss`. Eight additional critical and
+traditional editions (`sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`,
+`antoniades`, `tr`) are selectable via `edition=`.
 
-The offline sample ships **inside the package** (John 1 and the one-chapter
-Philemon), so `load_nt("Philemon")` and `load_nt("John", ref="1")` work
-**fully offline**; everything else fetches to cache on first use.
+John 1 and Philemon 1 (Nestle 1904) are bundled inside the package for offline
+use; all other books and editions fetch to cache on first use.
 
 ### Loading a book, chapter, verse, or range
 
-`ref` works just like `load_work`'s, but reads as **chapter.verse**:
+`ref` uses **chapter.verse** notation:
 
-| `ref` | selects |
+| `ref` | Selects |
 |-------|---------|
 | `"3"` | chapter 3 |
 | `"3.16"` | chapter 3, verse 16 |
 | `"3.16-3.18"` | verses 3:16–3:18 |
-| `"3.16-18"` | the same range, shorthand |
+| `"3.16-18"` | verses 3:16–3:18 (shorthand) |
 | `"3-5"` | chapters 3 through 5 |
 
-A complete, **verified, offline** example (Philemon is part of the bundled sample):
+Offline example using bundled Philemon:
 
 ```python
-from aegean import greek
+from aegean.greek import bible
 
-corpus = greek.load_nt("Philemon", ref="1.1-1.3")   # no network: bundled book
-len(corpus)                          # 1   (one Document per chapter)
+corpus = bible.load_nt("Philemon", ref="1.1-1.3")   # offline: bundled book
+len(corpus)                          # 1 (one Document per chapter)
 doc = corpus.documents[0]
 doc.id                               # 'Phlm 1'
 doc.meta.name                        # 'Philemon 1'
@@ -628,13 +588,13 @@ t.annotations
 #  'normalized': 'Παῦλος', 'upos': 'NOUN', 'ref': 'Phlm.1.1', 'gloss': 'Paul'}
 ```
 
-Turn the per-token annotations into a table (every field becomes a column):
+Tabular view in pandas:
 
 ```python
 import pandas as pd
-from aegean import greek
+from aegean.greek import bible
 
-corpus = greek.load_nt("Philemon", ref="1.1")
+corpus = bible.load_nt("Philemon", ref="1.1")
 rows = [{"text": t.text, **t.annotations} for t in corpus.documents[0].tokens]
 pd.DataFrame(rows)[["text", "lemma", "morph", "upos", "strongs", "gloss"]].head()
 #      text    lemma morph  upos strongs                             gloss
@@ -645,35 +605,39 @@ pd.DataFrame(rows)[["text", "lemma", "morph", "upos", "strongs", "gloss"]].head(
 #       καὶ      καί  CONJ CCONJ    2532           and, even, also, namely
 ```
 
-Other forms:
+Additional forms:
 
 ```python
-greek.load_nt("John")                 # whole Gospel of John  (fetches on first use)
-greek.load_nt("John", ref="1.1-18")   # John 1:1–18
-greek.load_nt("Rom", ref="8")         # Romans chapter 8
-greek.load_nt()                       # the whole 27-book NT
+from aegean.greek import bible
+
+bible.load_nt("John")                          # whole Gospel of John (Nestle 1904)
+bible.load_nt("John", ref="1.1-18")            # John 1:1-18
+bible.load_nt("John", ref="1.18", edition="sblgnt")  # SBLGNT edition
+bible.load_nt("Rom", ref="8")                  # Romans chapter 8
+bible.load_nt()                                # all 27 NT books
+bible.load_lxx("Gen", ref="1.1-5", offline=True)     # Swete Septuagint (LXX)
+bible.load_witness("P66", "John", "1.1-5")     # early NT manuscript witness
 ```
 
-`load_nt(book=None, *, ref=None, force=False)`: `force=True` re-fetches even if
-cached; passing a `ref` without a `book` raises (you can't address a verse across
-all 27 books).
-The corpus citation names the canonical book and selected chapter/verse range,
-including the actual extent of an offline sample. A requested unavailable chapter
-or range endpoint raises rather than silently returning a truncated passage.
+Signature: `bible.load_nt(book=None, ref=None, *, edition="nestle1904",
+offline=False, force=False)`. Passing `ref` without `book` raises `ValueError`.
+Unavailable chapters or out-of-range endpoints raise an error instead of
+returning a truncated passage, and `corpus.cite()` records the canonical book
+and exact loaded extent.
 
-### Per-token annotation fields
+### Per-token annotation fields (Nestle 1904)
 
-| field | what it is |
-|-------|------------|
-| `lemma` | dictionary headword (gold, from Nestle 1904) |
-| `morph` | Robinson-style morphology tag, e.g. `N-NSM`, `V-PAI-3S` |
+| Field | Meaning |
+|-------|---------|
+| `lemma` | Dictionary headword (gold, from Nestle 1904) |
+| `morph` | Robinson morphology tag, e.g. `N-NSM`, `V-PAI-3S` |
 | `strongs` | Strong's number (e.g. `3972` = Paul) |
-| `upos` | coarse Universal Dependencies POS, reconciled from `morph` |
-| `normalized` | accent/diacritic-normalized form |
-| `ref` | canonical address of the token, e.g. `Phlm.1.1` |
-| `gloss` | brief English gloss (bundled Dodson lexicon, when available) |
+| `upos` | Coarse UD POS reconciled from `morph` |
+| `normalized` | Accent/diacritic-normalized form |
+| `ref` | Canonical token address, e.g. `Phlm.1.1` |
+| `gloss` | Brief English gloss (bundled Dodson lexicon, when available) |
 
-The Robinson→UPOS mapping that fills `upos` is exposed if you want it directly:
+The Robinson-to-UPOS converter can be called directly:
 
 ```python
 from aegean.scripts.greek.nt import robinson_to_upos
@@ -687,32 +651,34 @@ robinson_to_upos("A-NUI")     # 'NUM'    (indeclinable numeral)
 
 ---
 
-## 7. The 27 books and the names you can use
+## 7. NT and LXX book names
 
-`nt_books()` lists every book in canonical order together with the abbreviations
-`load_nt` and `aegean bible read` accept for it. Pure metadata, no download.
+`bible.nt_books()` returns all 27 New Testament books in canonical order with
+the aliases accepted by `bible.load_nt()` and `aegean bible read` (bundled
+metadata, no network call):
 
 ```python
-from aegean import greek
-books = greek.nt_books()
+from aegean.greek import bible
+
+books = bible.nt_books()
 len(books)         # 27
 books[3]           # {'name': 'John', 'aliases': ['john', 'jn', 'jhn']}
 ```
 
-Any of the canonical `name` **or** any alias is accepted (case-insensitive; spaces
-and dots are ignored: `"1 Cor"`, `"1cor"`, `"1Cor."` all resolve to `1Cor`). The
-`name` is what shows up in document ids.
+Matching is case-insensitive and ignores spaces and periods (`"1 Cor"`, `"1cor"`,
+`"1Cor."` all resolve to `1Cor`). Document IDs always use the canonical `name`.
 
-On the command line:
+From the shell:
 
 ```bash
-aegean bible books nt          # the table below
-aegean bible books nt --json   # same data as JSON
+aegean bible books nt          # 27 NT books and accepted aliases
+aegean bible books lxx         # 55 Swete Septuagint books
+aegean bible books nt --json   # JSON output
 ```
 
-### The full book table
+### New Testament book table
 
-| book | accepted names |
+| Book | Accepted names |
 |------|----------------|
 | Matt | matthew, matt, mt |
 | Mark | mark, mk, mrk |
@@ -742,26 +708,22 @@ aegean bible books nt --json   # same data as JSON
 | Jude | jude, jud |
 | Rev | revelation, rev, rv, apocalypse |
 
-An unrecognised name gives a helpful error:
+Passing a non-NT book name to `bible.load_nt()` raises `ValueError` with a
+suggestion; for Septuagint books such as Genesis or Psalms, call
+`bible.load_lxx("Gen")` (or `aegean bible read Gen 1:1-5`, which auto-detects
+LXX books).
 
-```python
-greek.load_nt("Genesis")
-# ValueError: unknown NT book 'Genesis' — did you mean 'Eph'? (greek.nt_books()
-# lists all 27)
-```
-
-(Genesis is in the Hebrew Bible, not the Greek NT: `load_nt` covers the 27 NT
-books only.)
-
-> Looking up a single Koine word or Strong's number without loading a book:
-> `aegean bible strongs ἀγάπη` / `greek.bible.strongs_entry(...)`, documented on
-> [CLI: Biblical & Koine Greek](CLI-Bible) and [Biblical & Koine Greek](New-Testament).
+> For standalone Strong's lookups and word studies, use
+> `aegean bible strongs ἀγάπη` / `bible.strongs_entry(...)` and
+> `bible.word_study(...)`, documented in
+> [CLI: Biblical & Koine Greek](CLI-Bible) and [New Testament](New-Testament).
 
 ---
 
-## 8. What you can do once a work is loaded
+## 8. Analyzing loaded works
 
-Both loaders return a standard `Corpus`, so the rest of the toolkit applies directly:
+Because `greek.load_work()` and `bible.load_nt()` return standard `Corpus`
+objects, all Greek NLP functions apply directly:
 
 ```python
 from aegean import greek
@@ -770,19 +732,19 @@ corpus = greek.load_work("tlg0012.tlg001", ref="1.1-1.10")
 line = " ".join(t.text for t in corpus.documents[0].tokens if t.line_no == 0)
 line                                  # 'μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος'
 
-greek.scan_hexameter(line).pattern    # scan it as dactylic hexameter
-greek.syllabify("Ἀχιλῆος")            # syllabify a word from it
+greek.scan_hexameter(line).pattern    # scan as dactylic hexameter
+greek.syllabify("Ἀχιλῆος")            # syllabify an individual word
 ```
 
 See [Greek NLP](Greek-NLP) for syllabification, accentuation, metrical scansion,
-tagging, lemmatization, and parsing; every one of those applies to a loaded work.
+tagging, lemmatization, and dependency parsing.
 
 ---
 
 ## 9. Reproducibility and provenance
 
-Each fetched work is **pinned to a specific upstream commit**, so the same id gives
-you the same text tomorrow. The commit is recorded on the corpus:
+Fetched works are pinned to fixed upstream commits or SHA-256-verified release
+assets, recorded on `corpus.provenance`:
 
 ```python
 corpus = greek.load_work("tlg0012.tlg001", ref="1")
@@ -790,54 +752,56 @@ corpus.provenance.data_version   # 'PerseusDL/canonical-greekLit@d4fab69a2c26'
 corpus.provenance.license        # 'CC BY-SA 4.0 (Perseus Digital Library)'
 ```
 
-| collection | repository | licence |
-|------------|-----------|---------|
+| Collection | Repository / asset | Licence |
+|------------|--------------------|---------|
 | canonical-greekLit | `PerseusDL/canonical-greekLit` | CC BY-SA 4.0 (Perseus Digital Library) |
 | First1KGreek | `OpenGreekAndLatin/First1KGreek` | CC BY-SA 4.0 (Open Greek and Latin) |
-| New Testament | `biblicalhumanities/Nestle1904` | CC0 (morphology/lemmas/Strong's); base text public domain |
+| New Testament (Nestle 1904) | `biblicalhumanities/Nestle1904` | CC0 (morphology/lemmas/Strong's); base text public domain |
 
-Environment variables let you track a newer upstream state or authenticate
-large-scale discovery:
+Environment variables override upstream pins or authenticate GitHub API
+requests during large-scale discovery:
 
-| variable | effect |
+| Variable | Effect |
 |----------|--------|
-| `PYAEGEAN_GREEKLIT_REF` | override the pinned canonical-greekLit commit |
-| `PYAEGEAN_FIRST1K_REF` | override the pinned First1KGreek commit |
-| `PYAEGEAN_NT_CORPUS_URL` | point `load_nt` at an alternate NT corpus asset |
-| `PYAEGEAN_GITHUB_TOKEN` / `GITHUB_TOKEN` | authenticate first-time work discovery (the GitHub contents API is rate-limited to 60 req/hour unauthenticated) |
+| `PYAEGEAN_GREEKLIT_REF` | Override the pinned `canonical-greekLit` commit |
+| `PYAEGEAN_FIRST1K_REF` | Override the pinned `First1KGreek` commit |
+| `PYAEGEAN_NT_CORPUS_URL` | Point `bible.load_nt()` at an alternate NT corpus asset |
+| `PYAEGEAN_GITHUB_TOKEN` / `GITHUB_TOKEN` | Authenticate first-time work discovery (unauthenticated GitHub API limit is 60 req/hour) |
 
-Classical literary TEI files are fetched from the upstream repositories into your
-cache, rather than bundled or re-hosted. The full NT is a separately hosted corpus
-asset; John 1 and Philemon are also bundled for offline use. Full details are on
-[Data & Provenance](Data-and-Provenance).
+Classical TEI files are fetched directly from upstream into the local cache
+rather than bundled or re-hosted. The full NT is a separately hosted asset, with
+John 1 and Philemon 1 bundled offline. See
+[Data & Provenance](Data-and-Provenance) for full details.
 
 ---
 
 ## 10. Limitations and notes
 
-- **First use of a non-cached work needs the network.** After that it's read from
-  the local cache and works offline. The bundled NT sample (John 1 and Philemon) and
-  LXX sample (Genesis 1 and LXX Psalm 22) work offline immediately.
-- **TEI structures vary.** `ref` follows each work's own `<div>` nesting and `<l>`
-  line numbering. A `ref` that doesn't match the work's structure raises a clear
-  `ValueError` rather than guessing.
-- **`popular_works()` is a curated subset, not the canon.** 25 entries for quick
-  discovery; the full 1,778-work discovery index is `catalog()` / `aegean greek
-  catalog` ([§3](#3-finding-any-other-work)), the web browser is the
-  [Scaife Viewer](https://scaife.perseus.org), and any valid id loads.
-- **Line numbering is the edition's, not invented.** Verse `<l>` lines are filtered
-  by their numeric `n`; non-numeric or unnumbered lines won't match a numeric range.
-- **NT annotations are gold and fixed** (Nestle 1904 morphology), independent of
-  pyaegean's own taggers: useful as a benchmark as well as a corpus.
+- **Network on first fetch.** Uncached works require network access once and
+  read from cache offline afterward. The bundled NT sample (John 1 and Philemon
+  1) and LXX sample (Genesis 1:1–5 and LXX Psalm 22:1–6) work offline
+  immediately.
+- **Varying TEI hierarchies.** `ref` follows each edition's declared `<div>` and
+  `<l>` structure. A `ref` incompatible with the edition's scheme raises a
+  `ValueError` naming that scheme.
+- **Shortlist vs. full catalogue.** `popular_works()` lists 25 entries; search
+  all 1,778 loadable works via `catalog()` / `aegean greek catalog`
+  ([§3](#3-finding-any-other-work)), or browse the
+  [Scaife Viewer](https://scaife.perseus.org).
+- **Edition line numbering.** Verse `<l>` lines filter on numeric `n`
+  attributes; unnumbered or non-numeric lines do not match numeric ranges.
+- **Gold Nestle 1904 annotations.** Nestle 1904 annotations are fixed edition
+  gold (Robinson morphology), independent of pyaegean's taggers.
 
-For broader scope details, see [Limitations](Limitations).
+For broader scope notes, see [Limitations](Limitations).
 
 ---
 
 ## See also
 
-- [Greek NLP](Greek-NLP): everything you can run on a loaded work
+- [Greek NLP](Greek-NLP): NLP stages applicable to any loaded work
+- [New Testament](New-Testament): full `aegean.greek.bible` guide (9 editions, witnesses, Strong's, LXX, commentaries)
 - [CLI: Greek NLP & Review](CLI-Greek) and [CLI: Biblical & Koine Greek](CLI-Bible)
-- [Tutorial](Tutorial): a guided, end-to-end load of the Iliad
-- [Data & Provenance](Data-and-Provenance): caches, licences, pinned commits
+- [Tutorial](Tutorial): guided end-to-end walkthrough loading the *Iliad*
+- [Data & Provenance](Data-and-Provenance): caches, licences, and pinned commits
 - [Limitations](Limitations): scope and known gaps

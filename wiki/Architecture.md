@@ -1,57 +1,56 @@
 # Architecture
 
-This page is the developer's tour of pyaegean's **core data model** (the
-script-agnostic value objects every script and analysis is built on) and the
-five things you actually do with a corpus once you have it: serialize it
-(lossless JSON, SQLite), turn it into tables (DataFrames, CSV, Parquet), query
-it, cite it, and hand it to other tools (EpiDoc, the Linear A Research
-Workbench). If you only want to *use* the corpus, the [Tutorial](Tutorial) and
-[Analysis](Analysis) pages are friendlier; come here when you want to know how
-the pieces fit, build your own corpus, or wire pyaegean into another system.
+This page covers pyaegean's core data model (the script-agnostic value objects
+shared by every script and analysis module) and the five core operations on a
+corpus: serialization (lossless JSON, SQLite, and portable research bundles),
+tabular export (DataFrames, CSV, Parquet), querying, citation, and external
+interchange (EpiDoc, RDF, and the Linear A Research Workbench). For an
+introductory walkthrough, start with [Tutorial](Tutorial) and
+[Analysis](Analysis).
 
-Every example below was run against the installed package; the output shown is
-the real output. Where a feature has both a Python API and a CLI command, you
-get both.
+Examples below were executed against the installed package with real outputs.
+Where a feature has both a Python API and a CLI command, both are shown.
 
-> **Available since v0.45.0.** Typed source alignment, typed editorial form states,
-> lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
-> the current release.
-
-Every `aegean` CLI corpus argument
-accepts any source: a registered id, a Greek work id, a path to a saved
-`.json` or `.db` corpus, or `-` for JSON on stdin, and you can **combine**,
-**slice**, and **save** corpora and results without writing a line of Python.
-The universal resolver is [`aegean.read_corpus`](#aegeanread_corpus--one-resolver-for-any-source);
-combining/slicing is [`merge`/`subset`/`combine`](#combining-and-slicing-corpora).
+Typed source alignment, typed editorial form states, lossless CoNLL-U structure,
+and schema-3 JSON/SQLite persistence are built into the core model. Every `aegean`
+CLI corpus argument resolves any source through
+[`aegean.read_corpus`](#aegeanread_corpus-universal-source-resolver): a
+registered corpus id, a Greek work id, a saved `.json` or `.db` path, or `-` for
+JSON on stdin. Corpora can be combined, sliced, and persisted from Python or the
+shell ([Combining and slicing corpora](#combining-and-slicing-corpora)).
 
 ## The layered design
 
 ### Interoperability is a projection boundary
 
-The complete `UDDocument` row stream remains the structural core. `aegean.io` wraps it
-in an `InteropDocument`. That envelope carries exact source alignment, typed form state,
-confidence, receipts, profile identity, and provenance when those values exist. Exports populate
-the target's native fields and carry the rest in a canonical `aegean.interop/v1`
-sidecar. `InteropReport` distinguishes native, sidecar-held, and genuinely lost fields;
-strict reimport validates the native projection and sidecar together. spaCy, Stanza, and
-CLTK stay optional, and `[all]` intentionally does not install them.
+The complete `UDDocument` row stream forms the structural core. `aegean.io` wraps
+it in an `InteropDocument` carrying exact source alignment, typed form state,
+confidence, receipts, profile identity, and provenance when present. Exporters
+populate native target fields and store remaining fields in a canonical
+`aegean.interop/v1` sidecar. `InteropReport` distinguishes native, sidecar-held,
+and genuinely lost fields; strict reimport validates the native projection and
+sidecar together. spaCy, Stanza, and CLTK remain optional extras excluded from
+`[all]`.
 
-pyaegean groups its modules into the following conceptual layers. Translation
-combines the Greek analysis and AI layers; this diagram is not a strict import
-ordering. The script-agnostic core never imports a script.
+pyaegean groups its modules into seven conceptual layers. Translation combines
+Greek analysis and the AI layer; this diagram summarizes module responsibilities
+rather than strict import order. The script-agnostic core never imports a script
+plugin.
 
 ```
-L7  interfaces            cli (aegean CLI & REPL) · tui (aegean tui)
-                          · mcp_server (aegean-mcp) · library (aegean.library
+L7  interfaces            cli (aegean CLI & REPL) · tui (aegean tui, including
+                          tui/screens/review.py + tui/_review_data.py) ·
+                          mcp_server (aegean-mcp) · library (aegean.library
                           unified pack/corpus/work/model manager); shared views
-                          through aegean._view keep all surfaces aligned
+                          in aegean._view keep surfaces aligned
 L6  ai (aegean.ai)        provider-agnostic LLM clients + grounded capabilities
-L5  translate             hybrid: lexicon/morphology grounding → LLM
+L5  translate             hybrid: lexicon/morphology grounding -> LLM
 L5  greek (aegean.greek)  Greek NLP pipeline + aegean.greek.bible (9 NT editions,
                           13 early witnesses, Strong's, 55 LXX books, 86 commentaries)
-L4  io · geo · viz · data aegean.io (text/CSV/EpiDoc/CoNLL-U/interop) · aegean.geo
-    · cache · db          · aegean.viz · aegean.data (39 pinned remote assets)
-                          · aegean.cache · aegean.db (SQLite + resumable jobs)
+L4  io · bundle · geo     aegean.io (text/CSV/EpiDoc/CoNLL-U/interop) ·
+    · viz · data · cache  aegean.bundle (zero-dep portable research bundles) ·
+    · db                  aegean.geo · aegean.viz · aegean.data (39 pinned remote
+                          assets) · aegean.cache · aegean.db (SQLite + resumable jobs)
 L3  analysis              distance · align · morphology · collocation · patterns
                           · query · accounting · structure
 L2  scripts (plugins)     lineara · linearb · cypriot · cyprominoan · greek
@@ -59,78 +58,75 @@ L1  core                  Corpus · Document · Token · Sign · SignInventory �
                           Numeral · Script(ABC) · Registry · Provenance
 ```
 
-The Greek layer (L5) also hosts the **opt-in** backends: the AGDT treebank
-(`treebank.py`), LSJ and multi-dictionary glossing (`lexicon.py`), the dependency parser
-(`syntax.py`), the POS tagger (`tagger.py`), the lemmatizers (`lemmatizer.py`,
-`paradigms.py`, and the neural seq2seq backend `neural_lemmatizer.py`), the neural joint
-pipeline (`joint.py`, with `mst.py` arc decoding, `udfeats.py` FEATS rendering,
-`lemma_rerank.py` opt-in OOV lemma reranking, and `documentary.py` post-processing), which
-fetch and build their artifacts through the L4 **data/cache** layer (a `greek → data`
-edge); the strict downward-only layering still holds. See [Greek NLP](Greek-NLP) for that
-track.
+The Greek layer (L5) hosts the opt-in backends: the AGDT treebank
+(`treebank.py`), LSJ and multi-dictionary glossing (`lexicon.py`), dependency
+parser (`syntax.py`), POS tagger (`tagger.py`), lemmatizers (`lemmatizer.py`,
+`paradigms.py`, and the neural seq2seq backend `neural_lemmatizer.py`), and the
+neural joint pipeline (`joint.py`, with `mst.py` arc decoding, `udfeats.py` FEATS
+rendering, `lemma_rerank.py` opt-in OOV lemma reranking, and `documentary.py`
+post-processing). These backends fetch and build their artifacts through L4
+`data`/`cache`, preserving downward layering. See [Greek NLP](Greek-NLP).
 
-Why this matters in practice: **`import aegean` is instant and pulls zero
-third-party packages.** pandas, lxml, the provider SDKs, matplotlib: all of
-them are lazy-imported inside the functions that need them, and each lives behind
-an [extra](Installation) you opt into. So the data model below is always
-available, even on a bare Python install.
+`import aegean` loads zero third-party packages. pandas, lxml, provider SDKs,
+matplotlib, and Textual are lazy-imported inside the functions that need them
+behind optional [extras](Installation), so the core data model works on a bare
+Python installation.
 
 ### Sentence segmentation is a validated seam
 
-The Greek layer keeps document sentence segmentation separate from model inference.
-`segment_text()` applies one of the named rule policies (`default`, `prose`, `verse`,
-`inscription`, or `papyrus`) and returns immutable, source-preserving boundaries.
-`segmenter=` is an extension seam for an edition-specific callback or
-`SentenceSegmenter` implementation. Results are normalized and checked for complete
-non-whitespace coverage, ordering, bounds, and a non-spoofed policy identity.
-Tokenization additionally rejects token-bisecting spans before analysis uses them.
-Built-in boundaries are rules,
-not calibrated confidence values; a plugin may attach finite confidence metadata.
+Document sentence segmentation is separate from model inference. `segment_text()`
+applies a named rule policy (`default`, `prose`, `verse`, `inscription`, or
+`papyrus`) and returns immutable, source-preserving boundaries. `segmenter=`
+accepts an edition-specific callback or `SentenceSegmenter` implementation.
+Results are normalized and verified for complete non-whitespace coverage,
+ordering, bounds, and non-spoofed policy identity. Tokenization rejects spans
+that bisect tokens before analysis uses them. Built-in boundaries are
+deterministic rules rather than calibrated confidence scores; a custom segmenter
+may attach finite confidence metadata.
 
-The seam is intentionally independent of script plugins: it does not add a script
-or loader and it does not make the core import any model runtime. The per-call
-`sentence_policy` controls how raw or typed text is grouped. In contrast,
+This seam stays independent of script plugins and model runtimes. Per-call
+`sentence_policy` governs how raw or typed text is split. By contrast,
 `GreekPipelineConfig.segmentation` records the backend's versioned preprocessing
-identity: the baseline uses `pyaegean-punctuation-v1`, while a neural instance copies
-the value from its `ModelBundleManifest` (`pretokenized` for the published
-`grc-joint-v3` model). Neither value is the document splitter. The neural model
-receives already split word lists and never chooses document boundaries.
-Configuration schema 2 also records the explicit runtime-variant label, the complete registry
-digest, and any qualification/award digests. Restoring it refuses registry drift or an
-unavailable label before model loading; different variant artifacts use different cache keys.
+identity (`pyaegean-punctuation-v1` for baseline; copied from
+`ModelBundleManifest`, `pretokenized` for `grc-joint-v3`, for neural instances).
+The neural model receives pre-split word lists and never chooses document
+boundaries. Configuration schema 2 records the explicit runtime-variant label,
+registry digest, and qualification/award digests; restoring a configuration
+rejects registry drift or unavailable labels before loading weights, and distinct
+variants use separate cache keys.
 
 ### Confidence is a separate evidence layer
 
-`aegean.greek.confidence` is a standard-library-only contract shared by the neural
-pipeline, tabular views, and the CLI. `use_calibration_registry()` loads the bundled
-schema-2 `CalibrationRegistry` (`calibration_registry_v2.json`), keyed by model,
-task, lemma source path, and optional domain (`literary` and `documentary_native` across
-all six tasks, fitted on held-out development data and qualified on the locked test folds);
-exact entries win and explicitly marked fallback entries are reported as fallback rather
-than as exact evidence. `TokenConfidence` and `SentenceConfidence` hold either a scoped
-value (with calibration hash, sample count, and measured ECE/Brier support) or a stable
-unavailable reason. The legacy flat confidence fields remain for compatibility and are not
-retrofitted with scope.
+`aegean.greek.confidence` is a standard-library contract shared by the neural
+pipeline, tabular views, and the CLI. `use_calibration_registry()` loads the
+bundled schema-2 `CalibrationRegistry` (`calibration_registry_v2.json`), keyed by
+model, task, lemma source path, and optional domain (`literary` and
+`documentary_native` across all six tasks, fitted on held-out dev data and
+qualified on locked test folds). Exact entries take precedence; fallback entries
+are marked as fallback instead of exact evidence. `TokenConfidence` and
+`SentenceConfidence` carry either a scoped calibrated value (with calibration
+hash, sample count, and measured ECE/Brier metrics) or a stable unavailable
+reason. Legacy flat confidence fields remain untouched for compatibility.
 
-`AbstentionPolicy` is caller-owned: thresholds are supplied by the application and its
-canonical SHA-256 is attached to `accept`/`review`/`unavailable` decisions. The runtime
-ships no default threshold and does not infer an OOD warning. For the shipped canonical
-runtime, schema-4 `AnalysisReceipt` output records the calibration and policy hashes, runtime
-variant and registry, and composed output/post-processing identity. Schemas 1 through 3
-remain readable for current hosted evidence without inventing those newer fields. The receipt
-records provenance for every calibration and post-processing choice automatically.
+`AbstentionPolicy` is caller-owned: callers supply thresholds and the policy's
+canonical SHA-256 travels with `accept`/`review`/`unavailable` decisions. The
+runtime ships no default threshold and infers no OOD warnings. For the canonical
+runtime, schema-4 `AnalysisReceipt` records calibration and policy hashes,
+runtime variant and registry digests, and composed output/post-processing
+identity. Schemas 1 through 3 remain readable for hosted evidence without
+fabricating newer fields.
 
 ---
 
 ## The core model (`aegean.core`)
 
-The model is a handful of frozen `@dataclass(slots=True)` value objects. A Linear
-A syllabogram and a Greek letter are both a `Sign`; a `KU-RO` entry and a Greek
-word are both a `Token`. Nothing in `aegean.core.model` knows about any
-particular writing system: per-script behaviour lives in the
+The core model consists of frozen `@dataclass(slots=True)` value objects. A
+Linear A syllabogram and a Greek letter are both `Sign` instances; a `KU-RO`
+entry and a Greek word are both `Token` instances. `aegean.core.model` knows
+nothing about individual writing systems; script-specific logic lives in
 [script plugins](#scripts-are-plugins).
 
-Everything in the core is importable from the top level:
+All core types are importable from the top-level package:
 
 ```python
 import aegean
@@ -141,26 +137,26 @@ from aegean import (
 )
 ```
 
-### The objects at a glance
+### Core objects
 
-| Object | What it is | Key fields / methods |
+| Object | Role | Key fields / methods |
 |---|---|---|
 | **`Sign`** | one graphic unit (syllabogram, letter, logogram) | `label`, `glyph`, `codepoint`, `phonetic`, `script_id`, `attrs` |
 | **`Token`** | one unit in a document's text stream | `text`, `kind`, `signs`, `glyphs`, `line_no`, `position`, `status`, `alt`, `annotations`, optional `alignment` and `form_state` |
-| **`TokenFormState`** | typed source/editorial/model forms for one token | `diplomatic`, optional `regularized` / `normalized` / `model_input`, ordered `segments`, model-input provenance |
-| **`FormSegment`** | one ordered piece of a typed form | text, `ReadingStatus`, optional `SourceMarkupRef` |
-| **`SourceMarkupRef`** | semantic reference to source markup | source id, path, tag, ordered attributes; not an XML-byte offset |
-| **`SourceAlignment`** | immutable mapping to exact source | document/sentence/token IDs, original and normalized text, half-open character span, whitespace, normalization operations |
-| **`Document`** | one inscription / tablet / text | `id`, `script_id`, `tokens`, `lines`, `meta`, optional exact `source_text`; props `.words`, `.numerals`, `.logograms`, `.line_tokens` |
-| **`DocumentMeta`** | bibliographic / archaeological metadata | `site`, `support`, `scribe`, `findspot`, `period`, `name`, `images`, `notes` |
-| **`Corpus`** | a collection of documents + inventory + provenance | `.load()`, `.get()`, `.filter()`, `.query()`, `.word_frequencies()`, `.to_dataframe()`, `.to_json()`, `.cite()`, … |
-| **`SignInventory`** | a script's signs, indexed | `by_label()`, `by_glyph()`, `by_codepoint()`, `to_dataframe()` |
-| **`Provenance`** | source / license / citation that travels with a corpus | `cite()`, `bibtex()`, `apa()` |
+| **`TokenFormState`** | typed source, editorial, and model forms for one token | `diplomatic`, optional `regularized` / `normalized` / `model_input`, ordered `segments`, model-input provenance |
+| **`FormSegment`** | one ordered span inside a typed form | text, `ReadingStatus`, optional `SourceMarkupRef` |
+| **`SourceMarkupRef`** | semantic reference to source markup | source id, path, tag, ordered attributes (never raw XML byte offsets) |
+| **`SourceAlignment`** | immutable mapping to exact source text | document/sentence/token IDs, original and normalized text, half-open character span, whitespace, normalization ops |
+| **`Document`** | one inscription, tablet, or text | `id`, `script_id`, `tokens`, `lines`, `meta`, optional exact `source_text`; properties `.words`, `.numerals`, `.logograms`, `.line_tokens` |
+| **`DocumentMeta`** | bibliographic and archaeological metadata | `site`, `support`, `scribe`, `findspot`, `period`, `name`, `images`, `notes` |
+| **`Corpus`** | collection of documents, inventory, and provenance | `.load()`, `.get()`, `.filter()`, `.query()`, `.word_frequencies()`, `.to_dataframe()`, `.to_json()`, `.cite()` |
+| **`SignInventory`** | indexed table of a script's signs | `by_label()`, `by_glyph()`, `by_codepoint()`, `to_dataframe()` |
+| **`Provenance`** | source, license, and citation metadata | `cite()`, `bibtex()`, `apa()` |
 
 ### `Sign`
 
-One graphic unit of a script. `attrs` is a free dict for script-specific facts so
-the core stays generic:
+Represents one graphic unit of a script. `attrs` holds script-specific metadata
+without coupling the core to any writing system:
 
 ```python
 import aegean
@@ -174,17 +170,17 @@ print(ku.attrs)
 
 ### `Token` and `TokenKind`
 
-A token carries its transliteration (`text`), its decomposed `signs`, and where
-it sits in the document (`line_no`, `position`). Its `kind` is a `TokenKind`:
+A token stores its transliteration (`text`), decomposed `signs`, and document
+location (`line_no`, `position`). Its `kind` is a `TokenKind`:
 
 | `TokenKind` | Value | Meaning |
 |---|---|---|
-| `WORD` | `"word"` | a lexical word, including single-sign Aegean and alphabetic Greek words |
-| `LOGOGRAM` | `"logogram"` | ideogram / commodity sign |
-| `NUMERAL` | `"numeral"` | a number or metrological fraction |
-| `SEPARATOR` | `"separator"` | word/entry divider (e.g. 𐄁) |
-| `PUNCT` | `"punct"` | punctuation (alphabetic scripts) |
-| `UNKNOWN` | `"unknown"` | unclassified |
+| `WORD` | `"word"` | lexical word, including single-sign Aegean and alphabetic Greek words |
+| `LOGOGRAM` | `"logogram"` | ideogram or commodity sign |
+| `NUMERAL` | `"numeral"` | decimal numeral or metrological fraction |
+| `SEPARATOR` | `"separator"` | word or entry divider (such as 𐄁) |
+| `PUNCT` | `"punct"` | punctuation in alphabetic scripts |
+| `UNKNOWN` | `"unknown"` | unclassified token |
 
 ```python
 import aegean
@@ -198,63 +194,64 @@ for t in d.tokens[:5]:
 # '𐄁' separator signs= ('𐄁',) line= 0 pos= 4
 ```
 
-Two more fields handle the cases real epigraphy throws at you:
+Two additional fields store epigraphic and linguistic metadata:
 
-- **`annotations`**: a free `dict[str, str]` for per-token facts that don't fit
-  the fixed columns. The bundled Greek New Testament carries `lemma`, `morph`,
-  `strongs`, `gloss`, `normalized`, `upos`, and `ref` here, and they flow
-  straight into the token-level DataFrame and the CSV/Parquet exporters.
-- **`status`** and **`alt`**: see editorial certainty below.
+- **`annotations`**: a `dict[str, str]` for arbitrary per-token facts. The Greek
+  New Testament stores `lemma`, `morph`, `strongs`, `gloss`, `normalized`,
+  `upos`, and `ref` here, which spread automatically into token-level DataFrames
+  and CSV/Parquet exports.
+- **`status`** and **`alt`**: editorial reading certainty and variant readings.
 
-Linguistic review decisions also live in `annotations`, separately from editorial
-`ReadingStatus`. Review tables support per-field `accept`, `correct`, `defer`,
-and `reject` decisions for lemma, POS, and morphology. Accepting a prediction
-retains its source and records verification of that field; correcting a lemma
-records `lemma_source=user`. Blank cells never approve a prediction. Reviewer,
-note, evidence, and `review_history` survive corpus persistence, and a fresh
-`annotate_corpus()` prediction makes its replaced lemma/POS decisions stale.
-Reviewing one field does not certify the others. See
-[Validation and Review](Validation-and-Review).
+Linguistic review decisions also live in `annotations`, separate from editorial
+`ReadingStatus`. Review tables record per-field `accept`, `correct`, `defer`, and
+`reject` decisions for lemma, POS, and morphology (plus head and deprel where
+present). Accepting a prediction keeps its prediction source and marks that field
+verified; correcting a lemma records `lemma_source=user`. Blank cells never
+approve predictions. Reviewer identity, notes, evidence, and `review_history`
+persist across JSON and SQLite round-trips, and re-running `annotate_corpus()`
+marks superseded lemma/POS decisions stale. Reviewing one field never certifies
+another. See [Validation and Review](Validation-and-Review).
 
 ### Editorial certainty (`ReadingStatus`) and alternates
 
-Tokens carry a `ReadingStatus` so an edition's apparatus survives round-trips
-through EpiDoc. `CERTAIN` is the default; the others map to the Leiden / EpiDoc
-conventions for damaged, restored, and lost text.
+`Token.status` preserves Leiden/EpiDoc reading certainty across round-trips.
+`CERTAIN` is the default; damaged, restored, and lost states map directly to
+EpiDoc markup:
 
 | `ReadingStatus` | Value | EpiDoc | Leiden |
 |---|---|---|---|
 | `CERTAIN` | `"certain"` | (plain text) | securely read |
 | `UNCLEAR` | `"unclear"` | `<unclear>` | underdot |
 | `RESTORED` | `"restored"` | `<supplied reason="lost">` | `[ ]` |
-| `LOST` | `"lost"` | `<supplied reason="undefined">` (also reads `<gap>`) | `[---]` |
+| `LOST` | `"lost"` | `<supplied reason="undefined">` (reader also accepts `<gap>`) | `[---]` |
 
-A token's `alt` tuple holds alternate readings (EpiDoc `<app>`/`<rdg>`); `text`
-is the lemma. The bundled corpora are normalized transcriptions (almost entirely
-`CERTAIN`), but a bring-your-own EpiDoc corpus populates these from the markup,
-and the [EpiDoc writer](#epidoc-tei-xml) emits them back out.
+`Token.alt` stores alternate readings (`<app>`/`<rdg>` in EpiDoc), with `text`
+holding the lemma. Bundled transcriptions are mostly `CERTAIN`, whereas imported
+EpiDoc corpora populate both `status` and `alt`, and the
+[EpiDoc writer](#epidoc-tei-xml) serializes them back out.
 
 ### Typed editorial forms and model input
 
-A token can also carry `TokenFormState`. `diplomatic` records the
-original or diplomatic form, `regularized` an editorial correction or expansion,
-and `normalized` an optional preprocessing form. `segments` preserve ordered
-certain, supplied, unclear, and lost pieces with semantic source references.
-`model_input` is different: it records the exact string sent to an analyzer,
-along with `model_input_source` and ordered operations. It documents a computation,
-not a new reading of the edition.
+A token may carry `TokenFormState`: `diplomatic` holds the diplomatic surface
+form, `regularized` holds an editorial regularization or expansion, and
+`normalized` holds an optional preprocessing form. `segments` preserve ordered
+certain, supplied, unclear, and lost pieces with semantic `SourceMarkupRef`
+pointers. `model_input` records the exact string passed to an analyzer along with
+`model_input_source` and ordered operations; it documents computation rather than
+altering the edition text.
 
-`greek.pipeline_tokens()` chooses an explicit model input first, then regularized,
-normalized, diplomatic, and finally the legacy `Token.text` value. Its returned
-`TokenRecord` retains the state and the selected input. Token-carrier EpiDoc choices
-and apparatus can populate the state; the six currently hosted epigraphy and papyri
-assets remain legacy aggregate-status data and do not yet carry `TokenFormState`.
+`greek.pipeline_tokens()` selects an explicit `model_input` first, then
+`regularized`, `normalized`, `diplomatic`, and finally legacy `Token.text`. The
+returned `TokenRecord` retains both the state and the chosen input. Token-carrier
+EpiDoc `<choice>` and `<app>` elements populate `TokenFormState`; the six hosted
+epigraphy and papyri corpora remain legacy aggregate-status datasets without
+populated `TokenFormState`.
 
 ### `Document`
 
-One inscription/tablet/text. Its physical layout lives in `lines` (a list where
-each line is a list of indices into `tokens`) and convenience properties slice
-the token stream for you:
+Represents one inscription, tablet, or text. `lines` stores physical lines as
+lists of indices into `tokens`, and convenience properties filter the token
+stream:
 
 ```python
 import aegean
@@ -275,26 +272,25 @@ print("physical lines:", len(d.line_tokens))
 | `.words` | tokens with `kind == WORD` |
 | `.numerals` | tokens with `kind == NUMERAL` |
 | `.logograms` | tokens with `kind == LOGOGRAM` |
-| `.line_tokens` | tokens regrouped into physical lines |
+| `.line_tokens` | tokens grouped by physical line |
 | `len(doc)` | total token count |
 
-In Jupyter, a `Document` (and a `Corpus`, and a `SignInventory`) renders as a
-tidy HTML card (line-by-line tokens, metadata, counts) so exploring a corpus in
-a notebook is pleasant out of the box.
+In Jupyter, `Document`, `Corpus`, and `SignInventory` render as HTML cards
+displaying line-by-line tokens, metadata, and token counts.
 
-### `Corpus` — the hub
+### `Corpus`
 
-A `Corpus` is a list of documents plus a shared `SignInventory` and
-`Provenance`. You rarely build one by hand; you `load` a bundled one:
+A `Corpus` groups a list of documents with a shared `SignInventory` and
+`Provenance`. Load registered corpora with `aegean.load`:
 
 ```python
 import aegean
 c = aegean.load("lineara")            # or Corpus.load("lineara")
-print(len(c))                          # 1721
-print(c.get("HT13").id)                # HT13
+print(len(c))                         # 1721
+print(c.get("HT13").id)               # HT13
 ```
 
-The CLI equivalent of a quick look is `aegean info`:
+Inspect a corpus from the shell with `aegean info`:
 
 ```bash
 aegean info lineara
@@ -314,9 +310,8 @@ aegean info lineara
 └────────────────────┴──────────────────────────────────────────────────────┘
 ```
 
-**Filtering** returns a new corpus whose documents match all the metadata fields
-(AND-combined), and, importantly, records a `subset:` note in the provenance so
-a later citation states exactly what was used:
+`filter()` returns a new corpus matching all metadata predicates (AND-combined)
+and appends a `subset:` note to provenance so citations identify the exact slice:
 
 ```python
 c = aegean.load("lineara").filter(site="Haghia Triada")
@@ -326,40 +321,37 @@ print(len(c))                          # 1110
 aegean load lineara --site "Haghia Triada" --limit 5
 ```
 
-**Streaming views** never materialize a giant list, handy on a large corpus:
+Lazy iterators avoid building intermediate token lists on large corpora:
 
 ```python
 c = aegean.load("lineara")
 c.word_frequencies()[:3]
 # [('KU-RO', 37), ('SA-RA₂', 20), ('KI-RO', 16)]
 next(iter(c.iter_words()))             # 'QE-RA₂-U'
-# c.iter_documents(), c.iter_tokens(), c.iter_words() are all lazy iterators
-# (iter_documents() yields a list_iterator over the materialized documents;
-#  only iter_tokens() and iter_words() are true generators)
+# iter_documents() yields a list_iterator over materialized documents;
+# iter_tokens() and iter_words() are generators.
 ```
 
-Neural analysis has a separate pre-tokenized sentence stream:
+Neural analysis provides a separate streaming API over pre-tokenized sentences:
 
 ```python
 from aegean import greek
 
 greek.use_neural_pipeline()
 analyses = greek.iter_analyze_sentences(sentence_source(), batch_size=8)
-for analysis in analyses:              # ordered, receipt-bearing, backpressure-driven
+for analysis in analyses:              # ordered, receipt-bearing, bounded memory
     persist(analysis)
 ```
 
-This iterator holds at most one batch plus the largest sentence and captures one
-backend configuration before it touches the source. `analyze_sentences()` collects
-the same engine into a list. It does not change the collecting contracts of raw-text
-`pipeline()`, `annotate_corpus()`, or CoNLL-U parsing/serialization.
+`iter_analyze_sentences()` holds at most one batch plus the longest sentence in
+flight and freezes the backend configuration before reading the input iterator.
+`analyze_sentences()` collects the same engine into a list. Raw-text `pipeline()`,
+`annotate_corpus()`, and CoNLL-U helpers retain their collecting contracts.
 
-A corpus has a cheap, stable **fingerprint**: a content hash over its script,
-document ids, and everything a token-level analysis can see (each token's text,
-kind, editorial status, decomposed signs, glyphs, alternate readings, and
-annotations, plus any `subset:` note). It's one pass over the tokens with no
-model build, which makes it the cache key for the opt-in
-[analysis cache](Analysis):
+Every corpus computes a deterministic **fingerprint**: a content hash covering
+script id, document ids, token text, kind, editorial status, decomposed signs,
+glyphs, alternate readings, annotations, and any `subset:` note. The opt-in
+[analysis cache](Analysis) uses this fingerprint as its cache key:
 
 ```python
 c = aegean.load("lineara")
@@ -367,50 +359,46 @@ c.fingerprint()[:16]                   # 'f2619ca5089e533a'
 c.cache_key() == c.fingerprint()       # True (cache_key is an alias)
 ```
 
-### `aegean.read_corpus` — one resolver for any source
+### `aegean.read_corpus` (universal source resolver)
 
-`aegean.load(id)` takes a registered id. `aegean.read_corpus(spec)` is the
-generalization: it figures out what `spec` *is* and loads it. It's the same
-resolver every `aegean` CLI command uses for its corpus argument, so anything
-that works on the command line works here, and vice versa. The precedence is:
+`aegean.load(id)` resolves registered ids only. `aegean.read_corpus(spec)` is the
+general resolver used by every CLI corpus argument. Resolution order:
 
-1. `"-"` reads a JSON corpus from **stdin**; an inline string starting with `{`
-   is parsed directly (the output of `Corpus.to_json`).
-2. an exact **registered id** (`"lineara"`, `"damos"`, `"nt"`, …): a registered
-   id always wins over a same-named file.
-3. a **Greek work id** like `"tlg0012.tlg001"` → fetched via
-   `aegean.greek.load_work` (network on first use, then cached).
-4. a **file path**: `.json` → `Corpus.from_json`; `.db` / `.sqlite` /
-   `.sqlite3` → `Corpus.from_sql`.
+1. `"-"` reads JSON from stdin; an inline string starting with `{` is parsed as
+   `Corpus.to_json` output.
+2. Exact registered corpus id (`"lineara"`, `"damos"`, `"nt"`, …); registered ids
+   take precedence over same-named files.
+3. Greek work id (such as `"tlg0012.tlg001"`), fetched via
+   `aegean.greek.load_work` and cached locally.
+4. File path: `.json` via `Corpus.from_json`; `.db`, `.sqlite`, or `.sqlite3` via
+   `Corpus.from_sql`.
 
-Nothing matched raises `CorpusNotFound` (a `ValueError`) that lists the accepted
+Unmatched inputs raise `CorpusNotFound` (a `ValueError` subclass) listing valid
 forms.
 
 ```python
 import aegean
-aegean.read_corpus("lineara")          # registered id → the bundled corpus
-aegean.read_corpus("ht.json")          # a saved lossless JSON corpus
-aegean.read_corpus("homer.db")         # a SQLite corpus on disk
-# aegean.read_corpus("tlg0012.tlg001") # the Iliad, fetched then cached
+aegean.read_corpus("lineara")          # registered id -> bundled corpus
+aegean.read_corpus("ht.json")          # saved lossless JSON corpus
+aegean.read_corpus("homer.db")         # SQLite corpus on disk
+# aegean.read_corpus("tlg0012.tlg001") # Iliad, fetched and cached
 ```
 
-The practical payoff is on the CLI: every command's corpus argument is a
-`read_corpus` spec, so the Greek works, your saved subsets, and stdin pipes are
-all in scope with no Python:
+Because every CLI corpus argument calls `read_corpus`, Greek works, saved
+subsets, and stdin streams work directly from the shell:
 
 ```bash
-aegean stats     ht.json                       # a saved JSON subset
-aegean db build  tlg0012.tlg001 -o iliad.db    # build a DB straight from a work id
+aegean stats     ht.json                       # saved JSON subset
+aegean db build  tlg0012.tlg001 -o iliad.db    # build SQLite straight from a work id
 aegean export    tlg0012.tlg002 -f csv -o odyssey.csv
 python -c "import aegean; print(aegean.load('lineara').filter(site='Zakros').to_json())" \
-  | aegean stats -                             # JSON corpus piped on stdin
+  | aegean stats -                             # JSON corpus piped via stdin
 ```
 
 ### Combining and slicing corpora
 
-Two corpora become one with `merge`; pick out documents by id with `subset`.
-Both keep the provenance honest: the result cites every source (and names the
-slice).
+`merge()` joins corpora and `subset()` selects documents by id. Both preserve
+source attribution in provenance.
 
 ```python
 import aegean
@@ -418,21 +406,21 @@ a = aegean.Corpus.from_records([{"id": "A1", "text": "KU-RO 10"},
                                 {"id": "A2", "text": "A-DU 5"}], script_id="lineara")
 b = aegean.Corpus.from_records([{"id": "B1", "text": "SA-RA2 3"}], script_id="lineara")
 
-m = a.merge(b)                          # documents concatenated, in order
-print([d.id for d in m])               # ['A1', 'A2', 'B1']
+m = a.merge(b)                          # documents concatenated in order
+print([d.id for d in m])                # ['A1', 'A2', 'B1']
 print(m.cite("plain"))
 # Merged corpus of: User-supplied corpus (Corpus.from_records); User-supplied corpus (Corpus.from_records) [merged: 2 corpora → 3 documents]
 
-s = m.subset(["A1", "B1"])             # id-based counterpart to filter()
-print([d.id for d in s])               # ['A1', 'B1']
+s = m.subset(["A1", "B1"])              # id-based selection
+print([d.id for d in s])                # ['A1', 'B1']
 ```
 
-`Corpus.merge(*others, dedupe=...)` controls duplicate ids across the inputs:
+`Corpus.merge(*others, dedupe=...)` controls duplicate document ids:
 
-| `dedupe` | Behaviour on a colliding id |
+| `dedupe` | Behavior on colliding id |
 |---|---|
-| `"error"` (default) | raise, listing the collisions: the safe default |
-| `"first"` / `"last"` | keep that occurrence, drop the other |
+| `"error"` (default) | raise `ValueError` listing collisions |
+| `"first"` / `"last"` | keep that occurrence and drop the duplicate |
 | `"suffix"` | rename later collisions `id#2`, `id#3`, … |
 
 ```python
@@ -443,50 +431,45 @@ a.merge(b, dedupe="last")   # keeps b's X1
 a.merge(b, dedupe="suffix") # ids become ['X1', 'X1#2']
 ```
 
-When the inputs share a `script_id` the merged corpus keeps it and the first
-input's sign inventory; mixed scripts give `script_id="mixed"` and no inventory.
+When inputs share a `script_id`, the merged corpus keeps it and the first input's
+sign inventory; mixed scripts yield `script_id="mixed"` with no shared inventory.
 
-A `Corpus` is **self-consistent on document ids**: a corpus can't hold two
-documents with the same id, so `Corpus.__init__` collapses duplicates, keeping
-the last (which is what `.get()` already returns) and emitting a warning rather
-than dropping silently, and after that `len()`, iteration, `.documents`, the id
-lookup, and the fingerprint all agree. (`merge`'s `dedupe` modes above are the
-*explicit* control across inputs; the collapse is the safety net for a single
-list that happens to repeat an id.)
+Document ids inside a single `Corpus` are unique: `Corpus.__init__` collapses
+duplicate ids by keeping the last entry (matching `.get()`) and emitting a
+warning, ensuring `len()`, iteration, `.documents`, `.get()`, and `.fingerprint()`
+remain consistent.
 
-`aegean.combine([...])` is the module-level form (a list instead of `self` +
-varargs), and the CLI `aegean combine` resolves each source with `read_corpus`,
-merges, and saves to `.json` or `.db` in one step:
+`aegean.combine([...])` accepts a sequence of corpora; on the CLI, `aegean combine`
+resolves each source via `read_corpus`, merges them, and writes `.json` or `.db`:
 
 ```bash
-# all of Homer in one database, straight from two work ids
+# merge both Homeric epics into one SQLite database
 aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db
 
-# merge two saved subsets; --on-conflict mirrors the dedupe modes
+# merge two saved subsets; --on-conflict mirrors dedupe
 aegean combine ht.json zakros.json -o crete.json
 # wrote 1163 documents to crete.json (merged 2 sources)
 ```
 
-`aegean combine` takes `--on-conflict {error|first|last|suffix}` (default
-`error`) for duplicate ids, and the merged provenance names every source.
+`aegean combine` accepts `--on-conflict {error|first|last|suffix}` (default
+`error`) and records every input source in provenance.
 
 ---
 
 ## Building your own corpus
 
-You don't have to use a bundled corpus; your own inscriptions get the whole API
-(filter, query, DataFrames, citation, export) the moment you wrap them in a
-`Corpus`.
+Custom inscriptions support filtering, querying, DataFrames, citation, and export
+once wrapped in a `Corpus`.
 
-### `Corpus.from_records` — from plain dicts
+### `Corpus.from_records`
 
-Each record needs an `id` and its text as one of three keys, in order of
-precedence: `lines` (a list of physical lines, each a list of tokens), `words`
-(a flat token list = one line), or `text` (a whitespace-tokenized string = one
-line). A token is a string, or a dict `{"text": …}` with optional `kind`,
-`status`, and `alt`. When `kind` is omitted it's inferred: numerals by
-parseability, everything else a word; hyphenated tokens get their `signs` split
-automatically.
+Each dict record requires `id` and text supplied via one of three keys (in
+precedence order): `lines` (list of physical lines, each a list of tokens),
+`words` (flat token list forming one line), or `text` (whitespace-tokenized
+string forming one line). A token may be a string or a dict `{"text": …}` with
+optional `kind`, `status`, and `alt`. Omitted `kind` values are inferred
+(parseable numerals become `NUMERAL`, others `WORD`), and hyphenated tokens split
+into `signs` automatically.
 
 ```python
 import aegean
@@ -503,28 +486,28 @@ print(c.cite())
 # User-supplied corpus (Corpus.from_records)
 ```
 
-Optional record keys: `meta` (any of `site`/`support`/`scribe`/`findspot`/
-`period`/`name`) and `translations`. Pass your own `provenance=` and
-`sign_inventory=` to `from_records` if you have them. To make your corpus
-loadable by name, register a loader (see [below](#scripts-are-plugins)):
+Optional record keys include `meta` (`site`, `support`, `scribe`, `findspot`,
+`period`, `name`) and `translations`. Pass custom `provenance=` and
+`sign_inventory=` to `from_records` when available. Register a named loader to
+expose the corpus through `aegean.load` (see [Scripts are plugins](#scripts-are-plugins)):
 
 ```python
 aegean.core.corpus.register_loader("myfind", lambda: c)
-aegean.load("myfind")                  # now works
+aegean.load("myfind")
 ```
 
 ---
 
 ## Serialization: the JSON round-trip
 
-There are two JSON exports, and the difference matters.
+Two JSON formats exist with distinct fidelity guarantees:
 
-| Method | Fidelity | Use it for |
+| Method | Fidelity | Use case |
 |---|---|---|
-| `to_dict()` | **lossy** summary (per-doc words + metadata) | quick interop, a glance at the data |
-| `to_json()` / `from_json()` | **lossless** | archiving, moving a corpus between machines, reproducibility |
+| `to_dict()` | lossy summary (per-doc words and metadata) | quick inspection and lightweight interchange |
+| `to_json()` / `from_json()` | lossless | archiving, cross-machine transfer, reproducibility |
 
-### `to_dict` — the compact summary
+### `to_dict` (lossy summary)
 
 ```python
 import aegean, json
@@ -535,39 +518,37 @@ print(list(d["documents"][0].keys()))
 # ['id', 'script_id', 'words', 'glyphs', 'transcription', 'translations', 'meta']
 ```
 
-The `_meta` block stamps the tool name, schema version, script id, document
-count, and the provenance source/license/citation onto the export, so even the
-lossy form carries its attribution.
+The `_meta` header stamps tool name, schema version, script id, document count,
+source, license, and citation onto the summary export.
 
-### `to_json` / `from_json` — lossless
+### `to_json` / `from_json` (lossless)
 
-`to_json` serializes *everything*: every token (with its kind, signs, glyphs,
-line/position, any non-default status/alt/annotations, optional source alignment,
-and optional typed form state), the exact document source text, physical lines,
-full document metadata, the sign inventory, and provenance. `from_json` reverses
-it exactly. Current form-state files use schema 3; schema-1 and schema-2
-files still load with `form_state=None`.
+`to_json` serializes every token (kind, signs, glyphs, line, position, non-default
+status/alt/annotations, optional source alignment, and optional typed form state),
+exact document `source_text`, physical lines, full metadata, sign inventory, and
+provenance. `from_json` reconstructs the exact corpus. Current exports write
+schema 3; schema-1 and schema-2 files still load with `form_state=None`.
 
 ```python
 import aegean
 c = aegean.load("lineara")
 
-# in-memory string (indent defaults to 2; pass indent=None for compact)
+# JSON string (indent defaults to 2; pass indent=None for compact output)
 js = c.to_json()
 len(js)                                # 2708119
 
-# round-trip and verify it's lossless
+# verify lossless round-trip
 c2 = aegean.Corpus.from_json(js)
 print(len(c2))                                         # 1721
 print(c.get("HT13").tokens[0] == c2.get("HT13").tokens[0])   # True
 print(c.fingerprint() == c2.fingerprint())             # True
 ```
 
-`from_json` accepts a JSON **string**, a `Path`, or a path-like string (anything
-not starting with `{`):
+`from_json` accepts a JSON string, a `Path`, or a path string (anything not
+starting with `{`):
 
 ```python
-c.to_json("lineara.json")              # writes the file, returns None
+c.to_json("lineara.json")              # writes file, returns None
 c3 = aegean.Corpus.from_json("lineara.json")
 ```
 
@@ -581,19 +562,20 @@ aegean export lineara -f json -o ht.json --site "Haghia Triada"
 # wrote 1110 documents to ht.json (json)
 ```
 
-(`aegean load CORPUS --output file.json` writes the same lossless JSON, which is
-handy when you only want a metadata-filtered subset.)
+`aegean load CORPUS --output file.json` writes the same lossless JSON for a
+metadata-filtered subset.
 
 ---
 
 ## Tabular views: DataFrames, CSV, Parquet
 
-`Corpus.to_dataframe(level=...)` is the bridge to pandas. Three levels:
+`Corpus.to_dataframe(level=...)` builds a pandas DataFrame at one of three
+granularities:
 
 | `level` | One row per | Columns |
 |---|---|---|
 | `"document"` (default) | document | `id`, `script_id`, `site`, `support`, `scribe`, `findspot`, `period`, `name`, `n_tokens`, `n_words`, `source_text` |
-| `"token"` | token | `doc_id`, `line_no`, `position`, `text`, `kind`, `status`, `site`, `period` (+ any token `annotations` spread into columns) |
+| `"token"` | token | `doc_id`, `line_no`, `position`, `text`, `kind`, `status`, `site`, `period` (+ spread token `annotations`) |
 | `"word"` | `WORD` token | same as `token`, words only |
 
 ```python
@@ -607,66 +589,67 @@ list(df.columns)
 df.shape                               # (6406, 8)
 ```
 
-At `token`/`word` level, any per-token `annotations` are **spread first**, so the
-Greek NT's `lemma` / `morph` / `strongs` / `gloss` become their own columns
-(canonical columns always win on a name clash).
+At `token` and `word` levels, per-token `annotations` spread into columns first
+(so NT `lemma`, `morph`, `strongs`, and `gloss` become columns; canonical columns
+always win on name collisions).
 
-Two further groups of canonical columns appear **only when the corpus actually
-carries the values**, so an ordinary corpus is not padded with 25 empty columns.
-A corpus with source-aligned tokens gains nine `alignment_*` columns
-(`alignment_document_id`, `alignment_sentence_id`, `alignment_source_token_id`,
-`alignment_original_text`, `alignment_start_char`, `alignment_end_char`,
-`alignment_whitespace_before`, `alignment_normalized_text`,
-`alignment_normalization_ops`). A corpus with typed form state gains sixteen
-`form_*` columns: `form_diplomatic`, `form_regularized`, `form_normalized`,
-`form_model_input`, `form_model_input_ops`, `form_model_input_source`,
-`form_segments`, plus editorial-status, damage, and uncertainty columns.
-`form_segments` is a JSON string for tabular files; within a corpus that has the
-group, tokens with no value of their own are null. pandas is the `[data]` extra:
+Two canonical column groups are emitted only when at least one token in the
+corpus populates them, avoiding empty padding columns on plain corpora:
+
+- Source-aligned corpora gain nine `alignment_*` columns (`alignment_document_id`,
+  `alignment_sentence_id`, `alignment_source_token_id`, `alignment_original_text`,
+  `alignment_start_char`, `alignment_end_char`, `alignment_whitespace_before`,
+  `alignment_normalized_text`, `alignment_normalization_ops`).
+- Corpora with typed form state gain sixteen `form_*` columns (`form_diplomatic`,
+  `form_regularized`, `form_normalized`, `form_model_input`,
+  `form_model_input_ops`, `form_model_input_source`, `form_segments`, plus
+  editorial-status, damage, and uncertainty columns; `form_segments` serializes as
+  a JSON string).
+
+pandas is installed via the `[data]` extra:
 
 ```bash
 pip install "pyaegean[data]"
 ```
 
-The CSV and Parquet exporters are thin wrappers over that DataFrame:
+CSV and Parquet exporters wrap `to_dataframe`:
 
 ```python
 from aegean.io import to_csv, to_parquet
 c = aegean.load("lineara").filter(site="Haghia Triada")
 to_csv(c, "ht.csv", level="document")        # ~94 kB
-to_parquet(c, "ht.parquet", level="token")   # needs the [parquet] extra (pyarrow)
+to_parquet(c, "ht.parquet", level="token")   # requires [parquet] extra (pyarrow)
 ```
 ```bash
-aegean export lineara -f csv     -o docs.csv  --level document
+aegean export lineara -f csv     -o docs.csv    --level document
 aegean export lineara -f parquet -o tok.parquet --level token
 ```
 
-Parquet additionally needs a parquet engine; if it's missing you get a clear
-message pointing at `pip install "pyaegean[parquet]"`.
+If pyarrow is missing, Parquet export raises an error pointing to
+`pip install "pyaegean[parquet]"`.
 
-The `SignInventory` has its own `to_dataframe()` too: one row per sign with
-`label`, `glyph`, `codepoint`, `phonetic`, and each sign's `attrs` spread into
-columns.
+`SignInventory.to_dataframe()` produces one row per sign (`label`, `glyph`,
+`codepoint`, `phonetic`, plus spread `attrs`).
 
 ---
 
 ## The query engine
 
-`filter()` does exact metadata matching; the **query engine** does everything
-else: text/prefix/suffix/sign-pattern/co-occurrence predicates with AND / OR /
-NOT, returning either inscriptions or `(word, count)` pairs. The default count
-is document frequency: distinct inscriptions; `count_unit="token"` selects
-occurrences instead. The field registry and legacy predicates come from the
-Linear A Research Workbench, with explicit word views and editorial-status
-selection available for other scripts too.
+`filter()` matches exact document metadata. The query engine handles text,
+prefix, suffix, sign-pattern, and co-occurrence predicates with AND, OR, and NOT,
+returning either matched inscriptions or ranked `(word, count)` pairs. Word
+counts default to document frequency (distinct inscriptions); pass
+`count_unit="token"` for total occurrences. The field registry and legacy
+predicates mirror the Linear A Research Workbench, extended with explicit word
+views and editorial-status filters for other scripts.
 
-A query is a list of `FilterRow`s. Each row names a `field`, a `value`, an
-optional `connector` (`"and"` default, or `"or"`), and an optional `negate`.
+A query is a list of `FilterRow` objects naming a `field`, `value`, optional
+`connector` (`"and"` default or `"or"`), and optional `negate`.
 
 ### The fields
 
-The full registry is `aegean.analysis.FIELDS`. Inscription-scope rows select
-documents; word-scope rows select words within them.
+The registry lives in `aegean.analysis.FIELDS`. Inscription-scope rows filter
+documents; word-scope rows filter words within matched documents.
 
 | Field id | Label | Scope | Value kind |
 |---|---|---|---|
@@ -695,7 +678,7 @@ from aegean.analysis import FilterRow
 
 c = aegean.load("lineara")
 
-# inscriptions from Haghia Triada that contain a word starting with KU
+# inscriptions from Haghia Triada containing a word starting with KU
 res = c.query([
     FilterRow("site-is", "Haghia Triada"),
     FilterRow("word-prefix", "KU"),
@@ -705,23 +688,21 @@ print(len(res.inscriptions))           # 55
 print(res.description)                 # Site is: Haghia Triada · Word starts with: KU
 ```
 
-Switch `output="words"` to get ranked `(word, count)` pairs instead. The default
-`count` is the word's **document frequency** (how many distinct inscriptions it
-occurs in), so `('KU-RO', 34)` means KU-RO appears in 34 separate documents.
-For token counts (every occurrence), pass `count_unit="token"` or use
-`corpus.word_frequencies()`.
+Set `output="words"` to return ranked `(word, count)` pairs. By default, `count`
+is document frequency (distinct inscriptions), so `('KU-RO', 34)` means `KU-RO`
+occurs in 34 documents. Pass `count_unit="token"` (or call
+`corpus.word_frequencies()`) for token counts.
 
 Word predicates operate on every `TokenKind.WORD` token, including single-sign
 Aegean words and alphabetic Greek words. Numerals, logograms, punctuation, and
-unknown tokens remain outside that lexical population.
-`view="surface"` selects exact token text; `"normalized"` applies NFC, lowercase,
-and final-sigma folding; `"lemma"` applies that normalization to existing lemma
-annotations, excluding missing lemmas without running an analyzer. Omitting
-`view` retains the legacy uppercase text predicates and separate surface keys.
-`statuses=` selects both a token's editorial status and all its typed segments.
-`QueryResults.metadata` records the view, normalization, count unit, exclusions,
-lemma sources, and denominator before word filters; citations and saved query
-subsets retain the selection details.
+unknown tokens are excluded. `view="surface"` compares exact token text;
+`"normalized"` applies NFC, lowercasing, and final-sigma folding; `"lemma"`
+applies that normalization to existing lemma annotations and excludes tokens
+lacking lemmas without running an analyzer. Omitting `view` preserves legacy
+uppercase predicates and surface keys. `statuses=` filters both token editorial
+status and typed form segments. `QueryResults.metadata` records view,
+normalization, count unit, exclusions, lemma sources, and denominator before word
+filters; citations and saved query subsets preserve these parameters.
 
 ```python
 res = c.query([FilterRow("word-prefix", "KU")], output="words")
@@ -729,11 +710,11 @@ print(len(res.words), res.words[:5])
 # 33 [('KU-RO', 34), ('KU-PA₃-NU', 7), ('KU-NI-SU', 5), ('KU-PA', 4), ('KU-MI-NA-QE', 2)]
 ```
 
-`negate=True` flips a row; `connector="or"` ORs it with the running result
+`negate=True` inverts a row; `connector="or"` ORs it with the preceding result
 within its scope:
 
 ```python
-# words with ≥ 3 signs that do NOT contain "PA"
+# words with >= 3 signs not containing "PA"
 res = c.query([
     FilterRow("word-min-syllables", 3),
     FilterRow("word-contains", "PA", negate=True),
@@ -744,15 +725,14 @@ print(res.description)
 # Word has ≥ N signs: 3 · NOT Word contains text: PA
 ```
 
-A `QueryResults` carries the corpus's provenance and a one-line filter summary,
-so it cites the **exact result set**: `res.cite("plain" | "bibtex" | "apa")`.
+`QueryResults.cite("plain" | "bibtex" | "apa")` cites the corpus with the filter
+summary attached.
 
 ### Saving a query as a reusable corpus
 
-`QueryResults.to_corpus(source)` turns an `output="inscriptions"` result back
-into a `Corpus`: the matched inscriptions, carrying `source`'s sign inventory
-and script id, with a `subset:` provenance note that names the query. From there
-it's an ordinary corpus: serialize it, query it again, hand it to any tool.
+`QueryResults.to_corpus(source)` converts an `output="inscriptions"` result back
+into a `Corpus`, carrying `source`'s sign inventory, script id, and a `subset:`
+provenance note naming the query:
 
 ```python
 import aegean
@@ -763,14 +743,14 @@ res = c.query([FilterRow("site-is", "Haghia Triada"),
                FilterRow("word-prefix", "KU")], output="inscriptions")
 sub = res.to_corpus(c)
 print(len(sub))                        # 55
-sub.to_json("ku_at_ht.json")           # now a reusable corpus on disk
+sub.to_json("ku_at_ht.json")           # reusable corpus on disk
 ```
 
-(A `words`-only result has no inscriptions, so it yields an empty corpus: query
-with `output="inscriptions"` if you want to save the slice.)
+An `output="words"` result contains no inscriptions and yields an empty corpus;
+query with `output="inscriptions"` when saving a slice.
 
-From the shell, `aegean query ... -o out.json|.db` does the same: it writes the
-matched inscriptions as a corpus (inscriptions output only):
+From the shell, `aegean query ... -o out.json|.db` writes the matched
+inscriptions as a corpus:
 
 ```bash
 aegean query lineara --where site-is="Haghia Triada" --where word-prefix=KU \
@@ -780,12 +760,12 @@ aegean query lineara --where site-is="Haghia Triada" --where word-prefix=KU \
 
 ### From the shell
 
-`aegean query` mirrors all of this. Each `--where field=value` is ANDed with the
-previous row; prefix the field with `or:` to OR it, or `!` to negate it. List the
+`aegean query` mirrors the Python API. Each `--where field=value` ANDs onto the
+previous row; prefix a field with `or:` to OR it or `!` to negate it. List valid
 fields with `--fields`.
 
 ```bash
-aegean query lineara --fields                       # the table above
+aegean query lineara --fields
 aegean query lineara --where site-is="Haghia Triada" \
                      --where word-prefix=KU \
                      --output-kind words --limit 5
@@ -804,58 +784,55 @@ Site is: Haghia Triada · Word starts with: KU → 25 word(s)
 Godart, L. & Olivier, J.-P. (1976–1985). … [query: Site is: Haghia Triada · …]
 ```
 
-(There's also a simpler `aegean search CORPUS "KU-*-RO"` for one-off wildcard
-sign-pattern lookups, where `*` matches any one sign: see
-[Analysis](Analysis).)
+For quick wildcard sign-pattern lookups (`*` matches one sign), use
+`aegean search CORPUS "KU-*-RO"`. See [Analysis](Analysis).
 
 ---
 
 ## SQLite persistence (`aegean.db`)
 
-For a queryable, on-disk corpus, write it to SQLite: stdlib `sqlite3` only, no
-extra dependency. Documents and tokens become normalized rows (so SQL and
-full-text search work over them); the nested structure (signs, alternate
-readings, annotations, source alignment, typed form state, line groupings, image
-refs, notes) is kept in JSON columns; provenance and the sign inventory live in a
-small key/value `meta` table. It's a lossless round-trip.
+SQLite persistence uses stdlib `sqlite3` alone. Documents and tokens map to
+normalized tables (`documents`, `tokens`) for SQL and full-text search; nested
+structures (signs, alternates, annotations, source alignment, typed form state,
+line groupings, image refs, notes) live in JSON columns; provenance and sign
+inventory live in a `meta` key/value table. Round-trips are lossless.
 
-Replacing an existing SQLite database uses an online backup transaction. Existing
-WAL readers retain their snapshot until their transaction ends; subsequent reads
-see the replacement. A competing writer can cause a bounded timeout, leaving the
-previous database intact. External renames or unlinks while connections are open
-are outside this contract. New files use an atomic, no-clobber hard link.
+Overwriting an existing database runs inside an online backup transaction. Active
+WAL readers retain their snapshot until their transaction ends, and subsequent
+reads see the replacement. Competing writers fail with a bounded timeout, leaving
+the existing file intact. External renames or unlinks while connections are open
+are outside this contract. New files are created via atomic no-clobber linking.
 
 ```python
 import aegean, aegean.db as db
 c = aegean.load("lineara")
 
-c.to_sql("lineara.db")                 # FTS5 text index by default
+c.to_sql("lineara.db")                 # FTS5 index enabled by default
 c2 = aegean.Corpus.from_sql("lineara.db")
 print(c.fingerprint() == c2.fingerprint())   # True
 
-# search a whole token literally (KU-RO matches the token KU-RO, never PO-TO-KU-RO)
+# exact whole-token search (KU-RO does not match PO-TO-KU-RO)
 db.search("lineara.db", "KU-RO", limit=3)
 # [('HT9a', 25, 'KU-RO'), ('HT9b', 20, 'KU-RO'), ('HT11a', 7, 'KU-RO')]
-db.search("lineara.db", "KU-RO", mode="substring")   # opt in to within-token matches (PO-TO-KU-RO, …)
+db.search("lineara.db", "KU-RO", mode="substring")   # within-token matches
 
-# stream documents one at a time for a huge DB, without loading the whole corpus
+# stream one document at a time for large databases
 for doc in db.stream("lineara.db"):
     ...
 ```
 
 Schema 3 adds the nullable `tokens.form_state_json` column for typed editorial
-forms. Schema-1 and schema-2 databases load with that field absent; an
-`append=True` write migrates the column and schema marker atomically, leaving
-legacy rows with no typed state. The schema is two main tables (`documents`, `tokens`) with indices on
-`tokens(doc_id)` and `tokens(text)`, plus a `tokens_fts` FTS5 virtual table (with the
-hyphen kept as a token character) when the local SQLite build supports it; token search
-confirms an exact match on top of the index, and uses the `tokens(text)` index directly
-when FTS is unavailable.
+forms. Schema-1 and schema-2 databases load with `form_state=None`; appending
+(`append=True`) migrates the column and schema version atomically while leaving
+existing rows without typed state. Indexes cover `tokens(doc_id)` and
+`tokens(text)`, plus a `tokens_fts` FTS5 table (retaining hyphens as token
+characters) when SQLite supports FTS5. Exact search verifies whole-token matches
+on top of FTS and falls back to `tokens(text)` if FTS5 is absent.
 
-From the shell, `aegean db` is its own subcommand group:
+CLI subcommands under `aegean db`:
 
 ```bash
-aegean db build lineara -o lineara.db          # add --no-fts to skip the index
+aegean db build lineara -o lineara.db          # pass --no-fts to omit FTS5
 # wrote 1721 documents to lineara.db
 
 aegean db search lineara.db KU-RO --limit 3
@@ -871,98 +848,112 @@ aegean db search lineara.db KU-RO --limit 3
 └───────┴─────┴───────┘
 ```
 
-You can also reach SQLite through the unified exporter: `aegean export CORPUS -f
-sqlite -o lineara.db`.
+`aegean export CORPUS -f sqlite -o lineara.db` writes the same format.
 
 ### Appending to an existing database
 
-`to_sql(..., append=True)` (and `db.to_sqlite(..., append=True)`) **upserts**
-documents into a database that already exists: a document whose id is already
-present is replaced, new ids are added, and the FTS index is refreshed so search
-sees the change. It's how you grow a database incrementally without rebuilding.
+`to_sql(..., append=True)` and `db.to_sqlite(..., append=True)` upsert documents
+into an existing database: matching document ids are replaced, new ids are
+inserted, and affected FTS rows are updated in the same transaction without
+rebuilding the database.
 
 ```python
 import aegean, aegean.db as db
 a = aegean.Corpus.from_records([{"id": "A1", "text": "KU-RO 10"}], script_id="lineara")
-b = aegean.Corpus.from_records([{"id": "A1", "text": "A-DU 5"},     # same id → replaced
-                                {"id": "B1", "text": "SA-RA2 3"}],  # new id  → added
+b = aegean.Corpus.from_records([{"id": "A1", "text": "A-DU 5"},     # replaced
+                                {"id": "B1", "text": "SA-RA2 3"}],  # inserted
                                script_id="lineara")
 
-a.to_sql("corpus.db")                  # build
-db.to_sqlite(b, "corpus.db", append=True)   # or b.to_sql("corpus.db", append=True)
+a.to_sql("corpus.db")
+db.to_sqlite(b, "corpus.db", append=True)
 
 back = aegean.Corpus.from_sql("corpus.db")
 print(sorted(d.id for d in back))      # ['A1', 'B1']
-print(back.get("A1").tokens[0].text)   # 'A-DU'  (the appended copy won)
-db.search("corpus.db", "A-DU")         # [('A1', 0, 'A-DU')]  (FTS refreshed)
+print(back.get("A1").tokens[0].text)   # 'A-DU'
+db.search("corpus.db", "A-DU")         # [('A1', 0, 'A-DU')]
 ```
 
-The CLI mirror is `aegean db add SRC -o existing.db`, where `SRC` is any
-`read_corpus` spec:
+CLI equivalent (`SRC` is any `read_corpus` spec):
 
 ```bash
-aegean db build  tlg0012.tlg001 -o homer.db   # the Iliad
-aegean db add    tlg0012.tlg002 -o homer.db   # add the Odyssey, in place
+aegean db build tlg0012.tlg001 -o homer.db   # Iliad
+aegean db add   tlg0012.tlg002 -o homer.db   # append Odyssey in place
 # added/updated <n> documents in homer.db
 ```
 
-(The local-only version of the same operation, on bundled subsets, prints e.g.
-`added/updated 53 documents in homer.db`.)
+---
+
+## Portable research bundles (`aegean.bundle`)
+
+`aegean.bundle` packages a reproducible research snapshot into a deterministic
+`.zip` archive (`aegean-research-bundle/1`) using only the Python standard
+library. A bundle carries `manifest.json` with SHA-256 hashes for every member,
+citations (`CITATIONS.bib`, `CITATIONS.txt`, `citations.json`), optional
+workbench workspace state, review CSVs (automatically pairing editable
+`.companion.json` snapshots), analysis receipts, and corpus data.
+
+License compliance is enforced automatically under `embed_corpus="auto"`
+(default): redistributable corpora embed directly as deterministic
+`corpus.json.gz`, while corpora with non-commercial (`CC BY-NC*`) or restricted
+license strings omit the text and store a `CorpusReference` retrieval pointer
+(dataset id, version, URL, SHA-256, license, and filter spec). `hydrate_bundle`
+verifies archive safety and checksums, unpacks companion artifacts, and
+reconstructs pointer corpora under their upstream license. Pass
+`embed_corpus="always"` for a private non-redistributable archive (stamping
+`redistributable=False` in `manifest.json`).
+
+Core Python functions: `create_bundle`, `inspect_bundle`, `verify_bundle`,
+`extract_bundle`, and `hydrate_bundle`, mirrored on the CLI by `aegean bundle
+{create,inspect,verify,extract,hydrate}`. See
+[Recipe 28](Recipes#28--package-verify-and-hydrate-a-portable-research-bundle).
 
 ---
 
 ## Import and export adapters (`aegean.io`)
 
-`aegean.io` is the corpus model's two-way bridge to outside formats. The
-**import** side builds a `Corpus` from your own plain material:
-`from_text` / `from_text_file` / `from_text_dir` / `from_csv` (a string, a
-`.txt` file, a folder of text files, or a CSV), so you get the full
-filter/query/analyse/export API without writing `Corpus.from_records` by hand.
-These text/CSV importers default to `token_view="all"`: decoded source text,
-punctuation and other non-word tokens, whitespace, and document-local character
-spans survive. Use `Document.words` for the word view, or explicitly request
-`token_view="words"` (CLI `--token-view words`) for the former lossy import;
-the corpus provenance records exclusions. See
-[Importing your own text](Greek-NLP#importing-your-own-text).
+`aegean.io` converts between external formats and `Corpus`. Importers
+(`from_text`, `from_text_file`, `from_text_dir`, `from_csv`) default to
+`token_view="all"`, retaining decoded source text, punctuation, non-word tokens,
+whitespace, and document-local character spans. Use `Document.words` for lexical
+tokens, or pass `token_view="words"` (CLI `--token-view words`) for word-only
+import; provenance records exclusions. See
+[Greek NLP → Importing your own text](Greek-NLP#importing-your-own-text) and
+[Data & Provenance → Your own corpus](Data-and-Provenance#your-own-corpus).
 
-The **export** side turns a `Corpus` back into interchange formats other tools
-speak. See [Your own corpus](Data-and-Provenance#your-own-corpus) for the import
-walkthrough (and the `aegean import` CLI); the export set, and how to reach each
-one:
+Supported corpus export formats:
 
-| Format | Python | CLI | Lossless? | Extra needed |
+| Format | Python | CLI | Fidelity | Extra |
 |---|---|---|---|---|
-| Lossless JSON | `Corpus.to_json` | `export -f json` | yes | none |
+| Lossless JSON | `Corpus.to_json` | `export -f json` | lossless | none |
 | CSV | `io.to_csv` | `export -f csv` | tabular view | `[data]` |
 | Parquet | `io.to_parquet` | `export -f parquet` | tabular view | `[parquet]` |
 | EpiDoc TEI XML | `io.to_epidoc`/`write_epidoc` ↔ `io.from_epidoc`/`read_epidoc` | `export -f epidoc` / `import --epidoc` | token-carrier semantic fields, not arbitrary TEI | none |
-| SQLite DB | `Corpus.to_sql` / `db.to_sqlite` | `export -f sqlite` | yes | none |
+| SQLite DB | `Corpus.to_sql` / `db.to_sqlite` | `export -f sqlite` | lossless | none |
 | Workbench JSON | `io.to_workbench` / `io.from_workbench_export` | `aegean workbench` (serves the app) | tokenized text + surface forms; statuses, annotations, and typed form state are lossy | none |
 | RDF Turtle / JSON-LD | `io.to_rdf` | `export -f ttl` / `export -f jsonld` | graph view (export only) | none |
 
-The one command that covers the file formats:
+Single CLI entry point:
 
 ```bash
 aegean export CORPUS -f {json|csv|parquet|epidoc|sqlite|workbench|ttl|jsonld} -o PATH [--level …] \
               [--site …] [--period …] [--scribe …] [--support …]
 ```
 
-The `--site/--period/--scribe/--support` filters apply before export, so you can
-export exactly the subset you want, and the provenance records the filter.
+Metadata filters (`--site`, `--period`, `--scribe`, `--support`) apply before
+export and record a `subset:` note in provenance.
 
 ### EpiDoc TEI XML
 
-`to_epidoc(document)` serializes one `Document` to an EpiDoc TEI XML string;
-`write_epidoc(obj, path)` writes a `Document` to a file or a whole `Corpus` to a
-directory of `{id}.xml` files. The transliteration lives in a TEI `<div
-type="edition">` as `<lb/>`-delimited lines whose element encodes each token's
+`to_epidoc(document)` serializes one `Document` to EpiDoc TEI XML;
+`write_epidoc(obj, path)` writes a single file for a `Document` or a directory of
+`{id}.xml` files for a `Corpus`. Transliterations live inside `<div
+type="edition">` as `<lb/>`-delimited lines with element names matching
 `TokenKind`: `<w>` (words), `<num>` (numerals), `<g>` (logograms), `<pc>`
-(punctuation), and `<seg type="separator">` / `<seg type="unknown">` for the
-remaining two kinds; a token whose `ReadingStatus` isn't `CERTAIN`
-is wrapped in the matching apparatus element (`<unclear>` / `<supplied>`; LOST
-uses `<supplied reason="undefined">`, and the reader also accepts `<gap>`), and
-alternates become `<app><lem>…</lem><rdg>…</rdg></app>`. The writer uses the
-stdlib XML module (lazy-imported), so **EpiDoc export needs no extra**.
+(punctuation), and `<seg type="separator">` / `<seg type="unknown">`. Non-certain
+readings wrap in `<unclear>` or `<supplied>` (`LOST` emits
+`<supplied reason="undefined">`; the reader also accepts `<gap>`), and alternates
+emit `<app><lem>…</lem><rdg>…</rdg></app>`. Export uses stdlib XML
+(lazy-imported) with no extra required.
 
 ```python
 import aegean
@@ -978,8 +969,8 @@ print(xml[:300])
 #       ...
 ```
 
-The edition div is tagged with a BCP-47 `xml:lang` per script (`und`
-undetermined for the undeciphered scripts, `grc` Greek, `gmy` Mycenaean Greek):
+Each script maps to a BCP-47 `xml:lang` on the edition div (`und` for
+undeciphered scripts, `grc` for Greek, `gmy` for Mycenaean Greek):
 
 | script id | `xml:lang` |
 |---|---|
@@ -989,22 +980,23 @@ undetermined for the undeciphered scripts, `grc` Greek, `gmy` Mycenaean Greek):
 | `cyprominoan` | `und` |
 | `greek` | `grc` |
 
-The output validates against the EpiDoc RelaxNG schema and round-trips through the
-generic EpiDoc *reader* (`io.from_epidoc` / `io.read_epidoc`, stdlib-only, no extra)
-for token-carrier content it understands: id, find-place, the token/line stream,
-each token's kind (taken from its carrier element, so a separator and an unknown
-token stay distinct), editorial certainty, typed choices and apparatus segments,
-and `<app>` variants.
-This is a semantic round-trip, not a byte-identical XML promise, and it is not a
-general free-text TEI structured-state importer. A separate Linear B-specific reader,
-`aegean.scripts.linearb.parse_epidoc`, handles DAMOS-style files with lxml (the
-`[epidoc]` extra), re-deriving Aegean token kinds from the transliteration text.
+Output validates against the official EpiDoc RelaxNG schema and round-trips
+semantically through `io.from_epidoc` / `io.read_epidoc` (stdlib-only) for
+token-carrier documents: id, find-place, token/line stream, carrier-derived token
+kinds, editorial certainty, typed choices and apparatus segments, and `<app>`
+variants. It does not guarantee byte-identical XML or parse arbitrary free-text
+TEI. For DAMOS-style Linear B EpiDoc, `aegean.scripts.linearb.parse_epidoc` uses
+lxml (`[epidoc]` extra) and re-derives Aegean token kinds from transliteration
+text.
 
 ### The Linear A Research Workbench
 
-The corpus model round-trips with the [Linear A Research
-Workbench](https://linearaworkbench.xyz/) (the browser UI) in both directions,
-over plain JSON; neither tool needs the other installed.
+pyaegean exchanges corpus and workspace JSON in both directions with the
+[Linear A Research Workbench](https://linearaworkbench.xyz/). The CLI command
+`aegean workbench` fetches the SHA-256-pinned `workbench-app` `v2.1.0` static
+build (~3.3 MB `tar.gz`, with multi-script Aegean fonts) to the local cache and
+serves it on loopback with optional local bridges (`--corpus`, `--site`,
+`--module`, `--doc`, `--damos`, `--state`).
 
 ```python
 import aegean
@@ -1017,47 +1009,46 @@ from aegean.io import (
 
 c = aegean.load("lineara").filter(site="Haghia Triada")
 
-# emit workbench-shaped inscription records (optionally write a JSON file)
+# emit workbench-shaped inscription records (optionally write to JSON)
 recs = to_workbench(c, "ht.workbench.json")
 
-# load what the workbench produces (its Data Export, or a plain records array)
+# load workbench Data Export or plain records array
 c2 = from_workbench_export("ht.workbench.json")
 
-# load & query saved workbench research state (annotations, notes, saved queries)
+# load and run saved workbench research state (annotations, notes, saved queries)
 ws = load_workbench_backup("workspace.json")
 hits = c.query(ws.to_filter_rows(0))
 ```
 
-Point the app's `?corpus=<url>` (or run `aegean workbench --corpus <id-or-path>`) at a
-`to_workbench` file and every analysis module runs against your data. `from_workbench_export`
-accepts the schema-v1 full-corpus export object or a plain array of records; for
-`script_id="lineara"`, tokens are classified via `aegean.scripts.lineara.loader.classify`
-(restoring inline apparatus such as erased `𐝫`, bracketed uncertainty `[?]`, logograms,
-separators, and fractions) and `linear_a_inventory()` is attached. Out-of-band
-`ReadingStatus` overrides on plain tokens and `Token.annotations` are not represented in
-the workbench format. Use `load_workbench_backup` / `save_workbench_backup` (or
-`aegean workbench --state workspace.json`) to round-trip annotations, notes, collections,
-findings, saved hypotheses, and saved queries between Python and the browser.
+Mount a `to_workbench` file through `?corpus=<url>` or
+`aegean workbench --corpus <id-or-path>`. `from_workbench_export` accepts either
+a schema-v1 full-corpus export or a plain records array; for
+`script_id="lineara"`, tokens are classified via
+`aegean.scripts.lineara.loader.classify` (restoring inline erased `𐝫`, bracketed
+uncertainty `[?]`, logograms, separators, and fractions) and attached to
+`linear_a_inventory()`. Out-of-band `ReadingStatus` overrides on plain tokens and
+`Token.annotations` are not carried by the workbench format. Use
+`load_workbench_backup` / `save_workbench_backup` (or
+`aegean workbench --state workspace.json`) to round-trip annotations, notes,
+collections, findings, saved hypotheses, and saved queries between Python and the
+browser.
 
 ---
 
 ## Saving results and AI outputs (`--output`)
 
-The corpus exporters above turn a *corpus* into a file. The same
-`--output/-o` convention applies to the **analysis and AI commands**, so a result
-(not just the data behind it) lands on disk. The format is chosen by the file
-extension, all on the stdlib (no pandas needed): `.json` (structured), `.csv`
-(tabular), or `.txt` (plain text). Which extensions a command accepts depends on
-the shape of its result.
+Analysis and AI CLI commands share the `--output/-o` convention to write results
+to disk using only the standard library. The file extension chooses the format
+(`.json`, `.csv`, or `.txt`) where supported by the result shape:
 
 | Command | `-o` writes | Extensions |
 |---|---|---|
-| `aegean stats` / `keyness` / `dispersion` / `search` | the result table | `.json` / `.csv` / `.txt` |
-| `aegean analyze {assoc,cooccur,clusters,hands}` | the analysis result | `.json` / `.csv` / `.txt` |
-| `aegean ai {translate,gloss,summarize,hypotheses,ask,extract}` | the AI result | `.json` / `.txt` |
+| `aegean stats` / `keyness` / `dispersion` / `search` | result table | `.json` / `.csv` / `.txt` |
+| `aegean analyze {assoc,cooccur,clusters,hands}` | analysis result | `.json` / `.csv` / `.txt` |
+| `aegean ai {translate,gloss,summarize,hypotheses,ask,extract}` | AI result | `.json` / `.txt` |
 
 ```bash
-# a frequency table straight to CSV (stdlib csv, no pandas)
+# write frequency table directly to CSV (stdlib csv, no pandas)
 aegean stats lineara --top 3 -o freq.csv
 ```
 ```
@@ -1067,40 +1058,33 @@ SA-RA₂,20
 KI-RO,16
 ```
 
-For the AI commands, `.json` keeps the **whole** result: the generated text,
-its provenance, and the local grounding that fed the model, while `.txt` writes
-the labeled text. Translation JSON also retains the original draft when a
-checking pass ran, model-reported uncertainty and changes, the exact provider
-response, and grounding runtime/coverage details. `--style annotated` includes
-the notes in labeled output; `--style concise` shortens that presentation while
-retaining the details in JSON and trace output. The exploratory label travels
-onto disk either way:
+For AI commands, `.json` writes text, provenance, grounding, and `exploratory:
+true`; `.txt` writes labeled text. Translation JSON preserves any checking
+draft, model-reported uncertainties and changes, raw provider output, and
+grounding runtime/coverage metadata. Translation `.txt` exports append the audit
+trace automatically in both `--style annotated` and `--style concise`.
 
 ```bash
 aegean ai translate "ἐν ἀρχῇ" -o reading.json   # text + provenance + grounding
-aegean ai gloss     "ἐν ἀρχῇ" -o gloss.txt       # labeled text
+aegean ai gloss     "ἐν ἀρχῇ" -o gloss.txt      # labeled text
 ```
 
-### `ExploratoryResult` — the serialized AI result
+### `ExploratoryResult` serialization
 
-Every AI capability returns an `ExploratoryResult` (in
-`aegean.ai`): the generated `text`, the `provider` / `model` / `prompt_version`
-that produced it, the structured `grounding` it was given (each a `GroundingItem`
-with a `source`, `ref`, evidence `status`, and optional supporting `provenance`),
-an always-explicit `exploratory` flag, and an optional parsed `data` payload.
-Hybrid translation adds `grounding_runtime`; a checking pass adds the complete
-original `draft`. These optional values survive serialization and reimport.
-Translation `data` separates the translation, uncertainty notes, reported
-changes/reasons/evidence, and exact raw response. `format_status="structured"`
-validates response shape, not linguistic correctness; malformed responses
-remain verbatim and are labeled `unstructured`. Three methods
-move it to and from disk:
+Every AI capability returns an `ExploratoryResult` (`aegean.ai`) containing
+`text`, `provider`, `model`, `prompt_version`, structured `grounding`
+(`GroundingItem` objects carrying `source`, `ref`, `status`, and optional
+`provenance`), `exploratory=True`, and optional parsed `data`. Hybrid translation
+adds `grounding_runtime`; checking adds the original `draft`. All optional fields
+survive serialization. Translation `data` keeps `translation`, `uncertainties`,
+`changes`, and `raw_response` separate; `format_status="structured"` checks JSON
+structure only, while malformed responses stay verbatim as `unstructured`.
 
-| Method | Does |
+| Method | Behavior |
 |---|---|
-| `to_dict()` | a stable, JSON-ready dict: keeps `text`, `grounding`, `exploratory`, and any `data`, plus a `_meta` stamp |
-| `to_json(path=None)` | the dict as a JSON string, or written to `path` |
-| `from_dict(data)` *(classmethod)* | reconstruct an `ExploratoryResult` from `to_dict` output |
+| `to_dict()` | JSON-ready dict carrying `_meta`, `text`, `grounding`, `exploratory`, and optional `data`/`draft`/`grounding_runtime` |
+| `to_json(path=None)` | return JSON string or write to `path` |
+| `from_dict(data)` *(classmethod)* | reconstruct `ExploratoryResult` from `to_dict` output |
 
 ```python
 from aegean.ai import ExploratoryResult, GroundingItem
@@ -1115,35 +1099,29 @@ sorted(d.keys())
 # ['_meta', 'data', 'exploratory', 'grounding', 'kind', 'model', 'prompt_version', 'provider', 'text']
 d["_meta"]
 # {'tool': 'pyaegean', 'type': 'ExploratoryResult', 'schemaVersion': 1}
-d["exploratory"]                       # True — the caveat is part of the data
+d["exploratory"]                       # True
 
-r2 = ExploratoryResult.from_dict(d)    # round-trips
+r2 = ExploratoryResult.from_dict(d)
 r2.text == r.text                      # True
 r2.grounding[0].source                 # 'lexicon'
 ```
 
-`labeled()` returns the text with its exploratory caveat, runtime coverage when
-available, and style-selected translation notes; `trace()` retains the audit
-data, draft, and grounding provenance. Both are methods, not fields.
+`labeled()` and `trace()` are methods rather than serialized fields.
 `GroundingItem.status` distinguishes predictions, source annotations, field-level
-human review, reference candidates, and unclassified supplied text; `render()`
-includes that status and provenance in the prompt and trace. Plain strings never
-become verified evidence automatically. `ai.annotation_evidence()` can render
-existing token annotations and current per-field review decisions without
-rerunning an analyzer. The round-trip preserves this evidence alongside the
-exploratory flag; a retained model prediction is still a prediction.
+human review, reference candidates, and unclassified strings, rendered into
+prompts and traces via `render()`. Plain strings remain unclassified.
+`ai.annotation_evidence()` formats existing token annotations and current
+per-field review decisions without rerunning analyzers.
 
 ---
 
 ## Provenance and citation
 
-Every bundled corpus carries a `Provenance` (source, license, citation, URL)
-that travels with it and is stamped into exports. This is the structural backbone
-of pyaegean's "single source of truth" promise: an analysis can always say where
-its data came from.
+Every bundled and fetched corpus carries a `Provenance` record (source, license,
+citation, URL) that stamps exports and propagates through filters, queries, and
+merges.
 
-`Corpus.cite(style)` cites the corpus, or (after a `filter`) the exact subset,
-since `filter` records a `subset:` note that all three styles include:
+`Corpus.cite(style)` formats citations for the corpus or exact filtered subset:
 
 ```python
 import aegean
@@ -1160,29 +1138,28 @@ print(c.cite("bibtex"))
 # }
 ```
 
-| `style` | Produces |
+| `style` | Output |
 |---|---|
-| `"plain"` | one citation line (with any `subset:` / query note in brackets) |
-| `"bibtex"` | a `@misc` entry (`title`, `year` if recoverable, `url`, `note`) |
-| `"apa"` | an APA-style reference line (`n.d.` when no year is found) |
+| `"plain"` | single citation line with any `subset:` or query note in brackets |
+| `"bibtex"` | `@misc` entry (`title`, extracted `year`, `url`, `note`) |
+| `"apa"` | APA-style reference line (`n.d.` if no year is extracted) |
 
 ```bash
 aegean cite lineara --style bibtex
-aegean cite lineara --site "Haghia Triada"     # cites the subset
+aegean cite lineara --site "Haghia Triada"
 ```
 
-`QueryResults.cite(...)` does the same for a query's exact result set. The BibTeX
-and APA forms are best-effort renderings of the recorded free-text provenance:
-the first plausible year in the citation string becomes `year`, and the license
-plus any notes go into `note`/brackets. See
-[Data and Provenance](Data-and-Provenance) for where each corpus comes from and
-its license.
+`QueryResults.cite(...)` cites the exact query result set. BibTeX and APA
+renderings extract the first plausible year from free-text provenance and place
+license and subset notes into `note` or brackets. See
+[Data and Provenance](Data-and-Provenance) for dataset origins and licenses.
 
 ---
 
 ## Scripts are plugins
 
-A writing system is a plugin the core knows only by interface (`aegean.core.script.Script`):
+Each writing system implements the `aegean.core.script.Script` abstract base
+class:
 
 ```python
 from aegean.core.script import Script, register
@@ -1198,13 +1175,11 @@ class MyScript(Script):
 register(MyScript())
 ```
 
-A corpus loader is registered separately via
+Corpus loaders register separately with
 `aegean.core.corpus.register_loader(script_id, fn)` so `aegean.load(script_id)`
-works. The core never imports scripts (no cycles); `aegean/__init__` imports
-`scripts` to register the built-ins (Linear A, Linear B, Cypriot, Cypro-Minoan,
-Greek).
-
-Access registered scripts and their behaviour:
+can locate them. Core modules never import script plugins; `aegean/__init__.py`
+imports `aegean.scripts` to register the five built-ins (`lineara`, `linearb`,
+`cypriot`, `cyprominoan`, `greek`).
 
 ```python
 import aegean
@@ -1212,93 +1187,87 @@ aegean.registered_scripts()
 # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 
 g = aegean.get_script("greek")
-print(len(g.sign_inventory))           # 25  (the Greek alphabet)
+print(len(g.sign_inventory))           # 25 (Greek alphabet)
 [(t.text, t.kind.value) for t in g.tokenize("ἐν ἀρχῇ")]
 # [('ἐν', 'word'), ('ἀρχῇ', 'word')]
 ```
 
-`SignInventory` indexes a script's signs three ways for O(1) lookup:
+`SignInventory` indexes signs for O(1) lookup by label, glyph, or codepoint:
 
 ```python
 inv = aegean.load("lineara").sign_inventory
-inv.by_label("KU")        # the Sign labelled KU
-inv.by_glyph("𐙂")        # the same Sign by its Unicode glyph
-inv.by_codepoint(0x10642) # …or by codepoint
+inv.by_label("KU")        # Sign labelled KU
+inv.by_glyph("𐙂")        # same Sign by Unicode glyph
+inv.by_codepoint(0x10642) # same Sign by codepoint
 len(inv)                  # 342
 ```
 
 ```bash
-aegean sign lineara KU       # look one sign up: glyph, codepoint, sound value, attrs
+aegean sign lineara KU
 ```
 
 ---
 
 ## Numerals and accounting (`aegean.core.numerals`)
 
-The numeral layer parses the decimal numerals and metrological fractions that
-appear on tablets, and reconciles `KU-RO` / `PO-TO-KU-RO` totals against summed
-line items. It's a verbatim port of the workbench's numeral library, so results
-match the TypeScript tool against shared golden fixtures.
+`aegean.core.numerals` parses tablet decimal numerals and metrological fractions
+and reconciles `KU-RO` / `PO-TO-KU-RO` totals against summed entries. It is a
+parity-tested port of the workbench numeral library verified against shared
+golden fixtures.
 
 ```python
 from aegean.core.numerals import parse_value, format_value
 parse_value("10")        # 10
-parse_value("¹⁄₂")       # 0.5  (super/subscript fraction)
-parse_value("½")         # 0.5  (precomposed glyph)
+parse_value("¹⁄₂")       # 0.5 (super/subscript fraction)
+parse_value("½")         # 0.5 (precomposed glyph)
 format_value(130.5)      # '130½'
 ```
 
-Total-marker recognition is among the most secure lexical identifications in
-Aegean accounting:
+Recognized total and deficit markers:
 
 | Script | Total | Grand total | Deficit |
 |---|---|---|---|
 | Linear A | `KU-RO` | `PO-TO-KU-RO` | `KI-RO`, `KU-RO₂` |
-| Linear B | `TO-SO`, `TO-SA` |— | `O-PE-RO`, `O-PE-RO-SI` |
+| Linear B | `TO-SO`, `TO-SA` | — | `O-PE-RO`, `O-PE-RO-SI` |
 
-The reconciliation (`check_balances`, and `analysis.balance_check` /
-`aegean balance`) is an **exploratory** reading: section boundaries are
-heuristic and the metrology is scholarly-contested. It's labeled as such wherever
-it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
+Reconciliation (`check_balances`, `analysis.balance_check`, `aegean balance`) is
+exploratory because section boundaries are inferred heuristically and Minoan
+metrology remains contested. See [Analysis](Analysis).
 
 ---
 
 ## Conventions and design rules
 
-- **The core has zero hard third-party deps.** pandas (the `[data]` extra) and
-  the provider SDKs are lazy-imported inside functions; collocation stats are
-  pure stdlib. So `import aegean` is instant and loads nothing heavy, and the
-  whole data model above works on a bare install.
-- **No large/binary assets are bundled**: that's what the
-  [download-to-cache](Data-and-Provenance) layer is for. CI's
-  `scripts/check_footprint.py` enforces import-clean, import-fast, and a
-  code+JSON-only wheel.
-- **Corpus schema version.** Lossless corpus JSON and SQLite persistence use
-  schema version `3` so consumers can tell what they're reading; `to_json` omits default fields (e.g.
-  a `CERTAIN` status) to stay compact and back-compatible. Schema 3 adds typed
-  form state; schema-1 and schema-2 artifacts load without it.
-- **Every exploratory method carries its caveat.** Cross-linguistic distance,
-  morphology clustering, accounting reconciliation, decipherment, and AI readings
-  are labeled unverified at point of use. The Linear A material is undeciphered:
-  analysis is never presented as ground truth.
+- **Zero core third-party dependencies.** pandas (`[data]`), lxml (`[epidoc]`),
+  Textual (`[tui]`), neural runtimes (`[neural]`), and provider SDKs are
+  lazy-imported inside the functions that require them; collocation statistics,
+  querying, SQLite persistence, and research bundles use only the standard
+  library.
+- **No bundled binaries.** Large corpora, trained models, and imagery use
+  [download-to-cache](Data-and-Provenance). `scripts/check_footprint.py` enforces
+  import-clean, import-fast, and a code-and-JSON-only wheel in CI.
+- **Schema version 3.** Lossless JSON and SQLite persistence carry schema version
+  `3` (adding typed form state while remaining readable for schemas 1 and 2).
+  `to_json` omits default fields such as `CERTAIN` status to stay compact.
+- **Exploratory labeling.** Cross-linguistic distance, morphological clustering,
+  accounting reconciliation, decipherment hypotheses, and AI outputs carry
+  explicit unverified caveats. Linear A and Cypro-Minoan are undeciphered.
 
 ## Limitations and notes
 
-- `to_dict` is deliberately **lossy** (words + metadata only); for anything you
-  need to reconstruct, use `to_json`/`from_json` or the SQLite round-trip.
-- EpiDoc export is semantic rather than byte-identical. For token-carrier content
-  it preserves the id, find-place, token/line stream, token kinds, editorial
-  certainty, typed choices and apparatus segments. The generic reader
-  (`io.from_epidoc`) reads each kind off its carrier element and falls back to
-  the text only for an untyped `<seg>`; it is stdlib-only but is not a general
-  free-text TEI structured-state importer, while the DAMOS-style Linear B reader
-  (`scripts.linearb.parse_epidoc`) re-derives Aegean kinds from the
-  transliteration and needs lxml (the `[epidoc]` extra).
-- The query engine's word predicates select `TokenKind.WORD` tokens, including
-  single-sign Aegean words and Greek words. Logograms, numerals, punctuation,
-  and unknown tokens are outside its lexical word population; script-specific
-  sign-pattern predicates retain their own matching rules.
-- Parquet needs a parquet engine; CSV/Parquet need pandas (`[data]`).
-- See [Limitations](Limitations) for the project-wide list of what
-  pyaegean does and doesn't claim, and [Greek NLP](Greek-NLP) /
-  [Meters](Meters) for the layers above the core.
+- `to_dict` is lossy (words and metadata only). Use `to_json`/`from_json`,
+  SQLite, or `aegean.bundle` for reproducible persistence.
+- EpiDoc export is semantic rather than byte-identical. For token-carrier
+  documents it preserves id, find-place, token/line stream, token kinds,
+  editorial certainty, typed choices, and apparatus segments. `io.from_epidoc`
+  is stdlib-only and reads kinds from carrier elements (falling back to text
+  only for untyped `<seg>`); it is not a general free-text TEI importer.
+  `scripts.linearb.parse_epidoc` re-derives Aegean kinds from transliterations
+  and requires lxml (`[epidoc]`).
+- Query word predicates select `TokenKind.WORD` tokens (including single-sign
+  Aegean and Greek words) and exclude logograms, numerals, punctuation, and
+  unknown tokens.
+- Parquet export requires pyarrow (`[parquet]`); CSV and Parquet require pandas
+  (`[data]`).
+- See [Limitations](Limitations) for project-wide boundaries and
+  [Greek NLP](Greek-NLP) / [Meters](Meters) for Greek-specific layers.

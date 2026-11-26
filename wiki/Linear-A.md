@@ -1,37 +1,34 @@
 # Linear A
 
-Linear A is the script of Bronze-Age Crete, **still undeciphered**. pyaegean ships
-the whole corpus offline and gives you tools to *explore* it: load and filter
-1,721 inscriptions, look up signs, search for words by their sign shape (with
-wildcards), check the accounting tablets' arithmetic, and sort tablets by what
-they look like they're for. You'd reach for this page to answer questions like
-"which words end in **-RO**?", "does this tablet's **KU-RO** total actually add
-up?", or "what does sign **KU** look like?", all without writing much Python,
-and with a matching command line for every method.
+Linear A is the undeciphered writing system of Bronze Age Crete. pyaegean ships
+the full corpus offline for exploratory work: loading and filtering 1,721
+inscriptions, inspecting the 342-sign Unicode inventory, searching words by
+wildcard sign patterns, checking accounting tablet arithmetic, and classifying
+tablet structures. Every Python method below has a matching CLI command.
 
-> **Note on transcription conventions.** Linear A transliterations use
-> **Linear B sound values** as a working convention (the two scripts share many signs).
-> Numbers, totals, and structure labels are heuristics over a damaged corpus. See
-> **[Limitations](Limitations)** for scope and [Analysis](Analysis) for the methods.
+> **Transcription convention.** Linear A transliterations use Linear B sound
+> values by scholarly convention because the two scripts share many sign forms.
+> Numbers, totals, and structure categories are heuristic classifications over a
+> damaged corpus. See [Limitations](Limitations) for scope and
+> [Analysis](Analysis) for the underlying methods.
 
-Everything below runs on the **dependency-free core** unless a step is explicitly
-marked as needing the `[data]` extra (pandas) or a one-time fetch (SigLA).
+All operations below run on the zero-dependency core unless marked as needing
+the `[data]` extra (`pandas`) or a one-time fetch (SigLA or the browser
+workbench).
 
 ---
 
-## At a glance
+## Corpus summary
 
-What the bundled corpus contains. The first four counts plus source and license
-come straight from `aegean info lineara`; the sound-value, shared-with-Linear-B,
-editorial-status, and checkable-`KU-RO` rows are from the Python introspection
-shown later on this page:
+The first four counts, source, and license come from `aegean info lineara`; the
+remaining rows come from the Python queries shown below:
 
 | Quantity | Value |
 | --- | --- |
 | Inscriptions (documents) | **1,721** |
 | Word tokens (all multi-sign; 995 distinct) | **1,381** |
 | Tokens (words, numerals, logograms, separators) | **6,406** |
-| Signs in the inventory | **342** (the full Unicode Linear A block) |
+| Signs in the inventory | **342** (full Unicode Linear A block) |
 | Signs with an assigned sound value | **50** |
 | Signs marked shared with Linear B | **81** |
 | Documents carrying editorial status | **366** (552 `LOST` + 120 `UNCLEAR` tokens) |
@@ -53,7 +50,7 @@ aegean info lineara
 
 ## Loading the corpus
 
-The corpus is bundled in the wheel: no download, works offline.
+The corpus ships inside the wheel and loads offline with no network call:
 
 ```python
 import aegean
@@ -61,17 +58,17 @@ import aegean
 corpus = aegean.load("lineara")
 len(corpus)                       # 1721
 
-doc = corpus.get("HT13")          # one Document by id (note: no space — "HT13")
+doc = corpus.get("HT13")          # one Document by id (unspaced: "HT13")
 ```
 
-There is no separate CLI "load the corpus" step: every `aegean` command takes
-the corpus id (`lineara`) as its first argument and loads it for you.
+On the command line, pass `lineara` directly as the corpus argument to any
+`aegean` command.
 
 ### Filtering by metadata
 
-`corpus.filter(...)` AND-combines any [`DocumentMeta`](Architecture) fields. The
-period codes are written **un-spaced** (`LMIA`, `LMIB`, `MMII`, …), and
-`meta.site` holds the **full** site name:
+`corpus.filter(...)` combines [`DocumentMeta`](Architecture) fields with logical
+AND. Period codes have no spaces (`LMIA`, `LMIB`, `MMII`), and `meta.site`
+stores the full site name:
 
 ```python
 ht = corpus.filter(site="Haghia Triada")
@@ -81,7 +78,7 @@ ht_lmib = corpus.filter(site="Haghia Triada", period="LMIB")
 len(ht_lmib)                                  # 1110
 ```
 
-The same on the command line, which also lists the matches:
+CLI equivalent:
 
 ```bash
 aegean load lineara --site "Haghia Triada" --period LMIB --limit 5
@@ -93,13 +90,13 @@ aegean load lineara --site "Haghia Triada" --period LMIB --limit 5
 | Period / context code | `period=` | `--period` |
 | Scribal hand | `scribe=` | `--scribe` |
 | Support (object type) | `support=` | `--support` |
-| (export the filtered set) |— | `--output / -o FILE.json` |
-| (rows shown) |— | `--limit N` (default 20) |
+| Export filtered subset | — | `--output / -o FILE.json` |
+| Rows displayed | — | `--limit N` (default 20) |
 
-> **Site codes vs. site names.** `meta.site` is the full name (`"Haghia
-> Triada"`, `"Khania"`, …). The familiar two-letter codes (`HT`, `ZA`, `KH`)
-> are the prefix of each document's **id**, not a metadata field. To select "all
-> HT tablets," query the id with the [query engine](Analysis#query-engine):
+> **Site codes vs. site names.** `meta.site` holds the full name (`"Haghia
+> Triada"`, `"Khania"`). The two-letter prefixes (`HT`, `ZA`, `KH`) live on the
+> document `id`. To match by id prefix, use the
+> [query engine](Analysis#query-engine):
 
 ```python
 from aegean.analysis import FilterRow, run_query
@@ -111,7 +108,7 @@ len(res.inscriptions)                         # 1110
 aegean query lineara --where id-contains=HT
 ```
 
-### Looking at one document
+### Inspecting one document
 
 ```bash
 aegean show lineara HT13
@@ -126,8 +123,8 @@ aegean show lineara HT13
 #   8: KU-RO 130 ¹⁄₂
 ```
 
-Every token carries its **role**, so you can pull just words, numerals, or
-commodity signs:
+Each token carries its `TokenKind`, so words, numerals, and logograms can be
+read separately:
 
 ```python
 doc = corpus.get("HT13")
@@ -137,59 +134,59 @@ doc = corpus.get("HT13")
 # ['5', '¹⁄₂', '56', '27', '¹⁄₂', '18', '19', '5', '130', '¹⁄₂']
 [t.text for t in doc.logograms]
 # ['VIN', 'TE']
-doc.line_tokens                    # tokens regrouped by physical line
+doc.line_tokens                    # tokens grouped by physical line
 ```
 
-### Words, frequencies, DataFrames
+### Words, frequencies, and DataFrames
 
 ```python
 corpus.word_frequencies()[:5]
 # [('KU-RO', 37), ('SA-RA₂', 20), ('KI-RO', 16), ('*411-VS', 15), ('A-TA-I-*301-WA-JA', 11)]
 ```
 
-The DataFrame views need pandas, shipped as the optional `[data]` extra
-(`pip install 'pyaegean[data]'`); everything else on this page runs on the core.
+DataFrame conversion requires `pandas` via `pip install 'pyaegean[data]'`:
 
 ```python
 corpus.to_dataframe()                      # (1721, 11) — one row per document
 corpus.to_dataframe(level="word")          # (1381, 8) — one row per WORD token
-corpus.to_dataframe(level="token")         # (6406, 8) — every token (words, numerals, …)
+corpus.to_dataframe(level="token")         # (6406, 8) — every token (words, numerals, ...)
 ```
 
-The document-level frame's columns are: `id`, `script_id`, `site`, `support`,
-`scribe`, `findspot`, `period`, `name`, `n_tokens`, `n_words`, `source_text`.
-The token- and word-level frames carry `doc_id`, `line_no`, `position`, `text`,
-`kind`, `status`, `site`, `period`.
+The document-level frame has columns `id`, `script_id`, `site`, `support`,
+`scribe`, `findspot`, `period`, `name`, `n_tokens`, `n_words`, and
+`source_text`. Token- and word-level frames carry `doc_id`, `line_no`,
+`position`, `text`, `kind`, `status`, `site`, and `period`.
 
 ---
 
 ## The sign inventory
 
-The inventory is the **full Unicode Linear A repertoire**: 342 signs. Of those,
-**97** appear in the corpus-aligned sign table, **50** of them with an assigned
-sound value (`phonetic`); the remaining 245 are carried from the
-Unicode Character Database with `attrs["source"] == "ucd"` and **no** reading,
-because Linear A is undeciphered and most of its repertoire has no agreed value.
+The inventory contains the full 342-sign Unicode Linear A block. Of these, 97
+appear in the corpus-aligned sign table, 50 with a conventional Linear B sound
+value (`phonetic`) and 81 marked as shared with Linear B. The remaining 245 come
+from the Unicode Character Database with `attrs["source"] == "ucd"` and no sound
+value.
 
 ```python
 inv = aegean.get_script("lineara").sign_inventory
-len(inv)                           # 342
-len([s for s in inv if s.phonetic])               # 50  — the signs with assigned sound values
-len([s for s in inv if s.attrs.get("sharedWithLinearB")])  # 81  — shared glyphs
+len(inv)                                                   # 342
+len([s for s in inv if s.phonetic])                        # 50
+len([s for s in inv if s.attrs.get("sharedWithLinearB")])  # 81
 
 sign = inv.by_label("KU")
 sign.phonetic                      # 'ku'
 sign.glyph                         # '𐙂'
-sign.codepoint                     # 67138  (the int; the CLI/JSON render it as 'U+10642')
+sign.codepoint                     # 67138 (rendered as 'U+10642' by CLI/JSON)
 
-inv.to_dataframe()                 # (342, 10) — needs [data]
+inv.to_dataframe()                 # (342, 10) — requires [data]
 ```
 
-The inventory DataFrame's columns are: `label`, `glyph`, `codepoint`,
-`phonetic`, `sharedWithLinearB`, `linearAOnly`, `total`, `confidence`,
-`altGlyphs`, `source`.
+The inventory DataFrame has columns `label`, `glyph`, `codepoint`, `phonetic`,
+`sharedWithLinearB`, `linearAOnly`, `total`, `confidence`, `altGlyphs`, and
+`source`.
 
-Look up a single sign from the shell:
+Single-sign lookup from the CLI accepts a label (`KU`, `*301`) or a single
+Unicode glyph:
 
 ```bash
 aegean sign lineara KU
@@ -201,58 +198,53 @@ aegean sign lineara KU
 #  attrs.linearAOnly       False
 #  attrs.total             29
 #  attrs.confidence        1
-```
 
-```bash
 aegean sign lineara KU --json
 # {"label": "KU", "glyph": "𐙂", "codepoint": "U+10642", "phonetic": "ku",
 #  "attrs": {"sharedWithLinearB": true, "linearAOnly": false,
 #            "total": 29, "confidence": 1, "altGlyphs": []}}
 ```
 
-The `sign` argument accepts either a label (`KU`, `*301`) or a single glyph
-character. The `attrs.confidence` field rates how secure the empirical
-sign→sound alignment is: treat it as evidence, not canon.
+`attrs.confidence` rates how established the empirical sign-to-sound alignment
+is under the Linear B convention.
 
 ### Transliteration (sign → sound)
 
-The Linear-B-value convention, with an optional hypothesis override so you can
-test "what if `KU` were really `gu`?":
+`word_to_phonetic` applies the conventional Linear B values and accepts an
+override dictionary to test alternative sign values:
 
 ```python
 from aegean.scripts.lineara.phonetic import word_to_phonetic
 word_to_phonetic("KU-RO")                 # 'kuro'
 word_to_phonetic("PA-I-TO")               # 'paito'
-word_to_phonetic("KU-RO", {"KU": "gu"})   # 'guro'  (hypothesis override)
+word_to_phonetic("KU-RO", {"KU": "gu"})   # 'guro'
 ```
 
 ---
 
 ## Sign-pattern search (the `*` wildcard)
 
-This is the workhorse for "find every word shaped like X." A pattern is a
-**dash-separated list of sign labels** with two wildcards:
+A pattern is a dash-separated list of sign labels with two wildcards:
 
 | Wildcard | Meaning |
 | --- | --- |
-| `*` | **exactly one** sign (any value) |
-| `**` | **zero or more** signs |
-| (a label, e.g. `KU`) | that exact sign |
+| `*` | exactly one sign (any value) |
+| `**` | zero or more signs |
+| label (e.g. `KU`) | that exact sign |
 
-Matching is case-insensitive after subscript folding, so `RA₂` and `RA2` are the
-same sign. The key thing to internalize: **`*` is one whole sign, not one
-letter.** `KU-*-RO` means "KU, then any single sign, then RO": a three-sign
-word.
+Matching is case-insensitive after subscript folding (`RA₂` matches `RA2`). Each
+`*` matches one whole sign, so `KU-*-RO` matches three-sign words beginning with
+`KU` and ending with `RO`.
 
 ```python
 from aegean.analysis import word_matches_sign_pattern
-word_matches_sign_pattern("KU-NE-RO", "KU-*-RO")   # True  — three signs, middle is anything
-word_matches_sign_pattern("KU-RO",    "KU-*-RO")   # False — only two signs, * needs one in between
-word_matches_sign_pattern("KU-RO",    "**-RO")     # True  — ** allows zero-or-more before RO
-word_matches_sign_pattern("A-TA-I-*301-WA-JA", "A-**-JA")  # True — A … JA, anything between
+word_matches_sign_pattern("KU-NE-RO", "KU-*-RO")           # True
+word_matches_sign_pattern("KU-RO",    "KU-*-RO")           # False
+word_matches_sign_pattern("KU-RO",    "**-RO")             # True
+word_matches_sign_pattern("A-TA-I-*301-WA-JA", "A-**-JA")  # True
 ```
 
-### `*-RO` — words ending in **-RO** (with one sign before)
+### `*-RO` — two-sign words ending in `-RO`
 
 ```bash
 aegean search lineara "*-RO"
@@ -265,7 +257,7 @@ aegean search lineara "*-RO"
 #  RE-RO     1
 ```
 
-### `KU-*` — words starting with **KU-** (with one sign after)
+### `KU-*` — two-sign words starting with `KU-`
 
 ```bash
 aegean search lineara "KU-*"
@@ -276,10 +268,10 @@ aegean search lineara "KU-*"
 #  KU-RE     2
 #  KU-*305   1
 #  KU-*321   1
-#  KU-DA     1   (… KU-KA, KU-NI, KU-PA₃, KU-PI, KU-TA each 1)
+#  KU-DA     1   (plus KU-KA, KU-NI, KU-PA₃, KU-PI, KU-TA, each 1)
 ```
 
-### `KU-*-RO` — exactly three signs, KU…RO
+### `KU-*-RO` — three-sign words from `KU` to `RO`
 
 ```bash
 aegean search lineara "KU-*-RO"
@@ -287,15 +279,15 @@ aegean search lineara "KU-*-RO"
 #  KU-MA-RO  1
 ```
 
-The same searches in Python, ranked by frequency:
+Python frequency ranking:
 
 ```python
 [(w, n) for w, n in corpus.word_frequencies()
  if word_matches_sign_pattern(w, "**-RO")]
-# [('KU-RO', 37), ('KI-RO', 16), ('*86-RO', 4), ('SA-RO', 4), ('KI-DA-RO', 2), ('NU-RO', 2), ...]  — 18 words
+# [('KU-RO', 37), ('KI-RO', 16), ('*86-RO', 4), ('SA-RO', 4), ('KI-DA-RO', 2), ('NU-RO', 2), ...]  # 18 words
 ```
 
-If you need the compiled form (e.g. to reuse one pattern over many words):
+To precompile a pattern for reuse across many words:
 
 ```python
 from aegean.analysis import compile_sign_pattern
@@ -304,29 +296,25 @@ pat = compile_sign_pattern("KU-*-RO")
 match_sign_pattern(["KU", "MA", "RO"], pat)   # True
 ```
 
-Sign-pattern search is also one predicate inside the larger
-[query engine](Analysis#query-engine) (`word-sign-pattern`), which lets you
-combine it with site/period/co-occurrence filters.
-
-> Single-sign words never match a pattern (there's no dash to split), and an
-> empty pattern matches nothing.
+Sign patterns also work as the `word-sign-pattern` predicate inside the
+[query engine](Analysis#query-engine). Single-sign words have no hyphen to split
+and never match a pattern; an empty pattern matches nothing.
 
 ---
 
 ## Accounting reconciliation (KU-RO / PO-TO-KU-RO)
 
-`KU-RO` means "total" and `PO-TO-KU-RO` "grand total." On an accounting tablet
-you can check the stated total against the line items above it: a concrete,
-falsifiable thing to do with an undeciphered script.
+`KU-RO` marks a total (variant `KU-RA`) and `PO-TO-KU-RO` marks a grand total.
+`balance_check` sums the line items preceding each total line and compares the
+sum against the stated amount.
 
-> **Exploratory.** Section boundaries are heuristic and Aegean metrology is
-> contested, so a "balance" is evidence, not proof. Only **37** of the 1,721
-> tablets carry a `KU-RO` total (or its variant `KU-RA`) that's checkable at all
-> (41 total lines, since a few tablets state more than one); the rest are too
-> fragmentary: that's the nature of the corpus, not a tool limit. Of the 41
-> checked lines, **8** balance exactly.
+> **Scope note.** Section boundaries are inferred heuristically and Aegean
+> fraction metrology remains debated. Only **37** of the 1,721 tablets carry a
+> checkable `KU-RO` or `KU-RA` total (41 total lines across those 37 documents);
+> the remaining tablets are too fragmentary or lack totals. Of the 41 checked
+> lines, **8** balance exactly.
 
-Check one tablet:
+Check a single tablet:
 
 ```bash
 aegean balance lineara HT13
@@ -334,8 +322,8 @@ aegean balance lineara HT13
 #  HT13  KU-RO   130.5   131.0     0.5   NO
 ```
 
-The stated total is 130½ but the six items above it sum to 131: off by ½. The
-Python form gives you the full record per total line:
+HT13 states 130½ while the six entries above it sum to 131, a difference of ½.
+In Python:
 
 ```python
 from aegean.analysis import balance_check
@@ -346,16 +334,16 @@ for chk in balance_check(corpus.get("HT13")):
 #              exact_difference=Fraction(1, 2))
 ```
 
-`BalanceCheck` fields: `stated_total`, `computed_sum`, `item_count`,
+`BalanceCheck` fields are `stated_total`, `computed_sum`, `item_count`,
 `difference`, `balances`, `marker`, `total_line_index`, and the rational
-`exact_difference`; `exact_balances` reports exact written-quantity equality.
-Pass `balance_check(doc, exact=True)` or CLI `--exact` to use that equality for
-`balances`. The default retains the float cutoff. Exact arithmetic does not
-establish the reading, section boundary, or metrology.
+`exact_difference`; the `exact_balances` property reports exact written-quantity
+equality. Pass `balance_check(doc, exact=True)` or CLI `--exact` to use rational
+equality for `balances`; the default uses a floating-point cutoff (`1e-6`). Exact
+arithmetic does not confirm the reading, section boundary, or metrology.
 
-### Sweep the whole corpus
+### Corpus sweep
 
-Omit the document id to check every total line at once:
+Omit the document id to check every total line in the corpus:
 
 ```bash
 aegean balance lineara
@@ -368,102 +356,95 @@ aegean balance lineara
 #  ... (41 lines across 37 documents)
 ```
 
-Add `--strict` to exit non-zero if any checked total fails to balance: handy in
-a script or CI step. `--json` emits the rows as machine-readable JSON.
+Pass `--strict` to exit non-zero if any checked total fails to balance, or
+`--json` for JSON output.
 
-### Intact, balancing accounts
+### Intact balancing accounts
 
-A stricter filter than "balances": **every** token securely read (no lacuna, no
-bracketed restoration) *and* the arithmetic holds within a tolerance. These are
-the clean teaching/drill candidates.
+`checkable_accounts(corpus)` selects documents where every token is securely
+read (no `LOST` or `UNCLEAR` status) and at least one stated total falls within
+tolerance:
 
 ```python
 from aegean.analysis.accounting import checkable_accounts, is_checkable_account
-clean = checkable_accounts(corpus)            # default tolerance 10%
-[d.id for d in clean]                          # ['HT9a', 'HT9b', 'HT11b', 'HT13', 'HT89', ...]
-is_checkable_account(corpus.get("HT11b"))      # True
+clean = checkable_accounts(corpus)            # 7 tablets at default tolerance=0.10
+[d.id for d in clean]                         # ['HT9a', 'HT9b', 'HT11b', 'HT13', 'HT89', ...]
+is_checkable_account(corpus.get("HT11b"))     # True
 ```
 
-The default admits a difference within `max(1, tolerance * abs(stated_total))`,
-with `tolerance=0.10`, because Aegean metrology is imperfectly understood.
-Even `tolerance=0` retains the absolute-one allowance; use `exact=True` for
-rational equality of the written quantities. The eligibility filter still
-requires securely read tokens and at least one stated total.
+The default tolerance admits a difference within
+`max(1, tolerance * abs(stated_total))` with `tolerance=0.10`. Even
+`tolerance=0` retains the absolute allowance of 1; pass `exact=True` to require
+exact rational equality.
 
 ---
 
 ## Tablet-structure detection
 
-Sort inscriptions by what their token stream *looks* like: a quick way to find
-the accounts, the libation formulas, or the running text. These are
-**content-shape heuristics, not genre attributions**; you're expected to
-override individual calls.
+`classify_structure` groups inscriptions by token-stream shape. These are
+content-shape heuristics rather than genre attributions, and individual
+assignments can be overridden.
 
-| Category key | Label | Signal |
+| Category key | Label | Rule |
 | --- | --- | --- |
-| `accounting` | Accounting | Has `KU-RO`, or numerals plus several multi-sign words |
-| `libation` | Libation | Contains a known libation-formula word |
-| `list` | Lists | Many separator marks, no numerals |
-| `text` | Text / Other | Extended hyphenated text, no numerals |
-| `other` | Unclassified | Short or ambiguous |
+| `accounting` | Accounting | Total marker (`KU-RO`, `KU-RA`, `PO-TO-KU-RO`), or numerals/fractions with more than two multi-sign words |
+| `libation` | Libation | Any of the 14 attested libation-formula words |
+| `list` | Lists | More than three separator marks and no numerals |
+| `text` | Text / Other | More than four multi-sign words and no numerals |
+| `other` | Unclassified | Short or ambiguous inscriptions |
 
-The known libation-formula words are `A-TA-I-*301-WA-JA`, `JA-SA-SA-RA-ME`,
-and the attested a-di-ki-te family forms (`A-DI-KI-TE`, `A-DI-KI-TE-TE`,
-`JA-DI-KI-TE-TE-DU-PU₂-RE`, `JA-DI-KI-TE-TE-*307-PU₂-RE`, per Younger's
-readings of the PK Za vessels). The precedence is exactly the order above
-(accounting wins over libation, etc.).
+The 14 libation-formula forms (`aegean.analysis.structure.LIBATION_WORDS`) are
+`A-TA-I-*301-WA-JA`, `JA-SA-SA-RA-ME`, `A-SA-SA-RA-ME`, `A-DI-KI-TE`,
+`A-DI-KI-TE-TE`, `JA-DI-KI-TE-TE-DU-PU₂-RE`, `JA-DI-KI-TE-TE-*307-PU₂-RE`,
+`TA-NA-TE`, `I-DA-MA-TE`, `SI-RU-TE`, `DI-KI-SE`, `PI-TE-RI`, `U-NA-KA-NA-SI`,
+and `I-PI-NA-MA`. Rules are evaluated in the order shown above.
 
-Census the whole corpus:
+Census the corpus or classify one tablet:
 
 ```bash
 aegean analyze structure lineara
 # lineara: structure census (heuristic)
-#  accounting   134
-#  libation      18
-#  list           6
+#  accounting   137
+#  libation      25
+#  list           5
 #  text           1
-#  other       1562
-```
+#  other       1553
 
-Classify one document:
-
-```bash
 aegean analyze structure lineara HT13
 # HT13: accounting
 ```
 
-In Python:
+Python API:
 
 ```python
 from aegean.analysis.structure import classify_structure, classify_corpus
 classify_structure(corpus.get("HT13"))         # 'accounting'
-buckets = classify_corpus(corpus)              # {'accounting': [...ids...], 'libation': [...], ...}
-len(buckets["accounting"])                      # 134
+buckets = classify_corpus(corpus)              # {'accounting': [...ids...], ...}
+len(buckets["accounting"])                     # 137
 ```
 
 ---
 
 ## Commodity logograms
 
-The accounting tablets count commodities marked by **ideograms** (grain, oil,
-sheep, people …). pyaegean ships a curated catalog of **21** commodity heads with
-their standard GORILA/Younger glosses and a broad category, plus helpers to
-identify them in a token stream. (The glosses are standard; the *syllabic*
-values of the underlying signs are a separate, open question, and the numbered
-`*NNN` logograms are genuinely undeciphered as to referent.)
+`aegean.scripts.lineara.commodities` provides 21 commodity heads with standard
+GORILA/Younger glosses and broad categories, along with helpers to distinguish
+commodity ideograms from syllabic words. Glosses follow standard typological
+identifications; the syllabic values of the signs are separate, and numbered
+`*NNN` logograms have no settled referent.
 
 ```python
 from aegean.scripts.lineara.commodities import COMMODITIES, commodity_head, is_lexical_word
 len(COMMODITIES)                  # 21
 commodity_head("GRA")             # 'GRA'
-commodity_head("OLE+U")           # 'OLE'   — strips the ligature modifier
-commodity_head("OVISm")           # 'OVIS'  — strips the sex marker
-commodity_head("KU-RO")           # None    — hyphenated → a syllabic word, never a logogram
-is_lexical_word("KU-RO")          # True    — a real syllabic word, not a logogram chain
+commodity_head("OLE+U")           # 'OLE'  (strips ligature modifier)
+commodity_head("OVISm")           # 'OVIS' (strips sex marker)
+commodity_head("KU-RO")           # None   (hyphenated syllabic word)
+is_lexical_word("KU-RO")          # True
+is_lexical_word("KU-NI-SU")       # True   (NI is a syllabogram inside words; standalone NI is figs)
 ```
 
-The most frequent commodities across the corpus (oil, grain, cyperus, figs,
-wine, people):
+Most frequent commodities in the bundled corpus:
 
 ```python
 from collections import Counter
@@ -484,12 +465,12 @@ counts.most_common(6)
 
 ---
 
-## Editorial status (what's preserved)
+## Editorial status
 
-The bundled corpus is a **normalized** transcription, but the apparatus it does
-carry is interpreted on load. The upstream's erased-sign marks become
-`ReadingStatus.LOST` (where the text isn't preserved), and damaged-at-a-break
-words plus bracketed uncertain readings become `UNCLEAR`:
+The bundled corpus is a normalized transcription, and the apparatus it retains is
+mapped onto `ReadingStatus` at load time: erased-sign marks become
+`ReadingStatus.LOST`, and break-damaged words or bracketed uncertain readings
+become `ReadingStatus.UNCLEAR`:
 
 ```python
 from aegean.core.model import ReadingStatus
@@ -499,52 +480,64 @@ docs    = sum(1 for d in corpus if any(t.status is not ReadingStatus.CERTAIN for
 lost, unclear, docs            # (552, 120, 366)
 ```
 
-So **366 of 1,721** documents carry editorial status (552 `LOST` tokens, 120
-`UNCLEAR`). The **full** Leiden apparatus (restorations, dotted readings) is
-still absent (the upstream digitization dropped it), so for edition-grade work
-consult **GORILA** and **SigLA** (below). The EpiDoc reader accepts `<unclear>`,
-`<supplied>`, and `<gap>`; the writer emits `LOST` as
-`<supplied reason="undefined">`, preserving the same editorial status.
+In total, 366 of 1,721 documents carry editorial status (552 `LOST` tokens, 120
+`UNCLEAR`). The upstream digitization omits full Leiden apparatus (restorations
+and dotted signs); consult GORILA and SigLA for critical-edition readings. The
+EpiDoc reader ingests `<unclear>`, `<supplied>`, and `<gap>`, and the writer
+emits `LOST` as `<supplied reason="undefined">`.
 
 ---
 
 ## The SigLA corpus (opt-in, fetched)
 
-A second, independent Linear A corpus: **SigLA**, the paleographical database of
-Salgarella & Castellan (dataset published **CC BY-NC-SA 4.0**; its paper invites
-use outside the interface). pyaegean hosts the decoded dataset as a sha256-pinned
-release asset and loads it on demand; the NonCommercial obligation passes to
-**you**, and nothing ships in the wheel.
+SigLA (Salgarella & Castellan) is an independent palaeographic database of
+Linear A, published under **CC BY-NC-SA 4.0**. pyaegean hosts the decoded
+dataset as a SHA-256-pinned release asset fetched on demand; it is never bundled
+in the Apache-2.0 wheel, and the NonCommercial/ShareAlike terms apply to
+downstream use.
 
 ```python
 sigla = aegean.load("sigla")        # ~1.3 MB fetch on first use, then cached
 len(sigla)                          # 802
-doc = sigla.get("HT 13")            # note the space — SigLA ids are spaced
-doc.meta.name                       # 'HT 13 (6.1×10.5×0.8 cm)'  — physical dimensions!
+doc = sigla.get("HT 13")            # SigLA ids include a space
+doc.meta.name                       # 'HT 13 (6.1×10.5×0.8 cm)'
 " ".join(t.text for t in doc.tokens)
 # 'KA-U-DE-TA VIN TE RE-ZA TE-TU TE-KI KU-*79-NI DA-SI-*118 I-DU-NE-SI KU-RO'
 ```
 
-What SigLA adds over the bundled corpus: document **typology**, find-site,
-**physical dimensions**, period, EFA plate references, SigLA's own word
-division, and a fully independent reading of each tablet (note `KU-*79-NI` where
-GORILA reads `KU-ZU-NI`), useful for cross-checking. The two corpora broadly
-agree on shared documents once notation differences (like `*120`↔`GRA`) are
-normalized; where they diverge it's genuine scholarly variation.
-
-One honest limit: SigLA is a *palaeographic sign* database, so it records sign
-occurrences and word division but **not** the cardinal-number quantities of the
-accounts; there are **no numeral values** here. Use the bundled GORILA corpus
-for accounting. Cite SigLA in academic work.
-
-All the same commands work on it (`aegean info sigla`, `aegean search sigla
-"*-RO"`, `aegean stats sigla`, …). See [Data & Provenance](Data-and-Provenance).
+SigLA supplies document typology, find-site, physical dimensions, period, EFA
+plate references, its own word division, and independent sign readings (e.g.,
+`KU-*79-NI` where GORILA reads `KU-ZU-NI`). Because SigLA is a palaeographic
+sign database, it does not record cardinal-number quantities; use the bundled
+GORILA corpus for accounting reconciliation. All corpus commands work on
+`sigla` (`aegean info sigla`, `aegean search sigla "*-RO"`,
+`aegean stats sigla`). See [Data & Provenance](Data-and-Provenance).
 
 ---
 
-## Frequencies and the wider toolkit
+## Browser workbench
 
-Word and sign frequency tables straight from the shell:
+`aegean workbench` fetches and serves the multi-script browser workbench
+(`v2.1.0`) locally with self-hosted Noto Sans Aegean fonts:
+
+```bash
+aegean workbench --corpus lineara
+aegean workbench --corpus lineara --damos --state workspace.json   # with Linear B divergence + local state sync
+aegean workbench --corpus sigla                                    # open SigLA in the browser UI
+```
+
+Add `--fetch-images` once to cache the ~116 MB Linear A facsimile imagery for
+local viewing. From Python, `aegean.io.to_workbench_bundle(corpus, "lineara.json")`
+writes the multi-script schema-v1 bundle (inscriptions, sign inventory, and
+phonetic map) for direct import into the workbench; see
+[Interoperability](Interoperability) for workspace backup round-tripping with
+`load_workbench_backup` and `save_workbench_backup`.
+
+---
+
+## Frequencies and analytical toolkit
+
+Word and sign frequencies from the shell:
 
 ```bash
 aegean stats lineara --top 5
@@ -562,38 +555,35 @@ aegean stats lineara --signs --top 5
 #  A      202
 ```
 
-The full analytical toolkit: phonetic distance and alignment, cross-script
-nearest-neighbour, association statistics (χ², log-likelihood, Fisher, PMI),
-collocation, morphology clustering, the compound [query engine](Analysis#query-engine),
-keyness, and dispersion: is documented on the [Analysis](Analysis) page. The
-[Linear B](Linear-B) and [Cypriot](Cypriot) corpora use the same model and the
-same commands, and the Greek side lives under [Greek NLP](Greek-NLP) /
-[Meters](Meters).
+Phonetic distance, alignment, association tests (χ², log-likelihood,
+Fisher, PMI), collocation, morphological clustering, the compound
+[query engine](Analysis#query-engine), keyness, and dispersion are documented on
+[Analysis](Analysis).
 
-One result belongs here specifically. A cross-script Procrustes alignment was calibrated
-as a Linear A to Linear B sign-correspondence generator and, by leave-one-out on the 53
-signs the two scripts already share, it recovered **no signal** (top-1 0.000, median rank
-26 of 73 against a chance median of 37), while the same method recovers 90% of signs when
-a script is aligned to itself. Distributional embedding alignment carries no recoverable
-Linear A to Linear B correspondence at this corpus scale: see
+One negative empirical result applies directly to Linear A: a cross-script
+Procrustes alignment calibrated by leave-one-out over the 53 signs shared with
+Linear B recovered no signal (top-1 `0.000`, median rank 26 of 73 against a
+chance median of 37), whereas aligning a script to itself recovers 90.1% of
+signs at rank 1. Distributional embedding alignment carries no recoverable
+Linear A to Linear B correspondence at this corpus scale; see
 [Cross-script alignment, and the null it measured](Analysis#cross-script-alignment-and-the-null-it-measured).
-It is an honest negative result, not a decipherment aid.
 
 ### Command reference (Linear A)
 
-| Command | What it does | Key flags |
+| Command | Action | Key flags |
 | --- | --- | --- |
 | `aegean info lineara` | Corpus size, provenance, license | `--json` |
 | `aegean load lineara` | Filter by metadata; list or export | `--site --period --scribe --support -o --limit --json` |
 | `aegean show lineara HT13` | One document, line by line | `--json` |
 | `aegean search lineara "KU-*-RO"` | Wildcard sign-pattern search | `--json` |
 | `aegean query lineara` | Compound query engine | `--where --output-kind --fields --limit --json` |
-| `aegean stats lineara` | Word / sign frequency table | `--signs --top --view --count-unit --statuses --details --json` |
+| `aegean stats lineara` | Word or sign frequency table | `--signs --top --view --count-unit --statuses --details --json` |
 | `aegean sign lineara KU` | Look up one sign | `--json` |
-| `aegean balance lineara [HT13]` | KU-RO reconciliation | `--strict --exact --tolerance --json` |
+| `aegean balance lineara [HT13]` | `KU-RO` reconciliation | `--strict --exact --tolerance --json` |
 | `aegean analyze structure lineara [HT13]` | Heuristic categories | `--json` |
-| `aegean cite lineara` | Cite the corpus (or a subset) | `--style --site --period --scribe --support` |
-| `aegean export lineara` | Export JSON / CSV / Parquet / EpiDoc / SQLite / Workbench / RDF Turtle / JSON-LD | (see [CLI](CLI)) |
+| `aegean workbench --corpus lineara` | Launch local browser workbench (`v2.1.0`) | `--damos --state --fetch-images --site --doc` |
+| `aegean cite lineara` | Cite the corpus or filtered subset | `--style --site --period --scribe --support` |
+| `aegean export lineara` | Export JSON / CSV / Parquet / EpiDoc / SQLite / Workbench / RDF Turtle / JSON-LD | see [CLI](CLI) |
 
 ---
 
@@ -614,18 +604,16 @@ aegean cite lineara --site "Haghia Triada"  # cite the exact filtered subset
 
 ## Limitations
 
-- **Undeciphered.** Sound values are a Linear B *convention*; transliterations,
-  "totals," structure labels, and commodity glosses are evidence to weigh, never
-  ground truth.
-- **Damaged corpus.** Only 37 tablets carry a checkable total; section
-  boundaries for reconciliation are heuristic; the full Leiden apparatus isn't in
-  the bundled data.
-- **Heuristic structure.** The accounting/libation/list/text labels are
-  content-shape rules, not genre attributions; override them freely.
-- **SigLA carries no quantities** and is NonCommercial; the obligation passes to
-  you.
+- **Undeciphered script.** Sound values follow a Linear B convention;
+  transliterations, totals, structure labels, and commodity glosses are
+  analytical hypotheses.
+- **Fragmentary corpus.** Only 37 tablets carry a checkable total, section
+  boundaries for accounting reconciliation are heuristic, and full Leiden
+  apparatus is absent from the bundled digitization.
+- **Heuristic structure labels.** `accounting`, `libation`, `list`, and `text`
+  reflect surface token rules, not editorial genre classifications.
+- **SigLA terms and coverage.** SigLA omits numerical quantities and is licensed
+  CC BY-NC-SA 4.0.
 
-The full picture, with citations and caveats, is on the
-**[Limitations](Limitations)** page. For the methods behind the numbers, see
-[Analysis](Analysis); to get from nothing installed to your first result, see
-[Getting Started](Getting-Started).
+See [Limitations](Limitations) for project-wide boundaries, [Analysis](Analysis)
+for statistical methods, and [Getting Started](Getting-Started) for setup.

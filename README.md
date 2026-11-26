@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.71.0 (beta).** The API may still shift before 1.0.
+> **Latest PyPI release: v0.72.0 (beta).** The API may still shift before 1.0.
 > The bundled Linear A corpus is a normalized transcription without full epigraphic
 > apparatus; for edition-grade readings consult GORILA or SigLA.
 
@@ -250,13 +250,9 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 
 ### Following those foundations
 
-- [ ] **Interactive annotation review:** bring field-level decisions, sentence context,
-  supporting evidence, and reviewer disagreements into the corpus reader, reusing the
-  existing review history and validated selection policies.
-- [ ] **Portable research bundles and expanded resources:** package redistributable source
-  snapshots or retrieval references with citations, analysis settings, model identities,
-  review decisions, and checksums; add license-clean dictionaries, source-cited Cypriot
-  lexical entries, verified gazetteer/Pleiades coverage, and conda-forge packaging.
+- [ ] **Expanded lexical, spatial, and packaging resources:** add license-clean
+  dictionaries, source-cited Cypriot lexical entries, verified gazetteer/Pleiades
+  coverage, and conda-forge packaging.
 - [ ] **Independently evaluated models and runtime variants:** evaluate a separately
   versioned Greek-model successor when a new supervised dataset or stronger backbone
   passes predeclared cross-domain development gates; offer calibrated `fast`, `compact`,
@@ -297,7 +293,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.67.0},
+  version = {0.72.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

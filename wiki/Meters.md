@@ -1,21 +1,21 @@
 # Meters
 
-This is the reference for **metrical scansion** in pyaegean: you hand it a line of
-Ancient Greek verse and a metre, and it fits the whole line to that metre's
-quantity template: recovering the feet, the long/short sequence, and (for the
-spoken metres) the main caesura. Use it to check whether a line scans, to see
-*how* it scans, or to pull the metre out of a corpus line by line.
+pyaegean's metrical scanner fits a line of Ancient Greek verse to a specified
+metre's quantity template, returning the foot division, the resolved long/short
+sequence, and (for spoken metres) the main caesura. Use it to test whether a line
+scans, inspect how quantities resolve across word boundaries, or extract metrical
+patterns across a verse corpus.
 
-It works **offline**, with no third-party dependencies, on the syllables and
-quantities pyaegean already computes. If you only want the heavy/light weight of
-the syllables in a single word (not a fitted line), that's the simpler
-[per-syllable prosody](Greek-NLP#prosody-syllable-quantity) tool, not this page.
+Scansion runs offline with no third-party dependencies, building on pyaegean's
+syllabifier and word-level quantity rules. If you need only the heavy/light weight
+of syllables inside a single word without fitting a line to a metre, use the
+[word-level prosody](Greek-NLP#prosody-syllable-quantity) functions instead.
 
-> New here? Start with [Getting Started](Getting-Started). For the wider Greek
-> toolkit see [Greek NLP](Greek-NLP); for the spoken-vs-written-language caveats
-> see [Limitations](Limitations).
+> New to pyaegean? Start with [Getting Started](Getting-Started). For the rest of
+> the Greek pipeline, see [Greek NLP](Greek-NLP); for spoken-versus-written-language
+> caveats, see [Limitations](Limitations).
 
-## The one-line version
+## Quick start
 
 ```python
 from aegean import greek
@@ -24,7 +24,7 @@ greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτ�
 # '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'
 ```
 
-Or from the terminal (needs `pip install "pyaegean[cli]"`):
+From the terminal (`pip install "pyaegean[cli]"`):
 
 ```bash
 aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"
@@ -32,26 +32,25 @@ aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτρο
 # hexameter: dactyl, dactyl, dactyl, dactyl, dactyl, final; caesura: trochaic
 ```
 
-## Notation (the three glyphs)
+## Notation
 
-Every pattern is written with three symbols. There is nothing else to learn.
+Every pattern uses three glyphs:
 
-| Glyph | Name | Means |
+| Glyph | Name | Meaning |
 |---|---|---|
-| `—` | heavy (longum) | a long/heavy syllable |
-| `⏑` | light (breve) | a short/light syllable |
-| `×` | anceps | "either": a position the metre lets be long *or* short (also the line-final *brevis in longo*) |
+| `—` | heavy (longum) | long or closed syllable |
+| `⏑` | light (breve) | short open syllable |
+| `×` | anceps | position allowing either long or short (including line-final *brevis in longo*) |
 
-Feet are separated by `|` in the printed pattern. The aeolic lines are printed as
-one unbroken run (they aren't divided into feet).
+Feet are separated by `|` in the printed pattern. Aeolic cola are printed as a
+single unbroken sequence without foot dividers.
 
-## The metres at a glance
+## Supported metres
 
-Every supported metre, its quantity template, and a real line that scans. Each
-example below was run through `aegean greek scan ... --meter <name>` (or the
-matching Python call) and shows its **actual** output.
+Each example below was run through `aegean greek scan ... --meter <name>` (or the
+corresponding Python call):
 
-| `--meter` value | Template (— heavy · ⏑ light · × anceps) | Example line that scans |
+| `--meter` value | Template (`—` heavy · `⏑` light · `×` anceps) | Verified example line |
 |---|---|---|
 | `hexameter` | five dactyl-or-spondee feet + `—×` | `ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ` |
 | `pentameter` | `— ⏑⏑ — ⏑⏑ — ‖ — ⏑⏑ — ⏑⏑ —` | `κείμεθα τοῖς κείνων ῥήμασι πειθόμενοι.` |
@@ -64,12 +63,11 @@ matching Python call) and shows its **actual** output.
 | `alcaic_enneasyllable` | `× — ⏑ — × — ⏑ — ×` | `κρόνωι βασιλεῦσι δῶτορ` (illustrative) |
 | `alcaic_decasyllable` | `— ⏑ ⏑ — ⏑ ⏑ — ⏑ — ×` | `δέξατο νυμφίον ἐς θαλάμους` (illustrative) |
 
-> The `alcaic_enneasyllable` and `alcaic_decasyllable` examples are short
-> illustrative cola chosen to land exactly on the template; the rest are genuine
-> verse openings (Homer, Simonides, Sophocles, Euripides, Sappho, Alcaeus). All
-> ten were verified against the running scanner.
+> The `alcaic_enneasyllable` and `alcaic_decasyllable` examples are constructed
+> cola matching the templates exactly; the remaining eight are verse openings from
+> Homer, Simonides, Sophocles, Euripides, Sappho, and Alcaeus.
 
-The list of aeolic line names is also available in code:
+The supported aeolic names are exported in `greek.AEOLIC_LINES`:
 
 ```python
 from aegean import greek
@@ -78,29 +76,28 @@ greek.AEOLIC_LINES
 #  'alcaic_hendecasyllable', 'alcaic_enneasyllable', 'alcaic_decasyllable')
 ```
 
-## The functions
+## Functions and CLI mapping
 
-There is one function per metre family plus a dispatcher. The CLI mirrors them
-through a single `--meter` flag.
+Each metre family has a dedicated Python function alongside the `scan_line`
+dispatcher. The CLI selects the metre with `--meter`.
 
-| Python | What it scans | CLI equivalent |
+| Python | Scans | CLI equivalent |
 |---|---|---|
 | `greek.scan_hexameter(line)` | dactylic hexameter | `aegean greek scan LINE` (default) |
 | `greek.scan_pentameter(line)` | elegiac pentameter | `aegean greek scan LINE --meter pentameter` |
 | `greek.scan_trimeter(line)` | iambic trimeter (with resolution) | `aegean greek scan LINE --meter trimeter` |
-| `greek.scan_aeolic(line, line_type)` | one named aeolic line | `aegean greek scan LINE --meter <line_type>` |
-| `greek.scan_line(line, meter)` | any of the above, by name | `aegean greek scan LINE --meter <meter>` |
-| `greek.syllable_options(line)` | the raw pre-metrical analysis |— |
+| `greek.scan_aeolic(line, line_type)` | one named aeolic colon | `aegean greek scan LINE --meter <line_type>` |
+| `greek.scan_line(line, meter)` | any supported metre by name | `aegean greek scan LINE --meter <meter>` |
+| `greek.syllable_options(line)` | pre-metrical syllable quantities | — |
 
-`scan_line` is the general entry point: pass `"hexameter"`, `"pentameter"`,
-`"trimeter"`, or any aeolic line name. The named functions are just convenient
-shortcuts.
+`scan_line` accepts `"hexameter"`, `"pentameter"`, `"trimeter"`, or any name in
+`AEOLIC_LINES`.
 
 ### Dactylic hexameter
 
-Six feet: feet 1–5 each a **dactyl** (`—⏑⏑`) or **spondee** (`——`), the sixth
-always `—×`. Quantities are resolved across word boundaries, including
-*correptio epica* (a word-final long vowel in hiatus may scan short).
+Six feet: feet 1–5 are each a **dactyl** (`—⏑⏑`) or **spondee** (`——`), and the
+sixth is `—×`. Quantities resolve across word boundaries, including *correptio
+epica* (a word-final long vowel or diphthong in hiatus may scan short).
 
 ```python
 from aegean import greek
@@ -120,8 +117,8 @@ aegean greek scan "πλάγχθη, ἐπεὶ Τροίης ἱερὸν πτολ
 
 ### Elegiac pentameter
 
-The second line of the elegiac couplet: two dactyl-or-spondee feet, a longum, the
-central diaeresis (`‖`), then **two obligatory dactyls** and a final longum.
+The second line of the elegiac couplet consists of two dactyl-or-spondee feet, a
+longum, the central diaeresis (`‖`), two obligatory dactyls, and a final longum.
 
 ```python
 from aegean import greek
@@ -137,23 +134,23 @@ aegean greek scan "κείμεθα τοῖς κείνων ῥήμασι πειθ�
 # pentameter: dactyl, spondee, longum, dactyl, dactyl, longum; caesura: —
 ```
 
-No caesura is reported for the pentameter (its central break is structural, not a
-detected word-break), so the `caesura` field is `None`.
+Because the central diaeresis is structural rather than a variable word-break,
+`sc.caesura` is `None`.
 
 ### Iambic trimeter
 
-The spoken metre of tragedy and comedy: three metra of `× — ⏑ —` (the final
-element anceps). Long elements may be **resolved** into two shorts, so a
-13-syllable line can still be a clean trimeter.
+Tragic and comic dialogue consists of three metra of `× — ⏑ —` (final element
+anceps). Resolvable long elements may split into two shorts, so lines with 13 or
+more syllables can still scan cleanly.
 
 ```python
 from aegean import greek
 
-# Antigone 1 — no resolution
+# Antigone 1 (no resolution)
 greek.scan_trimeter("ὦ κοινὸν αὐτάδελφον Ἰσμήνης κάρα").pattern
 # '×—⏑—|×—⏑—|×—⏑×'
 
-# Bacchae 2 — Διό- resolves to ⏑⏑, giving 13 syllables
+# Bacchae 2 (Διό- resolves to ⏑⏑, 13 syllables)
 sc = greek.scan_trimeter("Διόνυσον, ὃν τίκτει ποθ' ἡ Κάδμου κόρη")
 sc.pattern              # '×⏑⏑⏑—|×—⏑—|×—⏑×'
 len(sc.syllables)       # 13
@@ -165,15 +162,15 @@ aegean greek scan "ὦ κοινὸν αὐτάδελφον Ἰσμήνης κά�
 # trimeter: metron, metron, metron; caesura: hephthemimeral
 ```
 
-The trimeter reports a **penthemimeral** or **hephthemimeral** caesura when a
-word-break falls at the right element.
+Trimeter reports a `penthemimeral` or `hephthemimeral` caesura when a word
+boundary falls at the corresponding element.
 
 ### Aeolic lyric lines
 
-These are **fixed quantity templates**: the choriambic nucleus does not resolve,
-so the line either matches the template exactly or it doesn't. Interior `×`
-positions are the *aeolic base*; the final `×` is *brevis in longo*. Use
-`scan_aeolic(line, line_type)` (or `scan_line(line, line_type)`).
+Aeolic cola use fixed quantity templates without resolution in the choriambic
+nucleus. Interior `×` positions represent the *aeolic base*; the final `×` is
+*brevis in longo*. Call `scan_aeolic(line, line_type)` or
+`scan_line(line, line_type)`.
 
 ```python
 from aegean import greek
@@ -194,41 +191,41 @@ aegean greek scan "φαίνεταί μοι κῆνος ἴσος θέοισιν"
 # sapphic_hendecasyllable: sapphic_hendecasyllable; caesura: —
 ```
 
-The full set of aeolic templates:
+All seven aeolic templates:
 
-| `line_type` | Template | Note |
+| `line_type` | Template | Notes |
 |---|---|---|
-| `glyconic` | `× × — ⏑ ⏑ — ⏑ ×` | the base aeolic colon |
+| `glyconic` | `× × — ⏑ ⏑ — ⏑ ×` | base aeolic colon |
 | `pherecratean` | `× × — ⏑ ⏑ — ×` | catalectic glyconic |
-| `sapphic_hendecasyllable` | `— ⏑ — × — ⏑ ⏑ — ⏑ — ×` | the line of the Sapphic stanza |
-| `adonean` | `— ⏑ ⏑ — ×` | the short close of the Sapphic stanza |
-| `alcaic_hendecasyllable` | `× — ⏑ — × — ⏑ ⏑ — ⏑ ×` | the line of the Alcaic stanza |
-| `alcaic_enneasyllable` | `× — ⏑ — × — ⏑ — ×` | the 9-syllable Alcaic colon |
-| `alcaic_decasyllable` | `— ⏑ ⏑ — ⏑ ⏑ — ⏑ — ×` | the 10-syllable Alcaic colon |
+| `sapphic_hendecasyllable` | `— ⏑ — × — ⏑ ⏑ — ⏑ — ×` | Sapphic stanza line |
+| `adonean` | `— ⏑ ⏑ — ×` | Sapphic stanza close |
+| `alcaic_hendecasyllable` | `× — ⏑ — × — ⏑ ⏑ — ⏑ ×` | Alcaic stanza opening line |
+| `alcaic_enneasyllable` | `× — ⏑ — × — ⏑ — ×` | 9-syllable Alcaic colon |
+| `alcaic_decasyllable` | `— ⏑ ⏑ — ⏑ ⏑ — ⏑ — ×` | 10-syllable Alcaic colon |
 
-## What a scansion gives you back
+## Return object: `LineScansion`
 
-Both `scan_*` and `scan_line` return a `LineScansion`. Its fields:
+Both `scan_*` and `scan_line` return a `LineScansion`:
 
-| Field / property | Type | What it is |
+| Field / property | Type | Meaning |
 |---|---|---|
-| `.line` | `str` | the input line |
-| `.meter` | `str` | the metre it was fit to |
-| `.pattern` | `str` | the glyph pattern (`—⏑⏑\|…`), feet joined by `\|` |
-| `.feet` | tuple of `Foot` | each foot's `name`, `syllables`, `quantities` |
-| `.syllables` | tuple of `str` | the line's syllables, in order |
-| `.quantities` | tuple of `str` | the resolved quantity per syllable (`"heavy"` / `"light"` / `"anceps"`) |
+| `.line` | `str` | input line |
+| `.meter` | `str` | matched metre name |
+| `.pattern` | `str` | glyph pattern (`—⏑⏑\|…`), feet joined by `\|` |
+| `.feet` | tuple of `Foot` | each foot's `name`, `syllables`, and `quantities` |
+| `.syllables` | tuple of `str` | line syllables in order |
+| `.quantities` | tuple of `str` | resolved quantity per syllable (`"heavy"`, `"light"`, or `"anceps"`) |
 | `.caesura` | `str` or `None` | `"penthemimeral"`, `"trochaic"`, `"hephthemimeral"`, or `None` |
-| `.caesura_index` | `int` or `None` | the syllable index the caesura precedes |
-| `.ambiguous` | `bool` | `True` if more than one scansion fit the template |
+| `.caesura_index` | `int` or `None` | syllable index preceded by the caesura |
+| `.ambiguous` | `bool` | `True` if more than one valid scansion fit the template |
 
 Each `Foot` carries:
 
-| `Foot` field | What it is |
+| `Foot` field | Meaning |
 |---|---|
-| `.name` | `dactyl`, `spondee`, `longum`, `final`, `metron`, or the aeolic line name |
-| `.syllables` | the syllables spanned by this foot |
-| `.quantities` | the resolved quantities for those syllables |
+| `.name` | `dactyl`, `spondee`, `longum`, `final`, `metron`, or the aeolic colon name |
+| `.syllables` | syllables spanned by the foot |
+| `.quantities` | resolved quantities for those syllables |
 
 ```python
 from aegean import greek
@@ -237,17 +234,16 @@ sc = greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολ
 sc.feet[0].name           # 'dactyl'
 sc.feet[0].syllables      # ('ἄν', 'δρα', 'μοι')
 sc.feet[0].quantities     # ('heavy', 'light', 'light')
-sc.quantities[2]          # 'light'  — μοι, shortened by correptio before ἔννεπε
+sc.quantities[2]          # 'light' (μοι shortened by correptio before ἔννεπε)
 ```
 
-In Jupyter or Colab a `LineScansion` renders as a small card with the line, the
-glyph pattern, the metre, and a foot-by-foot table; everywhere else it prints as
-the pattern string (`str(sc) == sc.pattern`).
+In Jupyter or Colab, `LineScansion` renders as an HTML card showing the line,
+glyph pattern, metre, and foot table; elsewhere `str(sc)` returns `sc.pattern`.
 
-### JSON from the CLI
+### JSON output from the CLI
 
-`--json` emits the whole analysis as machine-readable JSON (feet, per-syllable
-quantities, caesura, the ambiguity flag):
+`--json` emits the full analysis (feet, per-syllable quantities, caesura, and
+ambiguity flag):
 
 ```bash
 aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ" --json
@@ -266,14 +262,13 @@ aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτρο
 }
 ```
 
-The CLI also reads a line from **stdin** when you pass `-` as the argument, so you
-can pipe a corpus through it.
+Pass `-` as the line argument to read from stdin.
 
-## Scans-or-declines (it never fudges)
+## Strict failure on non-matching lines
 
-The scanner only returns a scansion that genuinely fits the template. A line that
-does **not** fit raises `ScansionError` from Python and exits non-zero (with the
-reason) from the CLI: it does not silently produce a wrong reading.
+The scanner returns a result only when the line satisfies the template. If a line
+fails to fit, Python raises `ScansionError` and the CLI exits with status 1 and a
+diagnostic message:
 
 ```python
 from aegean import greek
@@ -291,7 +286,7 @@ aegean greek scan "ἄνθρωπος"
 # (exit code 1)
 ```
 
-An unknown metre name is reported the same way, with the list of valid names:
+An unknown metre name fails in the same way and lists the valid options:
 
 ```bash
 aegean greek scan "φαίνεταί μοι κῆνος ἴσος θέοισιν" --meter not_a_metre
@@ -301,94 +296,90 @@ aegean greek scan "φαίνεταί μοι κῆνος ἴσος θέοισιν"
 # (exit code 1)
 ```
 
-## How the quantities are decided
+## Syllable-quantity rules
 
-Before fitting, every vowel nucleus is given the **set of quantities it could
-carry**, not a single value: the metre then resolves the open choices. The rules:
+Before template matching, each syllable is assigned the set of quantities allowed
+by its phonology and context; the metre then resolves open choices:
 
-| Situation | Quantity |
+| Context | Allowed quantities |
 |---|---|
-| closed by position (two+ consonants, or a double ζ/ξ/ψ, before the next nucleus) | heavy |
-| short vowel before *muta cum liquida* (stop + liquid/nasal) | **common**: heavy **or** light |
-| open, long nucleus (η, ω, circumflex, iota-subscript, or a diphthong) | heavy |
-| open, short nucleus (ε, ο) | light |
-| open *dichronon* (α, ι, υ: length not fixed by spelling) | **common**: heavy **or** light |
-| word-final long vowel/diphthong in hiatus (*correptio epica*) | also allowed to shorten |
+| closed by position (two or more consonants, or double `ζ`/`ξ`/`ψ`, before the next nucleus) | heavy |
+| short vowel before *muta cum liquida* (stop + liquid/nasal) | **common** (heavy or light) |
+| open syllable with long nucleus (`η`, `ω`, circumflex, iota subscript, or diphthong) | heavy |
+| open syllable with short nucleus (`ε`, `ο`) | light |
+| open *dichronon* (`α`, `ι`, `υ`, length not determined by spelling) | **common** (heavy or light) |
+| word-final long vowel or diphthong in hiatus (*correptio epica*) | heavy or light |
 
-You can see this raw, pre-metrical layer directly: useful for debugging why a
-line does or doesn't scan:
+Inspect this pre-metrical layer directly with `syllable_options`, which is useful
+when diagnosing why a line fails to scan:
 
 ```python
 from aegean import greek
 
 greek.syllable_options("πατρός")
 # [('πα', ['heavy', 'light']), ('τρός', ['light'])]
-#   πα is common: short α before the stop+liquid cluster τρ (muta cum liquida)
+# πα is common: short α before stop+liquid τρ (muta cum liquida)
 ```
 
-This is the line-level analysis (cross-word position and correptio applied). For
-the simpler within-a-word weight of each syllable, use
-[`greek.scan`](Greek-NLP#prosody-syllable-quantity), which returns `heavy` /
-`light` / `common` per syllable without fitting any metre.
+`syllable_options` applies cross-word position and correptio across the full line.
+For isolated single-word syllable weights, use
+[`greek.scan`](Greek-NLP#prosody-syllable-quantity), which returns `heavy`,
+`light`, or `common` per syllable without fitting a metre.
 
 ## Resolution
 
-In iambic trimeter, a long element may be **resolved** into two shorts (one extra
-syllable). The scanner allows this where the practice does: on the resolvable
-long elements only, never on the breves or the line-final element.
+In iambic trimeter, a resolvable long element may split into two shorts (adding
+one syllable). The scanner permits resolution only on resolvable long positions,
+never on breves or the line-final element.
 
 ```python
 from aegean import greek
 
 sc = greek.scan_trimeter("Διόνυσον, ὃν τίκτει ποθ' ἡ Κάδμου κόρη")  # Bacchae 2
-len(sc.syllables)   # 13 — one element resolved (Διό- = ⏑⏑)
+len(sc.syllables)   # 13 (one element resolved: Διό- = ⏑⏑)
 sc.pattern          # '×⏑⏑⏑—|×—⏑—|×—⏑×'
 ```
 
-The aeolic lines do **not** resolve (their choriambic nucleus is fixed), so for
-them a line is a straight template match: right syllable count and every
-position's quantity available, or it declines.
+Aeolic templates do not resolve. A line must match the template's exact syllable
+count and quantity constraints, or `ScansionError` is raised.
 
-## Synizesis (curated, never guessed)
+## Synizesis
 
-**Synizesis** is two (or three) written vowels read as a *single* metrical
-syllable: e.g. the `-εω` of `Πηληϊάδεω` in *Iliad* 1.1. This is **lexical**, not
-predictable from spelling, so pyaegean never *infers* it. A small curated lexicon
-lists the words where it is standard; a line that only fits via synizesis on a
-word **outside** that lexicon still declines rather than guessing.
+**Synizesis** merges two (or three) written vowels into a single metrical
+syllable, such as the `-εω` of `Πηληϊάδεω` in *Iliad* 1.1. Because synizesis is
+lexical rather than predictable from spelling, pyaegean never infers it. Only
+words in a curated synizesis lexicon allow coalescence; any line requiring
+synizesis on an unlisted word raises `ScansionError`.
 
-| Word | Coalescing vowels | Why it's in the lexicon |
+| Word | Coalescing vowels | Basis |
 |---|---|---|
-| Πηληϊάδεω | `εω` | the genitive ending `-εω` is one syllable (*Iliad* 1.1) |
-| πόλεως | `εω` | Attic genitive, frequent in tragic trimeter |
-| χρυσέῳ etc. | `εω` | adjectival `-εω` / `-εῳ` |
-| θεούς | `εου` | three written vowels collapse to one syllable |
-| θεοί | `εοι` | optional hexameter reading, required in *Iliad* 1.18; other contexts retain two syllables |
+| `Πηληϊάδεω` | `εω` | genitive `-εω` scanned as one syllable (*Iliad* 1.1) |
+| `πόλεως` | `εω` | Attic genitive, frequent in tragic trimeter |
+| `χρυσέῳ` etc. | `εω` | adjectival `-εω` / `-εῳ` |
+| `θεούς` | `εου` | three written vowels coalescing into one syllable |
+| `θεοί` | `εοι` | optional hexameter reading (*Iliad* 1.18); two syllables in other contexts |
 
-The `θεοί` entry belongs to a separate optional hexameter lexicon. The scanner
-tries the natural reading first, then curated coalescence choices independently
-for each occurrence. `ambiguous` reports multiple supported fits. The search is
-bounded to eight optional occurrences (256 combinations); a line beyond that
-bound raises `ScansionError` rather than claiming a unique fit from a truncated
-search. General syllabification and other metres keep the natural reading of
-this optional entry.
-
-With the entry present, the line scans:
+`θεοί` belongs to a separate optional hexameter list. The scanner tests the
+uncoalesced reading first, then curated coalescences independently per occurrence,
+setting `ambiguous=True` if multiple fits succeed. Search is capped at eight
+optional occurrences (256 combinations); lines exceeding that cap raise
+`ScansionError` instead of reporting a fit from a truncated search. General
+syllabification and non-hexameter metres retain the uncoalesced reading of
+optional entries.
 
 ```python
 from aegean import greek
 
 greek.scan_hexameter("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος").meter
-# 'hexameter'   — Πηληϊάδεω is in the lexicon, so Iliad 1.1 scans
+# 'hexameter' (Πηληϊάδεω is in the lexicon, so Iliad 1.1 scans)
 
-# πόλεως counts as two metrical syllables (πό + λεως) inside a trimeter
+# πόλεως counts as two syllables (πό + λεως) in trimeter
 sc = greek.scan_trimeter("πόλεως ἄνακτα τόνδε δεσπότην ἐμόν")
 sc.syllables[:2]    # ('πό', 'λεως')
 sc.pattern          # '×—⏑—|×—⏑—|×—⏑×'
 ```
 
-A diaeresis blocks the coalescence: in `Πηληϊάδεω` the `ϊ` (with diaeresis) is its
-own syllable, exactly as the metre requires:
+A diaeresis blocks coalescence. In `Πηληϊάδεω`, the `ϊ` remains its own syllable:
 
 ```python
 greek.syllable_options("Πηληϊάδεω")
@@ -396,37 +387,32 @@ greek.syllable_options("Πηληϊάδεω")
 #  ('ά', ['heavy', 'light']), ('δεω', ['heavy'])]
 ```
 
-The lexicon is contribution-friendly and test-enforced: each entry must be
-required by a real verse line that otherwise fails to scan. Optional entries
-also need evidence that their natural reading remains available in other contexts.
-Only the listed two- and three-vowel coalescences are supported.
+Every lexicon entry is test-enforced: it must be required by an attested verse
+line that fails without it. Optional entries also require evidence that their
+uncoalesced reading remains valid in other lines.
 
 ## Notes and limitations
 
-- **Synizesis is not inferred.** A line needing it on an un-listed word declines.
-  See the lexicon above; new entries are welcome.
-- **Resolution** is supported in the iambic trimeter; the aeolic lines are fixed
-  templates and do not resolve.
-- **Metres in scope:** dactylic hexameter, elegiac pentameter, iambic trimeter,
-  and the seven aeolic lines above. **Dactylo-epitrite** and **free astrophic
-  lyric** are not yet covered.
-- The scanner reads the text as written (Unicode polytonic or
-  [Beta Code](Greek-NLP#normalization--beta-code) converted first); it does not
-  edit, emend, or restore the text for you.
-- When more than one valid scansion fits, the first is returned and
-  `.ambiguous` is set to `True`: inspect it before trusting a single reading.
+- **Synizesis is strictly lexical.** Lines requiring synizesis on unlisted words
+  raise `ScansionError`.
+- **Resolution** is implemented for iambic trimeter only; aeolic templates are
+  fixed.
+- **Supported metres:** dactylic hexameter, elegiac pentameter, iambic trimeter,
+  and the seven aeolic cola listed above. Dactylo-epitrite and free astrophic
+  lyric are out of scope.
+- **No textual emendation.** The scanner reads the supplied text as written
+  (polytonic Unicode, or [Beta Code](Greek-NLP#normalization--beta-code) converted
+  beforehand) and does not edit or restore lines.
+- **Ambiguity.** When multiple valid scansions fit, the first match is returned
+  with `.ambiguous = True`.
 
-For the full picture of what the Greek prosody/scansion tools can and can't do,
-see [Limitations](Limitations).
+For full prosody and scansion limitations, see [Limitations](Limitations).
 
 ## See also
 
-- [Greek NLP](Greek-NLP): the rest of the Greek toolkit (syllables, accents,
-  prosody, IPA, morphology, lemmatisation).
-- [Greek NLP · Prosody](Greek-NLP#prosody-syllable-quantity): per-syllable
-  heavy/light/common weight for a single word.
-- [Greek NLP · Metrical scansion](Greek-NLP#metrical-scansion): the same
-  scanner in the context of the wider pipeline.
-- [CLI](CLI): every `aegean` command and flag.
-- [Tutorial](Tutorial): guided walkthroughs, including scanning a passage.
-- [Limitations](Limitations): honest scope notes.
+- [Greek NLP](Greek-NLP): syllabification, accents, prosody, IPA, morphology, and lemmatization
+- [Greek NLP · Prosody](Greek-NLP#prosody-syllable-quantity): single-word syllable weights
+- [Greek NLP · Metrical scansion](Greek-NLP#metrical-scansion): scansion within the wider pipeline
+- [CLI](CLI): `aegean` commands and flags
+- [Tutorial](Tutorial): guided walkthroughs, including scansion
+- [Limitations](Limitations): scope and known gaps

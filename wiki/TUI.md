@@ -1,155 +1,172 @@
 # The terminal UI (`aegean tui`)
 
-`aegean tui` is a full-screen, app-like cockpit for the pyaegean toolkit, running
-entirely inside your terminal. Where [the CLI](CLI) is one command at a time and
-`aegean repl` is those commands typed one after another, the TUI is a windowed
-reader: a scrollable corpus browser (with word cursor, live token inspector, and
-inline interlinear gloss toggle), a live Greek workbench (with Beta Code mode,
-all 10 meters, and lexicon glosses), a dedicated **Biblical Greek study screen**
-(`b`: 5 NT editions, early manuscripts, Strong's word studies, LXX & Catenae), a
-searchable catalogue of ~1,800 Greek works you can fetch and open, the local data
-store, and a command console with full CLI parity, all switched with a single
-keystroke.
+`aegean tui` launches a full-screen Textual interface over the pyaegean library.
+It provides nine keyboard-driven screens: a corpus overview, a three-pane corpus
+browser (with word cursor, live token inspector, and inline interlinear gloss
+toggle), a live Greek workbench (with Beta Code input, all 10 meters, and
+lexicon glosses), a **Biblical Greek study screen** (`b`: 9 NT editions, 13
+early manuscripts, Strong's word studies, and LXX & Patristics), a **Library
+Manager** (`l`), an **Annotation Review screen** (`r`: single CSVs,
+multi-reviewer conflict adjudication, and live corpus risk queues), a searchable
+catalogue of ~1,778 Greek works (`w`), the local data store (`d`), and a command
+console (`:`) with CLI parity.
 
-It is a **focused cockpit over the same library the CLI uses**, not a second
-product and not a mirror of every command. Its default reader and workbench views
-work offline over bundled and cached data without an API key. Optional actions can
-fetch works or neural models, and the analysis popup offers key-gated translation.
+Default reader and workbench views run offline over bundled and cached data with
+no API key. Optional actions fetch works, corpora, or neural models, and the
+line-analysis popup supports key-gated translation.
 
 ```bash
 pip install "pyaegean[tui]"
 aegean tui
+aegean tui --corpus lineara
+aegean tui --review review.csv
+aegean tui --review alice.csv --review bob.csv --corpus nt
 ```
 
-The TUI ships as the `[tui]` extra (it adds [Textual](https://textual.textualize.io/)).
-If the extra is not installed, `aegean tui` exits with a single line telling you
-exactly that (`the TUI needs the [tui] extra, install it with: pip install
-'pyaegean[tui]'`), the same way `aegean plot` guards `[viz]`.
+The TUI ships in the `[tui]` extra (which installs
+[Textual](https://textual.textualize.io/)). Without `[tui]`, `aegean tui` exits
+`1` with the exact install command (`the TUI needs the [tui] extra — install it
+with: pip install 'pyaegean[tui]'`).
 
-On Windows the Aegean glyph columns render best with the Aegean fonts from
-[Installation → Set up your terminal](Installation#set-up-your-terminal); run the
-TUI with `PYTHONUTF8=1` so Greek and Linear A display correctly.
+| Option | Effect |
+|---|---|
+| `--corpus`, `-c CORPUS` | Open directly on a corpus id or local `.json`/`.db` path; also provides corpus context for multi-reviewer `--review` merges. |
+| `--review`, `-r PATH` | Open directly in **Annotation review (`r`)** with one or more review CSVs (repeatable; pass twice with `--corpus` to adjudicate reviewer conflicts). |
+
+On Windows, install Aegean fonts from
+[Installation → Set up your terminal](Installation#set-up-your-terminal) and run
+with `PYTHONUTF8=1` so polytonic Greek and Aegean syllabic glyphs display
+correctly.
 
 ---
 
-## Your first five minutes
+## First five minutes
 
-A key-by-key tour from a cold start to reading and analyzing a real document. Every
-step names the key you press and what the screen does in response.
+Key-by-key walkthrough from launch to reading and analyzing a tablet:
 
 1. Run `aegean tui`. The app opens on **Home** with the corpus list focused on
    `lineara` and the key legend at the bottom.
-2. Press `c`. The **corpus browser** opens: the corpus list on the left (focused),
-   an empty document table in the middle, and the reader on the right saying
-   "Select a corpus on the left to browse its documents."
-3. Press `↓`. The highlight moves through the list (an entry whose data is not yet
-   on disk carries a `· fetch` tag; selecting it shows an inline **Download** bar
-   where `f` downloads and opens it without leaving the browser).
-4. Press `Enter` on `lineara`. The corpus loads: the status line reads
-   `lineara: 1721 documents` and the middle table fills with one row per document
-   (id, site, period, words, structure). The reader now says "Select a document to
-   read it."
-5. Press `Tab`. Focus moves to the search box above the table (typing there filters
-   by id). Press `Tab` again: focus moves into the document table, with the first
-   row under the cursor; `↑`/`↓` move the row highlight.
-6. Press `Enter`. The reader shows the highlighted document. For the first Linear A
-   tablet that is: the id (`HT1`), a metadata line (`Haghia Triada · LMIB · Tablet ·
-   HT Scribe 21`), the counts and structure line, and the numbered token lines with
-   line 1 highlighted. The status line shows the reader keys:
-   `HT1 — Tab to reader: ↑/↓ line · ←/→ word · i interlinear · Enter/a analyze`.
-7. Press `Tab`. The reader gains focus: its border and its "reading" title turn
-   accent-colored. `↑`/`↓` now move the highlighted **line cursor** through the
-   text (PgUp/PgDn jump ten lines at a time, Home/End go to the first and last line).
-8. Press `Enter` (or `a`). The **line-analysis popup** opens over the reader: the
-   chosen line at the top, a short list of the analyses that fit its script, and the
-   first one already run below. `↑`/`↓` and `Enter` in that list run a different analysis.
-9. Press `Esc`. The popup closes and you are back in the reader, with the line
-   cursor where you left it.
-10. Press `?`. The help overlay lists every global key and what the command palette
-    can do; `Esc` (or `q`, or `Enter`) closes it. Press `Esc` once more to walk back
-    to Home, and `q` to quit.
+2. Press `c`. The **corpus browser** opens: corpus list on the left (focused),
+   document table in the middle, and reader on the right.
+3. Press `↓` to move through the corpus list. Uninstalled hosted corpora carry a
+   `· fetch` tag; selecting one shows an inline **Download** bar where `f`
+   fetches and opens it in place.
+4. Press `Enter` on `lineara`. The status line reports `lineara: 1721 documents`
+   and the middle table lists each document (id, site, period, words,
+   structure).
+5. Press `Tab` to focus the search box above the table (typing filters by id),
+   then `Tab` again to move into the document table (`↑`/`↓` move rows).
+6. Press `Enter` on a row. The reader displays the tablet: id (`HT1`), metadata
+   (`Haghia Triada · LMIB · Tablet · HT Scribe 21`), counts and structure, and
+   numbered token lines with line 1 highlighted. The status line lists the
+   reader keys: `HT1 — Tab to reader: ↑/↓ line · ←/→ word · i interlinear · Enter/a analyze`.
+7. Press `Tab` to focus the reader. `↑`/`↓` move the line cursor (`PgUp`/`PgDn`
+   jump ten lines; `Home`/`End` jump to the start and end). `←`/`→` move the
+   word cursor; `i` toggles inline interlinear glosses.
+8. Press `Enter` (or `a`). The **line-analysis popup** opens with the selected
+   line at the top, available script analyses listed below, and the first
+   analysis already computed. Use `↑`/`↓` and `Enter` to switch analyses.
+9. Press `Esc` to close the popup and return to the reader at the same line.
+10. Press `?` for the key reference (`Esc`, `q`, or `Enter` closes it). Press
+    `Esc` to walk back to Home, or `q` to quit.
 
-One habit worth forming: `Esc` always exits a focused text box first and only then
-navigates back, so when in doubt press `Esc` and look at where the focus went.
+`Esc` always blurs a focused text input first, and a second `Esc` walks back
+through screen history.
 
 ---
 
 ## Managing texts, packs, and inline downloads
 
-You never have to leave a screen or remember internal asset IDs to download missing data:
+Missing corpora and bundles can be downloaded directly inside the TUI:
 
-- **Inline downloads in Biblical Greek (`b`)**: selecting an edition (such as Byzantine
-  Majority or SBLGNT), manuscript witnesses, full 27-book NT, Extended Strong's, or the
-  55-book Septuagint when its bundle is not yet cached reveals a contextual **Download**
-  bar right below the passage bar. Click **Download** (or press `f`) to download the exact
-  bundle needed, or click **Biblical Pack** to install all 5 Biblical bundles at once; the
-  active view reloads automatically when the download finishes.
-- **Inline downloads in the Corpus Browser (`c`)**: selecting an uninstalled corpus
-  (`damos`, `sigla`, `nt`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`) reveals an inline
-  **Download** bar (`f` downloads it in the background and opens it automatically).
-- **Unified Library Manager (`l`)**: one tabbed manager across the entire toolkit:
-  - **Packs**: one-click install (`f`) or remove (`x`) for `biblical`, `aegean`,
-    `epigraphy`, `lexica`, and `neural`.
-  - **Installed**: every bundled and downloaded resource currently on disk, with sizes,
-    **Open (`o`)**, and **Remove (`x`)**.
-  - **Corpora & Biblical**, **Works & Commentaries**, and **Lexica & Models**: filter with
-    `/`, download with `f`, open with `o`, or remove with `x`.
+- **Biblical Greek (`b`):** selecting an uncached NT edition, manuscript
+  witness, full 27-book NT, Extended Strong's, Septuagint, or *Patrologia
+  Graeca* view displays an inline **Download** bar below the passage input.
+  Press `f` (or click **Download**) to fetch the required asset, or click
+  **Biblical Pack** to install all 5 Biblical bundles; the active tab reloads
+  automatically on completion.
+- **Corpus Browser (`c`):** selecting an uninstalled browsable corpus (`damos`,
+  `sigla`, `nt`, `apostolic-fathers`, `pseudepigrapha`, `isicily`, `iip`,
+  `iospe`, `igcyr`, `aphrodisias`, `crete`, `edh`, `byzantine`,
+  `homer-scholia`) shows an inline **Download** bar (`f` fetches on a
+  background worker and opens it).
+- **Library Manager (`l`):** five-tab manager across all resources:
+  - **Packs**: install (`f`) or remove (`x`) any of the 7 themed packs
+    (`biblical`, `patristic`, `aegean`, `epigraphy`, `literary`, `lexica`,
+    `neural`).
+  - **Installed**: every bundled and downloaded resource on disk with byte
+    sizes, **Open (`o`)**, and **Remove (`x`)** (bundled corpora stay
+    protected).
+  - **Corpora & Biblical**, **Works & Commentaries**, and **Lexica & Models**:
+    filter with `/`, download with `f`, open with `o`, remove with `x`, and
+    reload with `r`.
 
 ---
 
-## Three everyday tasks
+## Everyday tasks
 
-The same key-by-key style, for the three things a new user most often wants.
+### Fetch and browse DAMOS (Linear B)
 
-### Fetch DAMOS and browse it
+DAMOS holds ~5,900 Linear B tablets, downloaded on demand:
 
-DAMOS is the full Linear B corpus (~5,900 tablets), downloaded on demand.
-
-1. Press `c` to open the **corpus browser**, move the highlight to `damos`, and press
+1. Press `c` to open the **corpus browser**, highlight `damos`, and press
    `Enter`. An inline **Download** bar appears (`DAMOS Linear B Corpus (~3.0 MB)`).
-2. Click **Download damos** (or press `f`). The download runs on a background worker and
-   automatically opens DAMOS in the document table (`damos: 5932 documents`) when done.
-   (Alternatively, press `l` to install the whole `aegean` pack — DAMOS + SigLA — in one
-   click from the Library Manager.)
-3. Press `/` and type `KN`. The table narrows to the Knossos tablets and the status
-   line reads `4228 of 5932 documents match id 'KN'`. Press `Tab` to move into the
-   filtered table and `Enter` on a row to read that tablet.
+2. Press `f` (or click **Download damos**). The worker fetches the corpus and
+   opens it in the document table (`damos: 5932 documents`). To fetch DAMOS and
+   SigLA together, install the `aegean` pack from **Library Manager (`l`)**.
+3. Press `/` and type `KN`. The table narrows to Knossos tablets
+   (`4228 of 5932 documents match id 'KN'`). Press `Tab` into the table and
+   `Enter` on any row to read it.
 
-### Find a Greek work, fetch it, read it, remove it
+### Fetch, read, and remove a Greek literary work
 
-The works library is where a Greek work enters the cache; the corpus browser is
-where you read it.
+Works are fetched from **Works library (`w`)** and read in the **Corpus browser (`c`)**:
 
-1. Press `w`. The **works library** opens with the search box already focused; before
-   you type anything it lists the works you have downloaded, and the status line
-   invites a search of the ~1,800-work catalogue.
-2. Type `epigrams`. The status line reads `3 matches` and the table shows the
-   matching catalogue rows (id, author, title, source, state).
-3. Press `Tab`. Focus moves into the results table; `↑`/`↓` pick a row, for example
-   `tlg0012.tlg003` (Homer, Epigrams). Leave the search box before pressing an
-   action key: while the box is focused, a letter is just text you are typing.
-4. Press `f`. The fetch runs on a worker with a progress bar; on completion the
-   status line reads `stored tlg0012.tlg003 — open it (o)` and the row's state
-   flips to `downloaded`.
-5. Press `o` (or `Enter`). The corpus browser opens with the work loaded, one row
-   per book or section: `tlg0012.tlg003: 17 documents`. The work is now also a
-   permanent entry in the corpus list (`tlg0012.tlg003 — Homer — Epigrams (Greek
-   work)`), and reading works exactly as in the first-five-minutes tour: `Tab` to
-   the table, `Enter` on a row, `Tab` to the reader, `Enter` on a line to analyze.
-6. Press `w` to return to the library, highlight the work in the table, and press
-   `x`. The status line reads `removed tlg0012.tlg003 from the cache`. The other
-   action keys: `a` fetches every work by the highlighted row's author, `r`
-   refreshes the view.
+1. Press `w`. The search box starts focused; an empty query lists downloaded
+   works.
+2. Type `epigrams`. The table filters to `3 matches` showing id, author, title,
+   source, and cache state.
+3. Press `Tab` to move focus into the table and highlight `tlg0012.tlg003`
+   (Homer, Epigrams). Leave the search box before pressing action keys so
+   letters are not typed into the query.
+4. Press `f`. A background worker downloads the TEI file; when done, the status
+   line reads `stored tlg0012.tlg003 — open it (o)` and the state changes to
+   `downloaded`.
+5. Press `o` (or `Enter`) to open the work in the corpus browser
+   (`tlg0012.tlg003: 17 documents`). It also appears in the corpus list for
+   future sessions.
+6. Return to `w`, highlight the work, and press `x` to delete it from the cache
+   (`removed tlg0012.tlg003 from the cache`). Other keys: `a` fetches all works
+   by the highlighted author; `r` refreshes.
 
-### Run any CLI command from the console
+### Adjudicate reviewer disagreements (`r`)
 
-1. Press `:`. The **command console** opens: a scrolling output log on top and an
-   `aegean>` prompt below it, already focused. The full command map prints on entry
-   (the same menu `aegean repl` shows), so the available commands are visible before
-   you type anything.
-2. Type `stats lineara --top 5` and press `Enter`. The prompt line echoes into the
-   log (`aegean> stats lineara --top 5`) and the command's output renders beneath
-   it, styled the same as in the terminal CLI:
+```bash
+aegean tui --review alice.csv --review bob.csv --corpus analysis.json
+```
+
+1. Launch with two (or more) `--review` CSVs and `--corpus` (the saved
+   annotated corpus from `aegean review export --annotate`). The app opens
+   straight into **Annotation review (`r`)**, merging the CSVs with
+   `merge_review_tables(..., on_conflict="report")` and filtering to `conflicts`
+   when disagreements exist.
+2. Inspect the highlighted token in the right pane: sentence context,
+   diplomatic/regularized form state, evidence class and confidence, field
+   predictions, numbered reviewer options, and offline lexicon evidence.
+3. Press `1`, `2`, or `3` to pick a reviewer's option for the conflicted field,
+   or press `e` to enter a custom value in the inline field editor. Press `a`
+   to accept predictions, `d` to defer, or `x` to reject.
+4. Use `n`/`p` to jump to the next or previous unresolved token, `f` to cycle
+   filters (`all` / `unresolved` / `conflicts` / `flagged`), and `s` to save the
+   resolved CSV atomically without altering immutable snapshot hashes.
+5. Apply the saved CSV back to the corpus with
+   `aegean review apply analysis.json merged.csv -o reviewed.json`.
+
+### Run any CLI command from the console (`:`)
+
+1. Press `:` to open the **command console** (scrolling output log above an
+   `aegean>` prompt). The command map prints on entry.
+2. Type `stats lineara --top 5` and press `Enter`:
 
    ```text
        lineara: top 5 words
@@ -171,59 +188,57 @@ where you read it.
    hexameter: dactyl, dactyl, spondee, dactyl, dactyl, final; caesura: penthemimeral
    ```
 
-4. As you type, a completion list opens above the prompt showing the matching
-   commands with a short description each: `↑`/`↓` pick one, `Tab` or `Enter`
-   complete it, `Esc` closes the list. An inline ghost-text suggestion also
-   previews the top match (`→` accepts it). With the list closed, `↑`/`↓` recall
-   history. A long or networked command runs on a background worker, so the log
-   keeps scrolling and the app stays responsive.
-5. Press `Esc` to close the completion list if one is open, then once more to
-   leave the prompt (it blurs), and again to go back to the screen you came from.
+4. A completion popup lists matching commands and descriptions as you type
+   (`↑`/`↓` select, `Tab`/`Enter` accept, `Esc` dismisses), and inline ghost
+   text previews the top match (`→` accepts). When the popup is closed, `↑`/`↓`
+   browse command history. Slow or networked commands run on a background
+   worker.
+5. Press `Esc` to close completions, `Esc` again to blur the input, and `Esc` a
+   third time to return to the previous screen.
 
 ---
 
-## What the reader shows you
+## Reader details
 
-### The editorial markers
+### Editorial markers
 
-Every token line in the reader carries the editorial status of its tokens, taken
-from the Leiden apparatus of the source edition. The markers are plain text
-appended to the token (not a color), so they read the same under every theme:
+Reader lines display each token's Leiden editorial status as plain text so it
+stays readable under any theme:
 
-| Editorial status | Marker in the reader |
+| Editorial status | Marker in reader |
 |---|---|
-| certain | none (the token as read) |
+| certain | none |
 | unclear | `?` after the token |
 | restored | `[ ]` after the token |
 | lost | `---` after the token |
 
-A token imported from a token-carrier EpiDoc file
-may also have typed form state. When those values differ from the displayed token,
-the reader appends plain-text distinctions such as `[dipl. …]`, the selected
-regularized or normalized form, and `[model …]` for the exact analyzer input.
-These annotations are read-only evidence and input provenance. The model form is
-not presented as a new editorial reading. The six currently hosted epigraphy and
-papyri assets expose aggregate status only, so their reader lines do not gain this
-typed state until their source assets are rebuilt.
+Tokens imported from token-carrier EpiDoc files may also carry typed form
+state. When those values differ from the displayed token, the reader appends
+plain-text markers such as `[dipl. …]`, the regularized/normalized form, and
+`[model …]` for the exact analyzer input. These annotations distinguish source
+evidence from model input; the model form is never presented as an editorial
+reading. Currently hosted epigraphy and papyri assets expose aggregate status
+only and do not carry typed form state until rebuilt.
 
-### The line-analysis popup, script by script
+### Line-analysis popup
 
-The popup (`Enter` or `a` on a reader line) offers the analyses supported for the
-line's script and runs the first available one immediately:
+Pressing `Enter` or `a` on a reader line opens the script-appropriate analysis
+popup and runs the first entry immediately:
 
-- **Greek** (`greek` sample, NT, inscription corpora, and fetched Greek works):
-  - `offline parser / tagger`: token, POS, and lemma from the zero-dependency pipeline;
-  - `neural pipeline`: UPOS, UD FEATS, lemma, and dependency parse (`[neural]` extra;
-    downloads ~173 MB model on first run);
-  - `neural + OOV reranker (weighted)`: neural pipeline with bundled OOV lemma reranking;
+- **Greek** (`greek`, `nt`, epigraphy corpora, fetched works):
+  - `offline parser / tagger`: zero-dependency token, POS, and lemma table;
+  - `neural pipeline`: UPOS, UD FEATS, lemma, and dependency parse (`[neural]`
+    extra; downloads ~173 MB model on first run);
+  - `neural + OOV reranker (weighted)`: neural pipeline with bundled OOV lemma
+    reranking;
   - `lexicon glosses`: Dodson plus any active fetched dictionaries;
   - `metrical scansion`: automatic meter detection and scansion;
   - `IPA (reconstructed)`: Classical Attic transcription;
   - `translate (BYOAI, optional)`: active when a provider API key is configured.
-- **Linear B / Cypriot**: `Greek reading + gloss` (phonetic value, Greek reading,
-  and gloss) and `signs (glyph + value)`.
+- **Linear B / Cypriot**: `Greek reading + gloss` (phonetic value, Greek
+  reading, gloss) and `signs (glyph + value)`.
 - **Linear A** (`lineara`, `sigla`): `conventional values (Linear B-shared)` and
-  `signs (glyph + value)`. Example for a line of HT2:
+  `signs (glyph + value)`:
 
   ```text
   conventional values (Linear B-shared)
@@ -238,15 +253,15 @@ line's script and runs the first available one immediately:
 
 - **Cypro-Minoan**: `signs (glyph only)`.
 
-Slow analyses (neural, translation) run on a background worker behind an
-"analyzing…" status line; everything else renders immediately. `Esc` (or `q`) closes
-the popup.
+Neural and translation analyses run on a background worker behind an
+`analyzing…` indicator; all other analyses render immediately. `Esc` or `q`
+closes the popup.
 
 ---
 
-## Keys
+## Global keys
 
-The same global keys work from every screen:
+These keys work on every screen (when no text input has focus):
 
 | Key | Action |
 |---|---|
@@ -255,265 +270,257 @@ The same global keys work from every screen:
 | `g` | Greek workbench |
 | `b` | Biblical Greek study screen |
 | `l` | Library manager (packs, installed items, search, download/remove) |
+| `r` | Annotation & conflict review (`ReviewScreen`) |
 | `w` | Works library |
 | `d` | Data store |
 | `:` | Command console (run any `aegean` command) |
-| `t` | Theme picker (live preview, persists) |
+| `t` | Theme picker (live preview, persisted on `Enter`) |
 | `?` | Help overlay |
-| `Esc` | Back a screen, or exit a focused text box first |
-| `ctrl+p` | Command palette (fuzzy: open a corpus, jump, fetch, theme…) |
+| `Esc` | Blur focused input, or return to the previous screen |
+| `ctrl+p` | Command palette (open corpus, jump to screen, fetch dataset, theme, help) |
 | `q` | Quit |
-
-`Esc` is two-stage: when a text input is focused it blurs the input and stays on
-the screen, and a second `Esc` walks back through screen history. `?` opens a modal
-key reference (`Esc`, `q`, or `Enter` dismisses).
 
 ---
 
 ## Screens
 
-Eight screens over the shared library adapter, matching CLI outputs.
+All nine screens call the shared library adapter, matching CLI behavior.
 
 ### Home (`h`)
 
-The landing view holds:
-
-1. **The nineteen-corpus overview.** Each browsable corpus with a one-line summary
-   and on-disk status (read without loading corpus files): `lineara`, `linearb`,
-   `cypriot`, `cyprominoan`, `greek`, `nt`, `apostolic-fathers`, `pseudepigrapha`,
-   `damos`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `aphrodisias`, `crete`,
-   `edh`, `byzantine`, and `homer-scholia`. Selecting a row opens it directly in
-   the corpus browser (with an inline download bar if its asset is not yet cached).
-   `ddbdp` (57,331 documentary papyri) and `patrologia` (33 *Patrologia Graeca*
-   volumes, 6.79M words) are omitted from the in-memory browser due to size;
-   search `ddbdp` via `aegean db search ddbdp` and browse/read `patrologia`
-   commentaries via `aegean bible commentary` or `aegean.load("patrologia")`.
-2. **The global-key legend**, listing the single-key shortcuts for every screen.
+1. **19-corpus overview.** Lists every browsable corpus with a one-line summary
+   and cached status (read without loading corpus data): `lineara`, `linearb`,
+   `cypriot`, `cyprominoan`, `greek`, `nt`, `apostolic-fathers`,
+   `pseudepigrapha`, `damos`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`,
+   `aphrodisias`, `crete`, `edh`, `byzantine`, and `homer-scholia`. Selecting a
+   row opens it in the corpus browser (showing an inline download bar if
+   uncached). `ddbdp` (57,331 papyri) and `patrologia` (33 *Patrologia Graeca*
+   volumes, 6.79M words) are excluded from full in-memory browsing because of
+   size: search `ddbdp` with `aegean db search ddbdp` and browse `patrologia`
+   via the **Biblical Greek (`b`)** `LXX & Patristics` tab, `aegean find`, or
+   `aegean bible commentary`.
+2. **Global key legend**, showing the single-key shortcuts.
 
 ### Corpus browser (`c`)
 
-Three panes, left to right:
+Three panes from left to right:
 
-1. **The corpus list**, marking datasets not yet cached on disk.
-2. **The document table**, above a search box (`/` focuses). Typing filters by
-   document ID (case-insensitive); a sign pattern such as `KU-*-RO` runs a
-   corpus-wide search on a background worker and displays matching words in the
-   status line.
-3. **The document detail (the reader)**: token lines with editorial status markers
-   (unclear / restored / lost), word-level cursor (`←`/`→`) with live token
-   inspector bar, inline interlinear gloss toggle (`i`), structural classification,
-   and `KU-RO` / `to-so` balance checks when a document states a total. `Tab` cycles
-   panes; `Enter` on a document row opens its detail.
+1. **Corpus list**, flagging uncached datasets.
+2. **Document table**, with a filter box (`/` focuses). Plain text filters by
+   case-insensitive document ID; a sign pattern such as `KU-*-RO` runs a
+   corpus-wide search on a background worker and reports matches in the status
+   line.
+3. **Reader**: token lines with editorial markers, word cursor (`←`/`→`) with
+   live token inspector, inline interlinear gloss toggle (`i`), structural
+   classification, and `KU-RO` / `to-so` balance checks when a total is stated.
+   `Tab` cycles panes; `Enter` opens a document or (inside the reader) launches
+   the line-analysis popup (`Enter` or `a`).
 
-**Analyze a line while you read.** With the reader focused, `↑`/`↓` (and PgUp/PgDn,
-Home/End) move the line cursor, and `Enter` or `a` opens the analysis popup for that
-line:
-
-- **Greek** (`greek`, NT, epigraphy corpora, fetched Greek works): offline parser /
-  tagger, lexicon glossing, automatic scansion, neural pipeline (with optional
-  weighted OOV reranker and calibrated confidence), IPA, and optional BYOAI
-  translation (passing neighboring lines and document metadata separately as
-  `source_context`). Neural and translation calls run on a background worker.
-- **Linear B / Cypriot**: Greek reading + gloss and sign values (glyph + phonetic
-  value).
-- **Linear A / Cypro-Minoan**: sign glyphs and, for Linear A, Linear B-shared
-  conventional phonetic values.
-
-The corpus browser accepts any corpus spec the CLI accepts, including fetched Greek
-works by CTS ID (`tlg0012.tlg001`) and saved `.json` / `.db` corpus files.
+The browser accepts any corpus spec supported by the CLI, including fetched
+Greek works by CTS ID (`tlg0012.tlg001`) and saved `.json` / `.db` files
+(`aegean tui --corpus path/to/file.json`).
 
 ### Greek workbench (`g`)
 
-A single text box at the top (with a live **Beta Code** input toggle `b`) drives five
-tabs that re-render as you type (a short debounce coalesces fast keystrokes; every
-backend is zero-dependency, offline, and instant):
+A single text input at the top (with a live **Beta Code** toggle `b`; `/`
+focuses the input) updates five offline tabs as you type:
 
-- **pipeline** — per-token analysis, each row `sentence:index  text  UPOS  lemma`,
-  the sentence number kept so a multi-sentence line stays unambiguous.
-- **scansion** — the metrical scan against a meter chosen in a selector covering all
-  **10 classical meters** (hexameter, pentameter, trimeter, and the Aeolic lyric
-  templates): the foot glyphs and caesura, or a friendly "does not scan" message when
-  the line does not fit the chosen meter.
-- **syllables** — the syllabification of the first word, hyphenated.
-- **IPA** — the reconstructed transcription word by word, with an **Attic / Koine**
-  period selector so you can compare the two reconstructions.
-- **lexicon** — live offline lexicon glosses (Dodson Koine plus any cached registry
-  lexica) for each word in the line.
+- **pipeline** — per-token `sentence:index  text  UPOS  lemma`.
+- **lexicon** — offline lexicon glosses (Dodson Koine plus any cached registry
+  dictionaries).
+- **scansion** — metrical scan with a selector covering all **10 classical
+  meters** (hexameter, pentameter, trimeter, and Aeolic templates), printing
+  foot glyphs and caesura or the non-scanning reason.
+- **syllables** — hyphenated syllabification of the first word.
+- **IPA** — reconstructed transcription word by word with an **Attic / Koine**
+  period selector.
 
-A bad meter or an unscannable line arrives as a friendly message shown inside the
-tab, never as a traceback. `/` focuses the input.
-
-For the full account of what each of these does, see [Greek NLP](Greek-NLP) and
-[Meters](Meters).
+See [Greek NLP](Greek-NLP) and [Meters](Meters) for backend details.
 
 ### Biblical Greek (`b`)
 
-A dedicated five-tab specialist workspace over [`aegean.greek.bible`](New-Testament),
-driven by a shared passage bar at the top (`/` focuses the passage box, `r` reloads)
-with an edition selector (`Nestle 1904`, `SBLGNT`, `SRGNT`, `Byzantine Majority`,
+Five-tab workspace over [`aegean.greek.bible`](New-Testament), driven by a
+shared passage bar (`/` focuses, `r` reloads) and an edition selector covering
+all **9 Greek NT editions** (`Nestle 1904`, `SBLGNT`, `SRGNT`, `BHP`,
+`Tischendorf 8th`, `Westcott–Hort`, `Byzantine Majority`, `Antoniades 1904`,
 `Textus Receptus`):
 
-- **Interlinear** — reads any Greek NT passage (or Septuagint passage such as
-  `Gen 1.1-5` / `Ps 22.1-6`) with word-by-word surface, lemma, Robinson morphology,
-  Strong's number, and Koine gloss (works offline on John 1, Philemon 1, Gen 1:1–5,
-  and LXX Ps 22:1–6; full books unlock once cached in the Data store).
-- **Editions** — side-by-side comparison of the 5 Greek NT editions with word-level
-  textual variant diffs (`nt-editions` asset).
+- **Interlinear** — reads any NT or Septuagint passage (`John 1.1-5`,
+  `Gen 1.1-5`, `Ps 22.1-6`) with surface, lemma, Robinson morphology, Strong's
+  number, and Koine gloss. Bundled offline samples cover John 1, Philemon 1,
+  Gen 1:1–5, and LXX Ps 22:1–6; full books activate once cached.
+- **Editions** — side-by-side collation across the 9 NT editions with word-level
+  variant diffs (`nt-editions` asset).
 - **Manuscripts** — extant 2nd–5th c. CE uncials and papyri (Sinaiticus `01`,
-  Vaticanus `03`, Alexandrinus `02`, Ephraemi `04`, Bezae `05`, `032`, `P45`–`P75`)
-  with original/corrected hand selector, diplomatic text, and *nomina sacra* expansions
-  (`nt-witnesses` asset).
-- **Word Study** — type any Strong's ID (`G3056`) or Greek lemma (`ἀγάπη`, `λόγος`)
-  for Strong's / Extended Strong's gloss, etymological root tree, NT book & morphology
-  distribution, and concordance verses.
-- **LXX & Catenae** — filterable catalogue of all 55 Swete Septuagint books and 48
-  Greek patristic commentaries (NT *Catenae* + Origen); typing a Psalm number (e.g.
-  `23`) converts MT ↔ LXX inline, typing an LXX passage (e.g. `Gen 1.1-5` or
-  `Ps 22.1-6`) renders the Greek verses inline, and typing a Greek word (e.g. `φῶς`)
-  runs a live Septuagint concordance search.
-
-### Works library (`w`)
-
-The corpus browser reads works; the Works library is where a work **enters** the
-cache. It searches the bundled Greek catalogue of roughly 1,800 works
-(case-insensitive, by author or title, for example `plato`, `homer`, or `Ἰλιάς`),
-and shows which works are already downloaded. On an empty query it lists your
-downloaded library, so you can see what you already have. From here you can:
-
-- **`f` — fetch the selected work** into the cache;
-- **`a` — fetch every work by the selected work's author** in one step;
-- **`o` (or `Enter`) — open a fetched work** in the corpus browser to read it;
-- **`x` — remove a downloaded work** from the cache (the highlighted one);
-- **`r` — refresh** the view.
-
-Downloads run on a background worker with a progress indicator, so the UI stays
-responsive, and a fetch already in flight is not restarted by a second press. The
-catalogue and the addressing scheme are documented in
-[Greek Works and Books](Greek-Works-and-Books), which also covers the **Greek New
-Testament** (the `nt` corpus, Nestle 1904 with gold lemma, morphology, Strong's
-numbers, and glosses).
+  Vaticanus `03`, Alexandrinus `02`, Ephraemi `04`, Bezae `05`, `032`,
+  `P45`–`P75`) with original/corrected hand selector, diplomatic text, and
+  *nomina sacra* expansion (`nt-witnesses` asset).
+- **Word Study** — Strong's / Extended Strong's entry, etymological root tree,
+  NT book and morphology counts, and sample concordance for any Strong's ID
+  (`G3056`) or Greek lemma (`ἀγάπη`, `λόγος`).
+- **LXX & Patristics** — filterable catalogue of all 55 Swete Septuagint books
+  and 86 Greek patristic commentaries across 10 Church Fathers and traditions.
+  Entering a Psalm number (`23`) converts MT ↔ LXX inline; entering an LXX
+  passage (`Gen 1.1-5`, `Ps 22.1-6`) renders verses inline; entering a
+  *Patrologia Graeca* volume (`PG073`) reads excerpts; entering a Greek term or
+  `PG073 λόγος` runs live search.
 
 ### Library manager (`l`)
 
-Unified manager for every bundled corpus, downloadable corpus, Biblical/Patristic
-bundle, Greek literary work, commentary, lexicon, and model:
+Five-tab manager covering bundled corpora, hosted datasets, Biblical and
+Patristic bundles, ~1,778 Greek literary works, 86 commentaries, lexica, and
+neural models:
 
-1. **Packs tab** — one-key installation of named bundles (`biblical`, `patristic`,
-   `aegean`, `epigraphy`, `literary`, `lexica`, `neural`) with live installed/missing
-   counts and sizes.
-2. **Installed tab** — everything currently available offline on disk, with byte
-   footprint and `x` to remove any downloaded item (bundled corpora are protected).
-3. **Catalog tab** — filter across all ~1,900 managed items by category or search
-   string (`/`), press `i` / `Enter` to install on a background worker, or `x` to
-   remove a cached asset.
+1. **Packs** — install (`f`) or remove (`x`) all 7 named packs (`biblical`,
+   `patristic`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`) with live
+   installed/missing counts and sizes.
+2. **Installed** — every local offline resource with disk footprint, `o` to
+   open, and `x` to delete (bundled corpora cannot be removed).
+3. **Corpora & Biblical** — filterable list of corpora and Biblical/Patristic
+   bundles.
+4. **Works & Commentaries** — filterable list of Perseus/First1KGreek works and
+   patristic commentaries.
+5. **Lexica & Models** — hosted Greek dictionaries and neural model bundles.
 
-Both the **Corpus browser (`c`)** and **Biblical Greek (`b`)** screens also surface
-an inline one-click download bar whenever you select a corpus, NT edition,
-manuscript witness, or Septuagint passage whose asset is not yet cached.
+Keys inside Library Manager: `/` focus filter, `f` download, `o` open, `x`
+remove, `r` reload.
+
+### Annotation review (`r`)
+
+Split-pane interactive annotation and reviewer-disagreement workspace
+(`ReviewScreen`), backed by `ReviewSession`.
+
+**Three entry modes:**
+
+1. **Single review CSV** (`full` schema or `editable` layout with its
+   `.companion.json` sidecar): `aegean tui --review review.csv` (or enter the
+   path in the top bar and press `Enter` / **Load**).
+2. **Multi-reviewer conflict adjudication**: pass two or more CSVs from the same
+   export together with `--corpus`:
+   `aegean tui --review alice.csv --review bob.csv --corpus analysis.json` (or
+   enter `alice.csv,bob.csv` in the top bar after setting a corpus). Runs
+   `merge_review_tables(..., on_conflict="report")` and automatically switches
+   the filter to `conflicts` when disagreements are present.
+3. **Live corpus review queue**: enter a corpus id (for example `nt`) in the top
+   bar to generate an on-demand queue via `to_review_table` (using calibrated
+   risk ordering when calibrated confidence annotations exist).
+
+**Layout:**
+
+- **Left pane:** filterable token queue (`Status`, `Ref`, `Token`, `Lemma`,
+  `Conf`).
+- **Right pane:** token header and sentence context, diplomatic/regularized form
+  state and damage/uncertainty flags, evidence class and confidence, per-field
+  prediction vs. decision status (`lemma`, `pos`, `morph`, `head`, `deprel`),
+  numbered reviewer disagreement options when merged, offline lexicon evidence,
+  and an inline editor for `lemma`, `pos`, `morph`, `head`, `deprel`, `note`,
+  and `evidence`.
+
+**Review screen keys:**
+
+| Key | Action |
+|---|---|
+| `a` | Accept displayed predictions for active fields on the current token |
+| `e` | Focus the inline field editor (`Enter` or **Apply edits** commits) |
+| `1` / `2` / `3` | Pick numbered reviewer option 1, 2, or 3 on a conflicted field |
+| `d` | Defer active fields on the current token |
+| `x` | Reject active fields on the current token |
+| `n` / `p` | Jump to next / previous unresolved token |
+| `f` | Cycle queue filter: `all` → `unresolved` → `conflicts` → `flagged` |
+| `s` | Save review CSV atomically (preserves immutable snapshot hashes for `aegean review apply`) |
+| `o` | Focus the top open/load input bar |
+
+### Works library (`w`)
+
+Searches the bundled catalogue of 1,778 Greek works (case-insensitive over
+author and title, e.g. `plato`, `homer`, `Ἰλιάς`) and displays cache status. An
+empty query lists downloaded works.
+
+- `f` — fetch the highlighted work into the cache;
+- `a` — fetch all works by the highlighted work's author;
+- `o` (or `Enter`) — open a downloaded work in the corpus browser;
+- `x` — remove the highlighted work from the cache;
+- `r` — refresh.
+
+Downloads run on a background worker with progress status; duplicate fetches for
+an in-flight work are ignored. See [Greek Works and Books](Greek-Works-and-Books)
+for citation addressing.
 
 ### Data store (`d`)
 
-Two read-only reports plus fetch/remove actions:
+Displays two live reports plus cache actions:
 
-1. **The environment report**, verbatim from `aegean doctor`: the Python and
-   pyaegean versions, which optional extras are importable, the local data store's
-   location and total size (with any leftover partial-download files flagged), the
-   neural model bundles, and the opt-in analysis cache.
-2. **The dataset table**, the same per-dataset state `aegean data list` reports:
-   every fetchable dataset, its download state, on-disk size, and license.
-3. **`f` — fetch the highlighted dataset**, on a worker with a progress line that
-   refreshes the row on completion and surfaces any failure as a one-line
-   notification. **`x` — remove the highlighted cached dataset** and reclaim its
-   disk space. **`r`** refreshes the report and table from disk.
+1. **Environment report** (same checks as `aegean doctor`): Python and pyaegean
+   versions, installed extras, data store location/size and partial downloads,
+   neural model bundles, and analysis cache state.
+2. **Dataset table** (same rows as `aegean data list`): all 39 hosted datasets
+   with downloaded state, on-disk size, and license.
+3. **Actions**: `f` downloads the highlighted dataset on a background worker,
+   `x` deletes it from disk, and `r` refreshes both tables.
 
 ### Command console (`:`)
 
-A REPL inside the TUI with **full CLI parity**. Type any command **without** the
-`aegean` prefix (for example `stats lineara --top 5` or `bible read John 1.1-5`)
-and its output renders in a scrolling log. It runs through the same dispatcher
-and session corpus cache as bare `aegean` / `aegean repl`, so `use CORPUS` sets
-a session corpus, `:examples` works, and every command behaves identically to
-the command line. As you type, a floating completion list offers context-aware
-predictions across every command (1-, 2-, and 3-level nested subcommands,
-including `bible`, `library`, and `greek interop`/`conllu`/`annotation-profiles`),
-deduplicated `--flag` options, and offline domain values (corpora, fetchable
-datasets, NT/LXX books, NT editions, manuscript sigla, meters, dictionaries, and
-output formats) with a one-line description each (`↑`/`↓` to pick, `Tab`/`Enter`
-to accept, `Tab` on a blank argument to reopen, `Esc` to close); inline ghost
-text previews the top history or live prediction (`Right`/`End` to accept). Long
-or networked commands run on a worker so the console stays responsive.
+An embedded REPL with CLI parity. Run any command without the `aegean` prefix
+(for example `stats lineara --top 5`, `bible compare John 1:18`, or
+`bundle verify study.zip`). It shares the dispatcher and session corpus cache
+with bare `aegean` / `aegean repl`, supporting `use CORPUS` and `:examples`.
 
-The console needs the `[cli]` extra (typer + rich). If it is missing, the input is
-disabled with a one-line message pointing you at `pip install 'pyaegean[cli]'`.
-Press `i` or `/` to focus the input. Every command-line feature — queries,
-keyness/dispersion, plots, export/import, geo maps, `db build`, and evaluation
-reproductions — runs directly inside the TUI through this console.
+Live completions cover 1-, 2-, and 3-level subcommands, flags, and domain values
+(corpora, datasets, NT/LXX books, editions, manuscript sigla, meters,
+dictionaries, formats): `↑`/`↓` pick, `Tab`/`Enter` accept, `Esc` closes the
+popup, `Right`/`End` accepts inline ghost text. Press `i` or `/` to focus the
+input. Long or networked commands run on a worker so the UI stays responsive.
+
+Requires the `[cli]` extra (`typer` + `rich`); if missing (for example when
+launching the TUI from Python without `[cli]`), the prompt displays
+`pip install 'pyaegean[cli]'`.
 
 ---
 
 ## Theme picker (`t`)
 
-Press `t` for a live-preview theme picker. Moving the highlight with `↑` / `↓`
-applies each theme immediately, so you can try the whole list before committing.
-`Enter` keeps **and persists** the highlighted theme (written to a small
-`tui.json` in the config directory and loaded on the next launch); `Esc` closes
-keeping whatever is currently previewed for this session, without persisting it. A
-theme that no longer exists is ignored on load, so the app always starts on a valid
-theme.
+Press `t` to preview installed Textual themes live with `↑`/`↓`. Press `Enter`
+to apply and persist the selection to `tui.json`; press `Esc` to keep the
+previewed theme for the current session only. Unknown theme names in `tui.json`
+are ignored on startup.
 
 ---
 
 ## Command palette (`ctrl+p`)
 
-`ctrl+p` opens a fuzzy-searchable palette of everything the keys do: open any
-corpus by name, jump to any screen, open a work you have already fetched, fetch a
-not-yet-downloaded dataset, switch theme, or open the help reference. It is the
-discoverability layer over the same navigation the key bindings drive.
+`ctrl+p` opens a fuzzy palette covering screen navigation (including
+`Go to Annotation review`), opening any corpus or downloaded work, jumping to
+the Library Manager to fetch datasets, switching themes, and opening help.
 
 ---
 
 ## Troubleshooting
 
-**`aegean tui` prints an error instead of starting.** Without the `[tui]` extra the
-command exits (status 1) with exactly one line:
+**`aegean tui` exits with a `[tui]` error:**
 
 ```text
 aegean: the TUI needs the [tui] extra — install it with: pip install 'pyaegean[tui]'
 ```
 
-`pip install "pyaegean[tui]"` fixes it, and includes the CLI dependencies the
-command console uses. If the console screen ever reports `the command console needs
-the [cli] extra — pip install 'pyaegean[cli]'` (possible when the TUI was launched
-from Python in an environment without the CLI dependencies), that install line
-fixes it the same way.
+Run `pip install "pyaegean[tui]"` (which also brings in the dependencies needed
+for the `:` command console).
 
-**Boxes or blanks where the Aegean glyphs should be.** The terminal font does not
-cover the Linear A / Linear B / Cypriot / Cypro-Minoan Unicode blocks. Install and
-select one of the fonts in
+**Missing Aegean glyphs (boxes or blanks):** Install and select an Aegean-capable
+font listed in
 [Installation → Set up your terminal](Installation#set-up-your-terminal), and on
-Windows run the TUI with `PYTHONUTF8=1` so the glyphs reach the terminal intact.
+Windows set `PYTHONUTF8=1`.
 
-**Where the theme choice is stored.** `Enter` in the theme picker writes `tui.json`
-under your config directory: `$XDG_CONFIG_HOME/pyaegean/tui.json` when
-`XDG_CONFIG_HOME` is set, otherwise `~/.config/pyaegean/tui.json` (the same path
-convention on Windows, for example `C:\Users\you\.config\pyaegean\tui.json`).
-Deleting the file resets the theme; a persisted theme that no longer exists is
-ignored on the next launch, so the app always starts on a valid one.
+**Theme configuration path:** Saved themes live in
+`$XDG_CONFIG_HOME/pyaegean/tui.json` or `~/.config/pyaegean/tui.json`
+(`C:\Users\<you>\.config\pyaegean\tui.json` on Windows). Delete the file to
+reset to the default theme.
 
 ---
 
-## Scope
-
-The TUI covers interactive browsing and reading, the Greek workbench, the Biblical
-Greek study screen, the works library, and the data store, with the `:` command
-console running the rest of the CLI in place. For scripting and full-pipeline flags,
-see [CLI Overview](CLI).
-
 ## See also
 
-- [The CLI](CLI) — the full command surface the TUI is a cockpit over.
-- [Greek Works and Books](Greek-Works-and-Books) — the ~1,800-work catalogue and
-  the Greek New Testament that the Works library fetches and opens.
-- [Greek NLP](Greek-NLP) and [Meters](Meters) — what the Greek workbench tabs do.
-- [Installation](Installation#set-up-your-terminal) — the Aegean fonts and
-  `PYTHONUTF8=1` for correct glyph rendering.
+- [The CLI](CLI) — command-line interface and scripting flags.
+- [CLI: Greek NLP & Review](CLI-Greek#review--aegean-review-) — exporting, merging, and applying review CSVs.
+- [Greek Works and Books](Greek-Works-and-Books) — the ~1,778-work catalogue and citation schemes.
+- [Greek NLP](Greek-NLP) and [Meters](Meters) — backends behind the Greek workbench.
+- [Installation](Installation#set-up-your-terminal) — Aegean fonts and `PYTHONUTF8=1`.

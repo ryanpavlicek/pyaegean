@@ -21,6 +21,7 @@
     "aegean.library",
     "aegean.search",
     "aegean.viz",
+    "aegean.bundle",
     "aegean.cache",
     "aegean.db",
     "aegean.mcp_server",

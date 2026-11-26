@@ -1758,9 +1758,8 @@
           }
         },
         "tui": {
-          "status": "excluded",
-          "reason": "not-applicable",
-          "note": "reachable via the command console (aegean review export|apply|merge)."
+          "status": "covered",
+          "where": "ReviewScreen"
         }
       }
     },
@@ -2546,6 +2545,34 @@
         "tui": {
           "status": "covered",
           "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "research-bundle",
+      "since": "0.72.0",
+      "python_api": "aegean.bundle.create_bundle",
+      "summary": "Deterministic, SHA-256-verified, license-clean research bundle archives (.zip) packaging corpora or NC retrieval pointers, review CSVs, workbench backups, and evaluation receipts.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "Packages and verifies local archive files on disk; the browser has no filesystem."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "The MCP server accepts and writes no local filesystem paths by design."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Covered by Python API aegean.bundle and CLI aegean bundle create|inspect|verify|extract|hydrate."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Reachable via the TUI command console (aegean bundle ...); no dedicated archive screen."
         }
       }
     }

@@ -1,230 +1,225 @@
-# Choosing a workflow
+# Choosing a Workflow
 
-pyaegean gives you many corpora, several analysis tiers, and a range of output
-formats. This page starts from the practical question, *who are you and what do
-you want out of the toolkit*, and routes you to a whole working sequence: which
-corpus, which pipeline, how much detail to keep, how to catch and correct
-errors, and how to cite the result.
+This page maps common research and teaching goals to a complete sequence of
+pyaegean steps: which corpus to load, which analysis tier to enable, how much
+per-token detail to keep, how to review and correct annotations, and how to
+package and cite results.
 
-It sits one level above [Choosing a Pipeline](Choosing-a-Pipeline), which
-answers the narrower question of which analysis tier to run on a given text.
-This page chains that choice together with output verbosity, the correction
-loop, and citation into an end-to-end workflow, then points you into the
-matching walkthrough in [Recipes](Recipes).
+[Choosing a Pipeline](Choosing-a-Pipeline) answers the narrower question of
+which Greek backend fits a given text. This page combines backend selection
+with review, packaging, and citation, then points to matching walkthroughs in
+[Recipes](Recipes).
 
-A workflow here is a sequence you assemble from the toolkit's ordinary calls and
-flags, not a single global setting. You pick a corpus, activate a pipeline tier
-(or leave the offline baseline in place), decide how much of the analysis to
-keep, and choose a citation. Each step is a normal call, so you can mix and
-match freely across the four shapes below.
+You assemble a workflow from ordinary API calls and CLI flags; there is no
+global mode switch. Pick a corpus, enable a backend (or stay on the offline
+baseline), select your output and review path, and record citations.
 
-## At a glance
+## Summary
 
-| Audience / goal | The shape of the workflow | Read on |
+| Goal | Workflow | Details |
 | --- | --- | --- |
-| **Teaching and demonstration** | Bundled samples, the offline baseline first so the uncertainty is visible, then a stronger tier for contrast; keep parses readable. | [§ Teaching](#teaching-and-demonstration) |
-| **Research toward a citable result** | The edition your question needs, the highest tier you can run, full per-token records, review the flagged tokens, cite the exact subset. | [§ Research](#research-toward-a-citable-result) |
-| **Exploratory decipherment** | The undeciphered scripts, structure tools tested against null models, every result kept under its exploratory label as a hypothesis rather than a reading. | [§ Exploratory](#exploratory-decipherment) |
-| **Reproducible benchmarking** | The evaluation folds, a fixed protocol, pinned data, evaluation receipts, the claims registry. | [§ Benchmarking](#reproducible-benchmarking) |
+| **Teaching and demonstration** | Bundled samples, offline baseline first so fallback rules are visible, then a stronger backend for contrast. | [§ Teaching](#teaching-and-demonstration) |
+| **Research toward a citable result** | Edition matching your question, highest suitable backend, full per-token records, human review of annotations, portable research bundle and subset citation. | [§ Research](#research-toward-a-citable-result) |
+| **Exploratory decipherment** | Undeciphered corpora (`lineara`, `cyprominoan`), structural tools tested against null models, exploratory labels retained on every output. | [§ Exploratory](#exploratory-decipherment) |
+| **Reproducible benchmarking** | Locked evaluation folds, fixed protocol, pinned datasets, evaluation receipts, and the claims registry. | [§ Benchmarking](#reproducible-benchmarking) |
 
-## Three things every workflow settles
-
-Whatever your goal, a workflow makes three decisions. The four sections that
-follow are really just four ways of setting these three dials.
+## Three decisions every workflow makes
 
 ### 1. Which pipeline tier
 
-The Greek stack has a baseline and three opt-in tiers you activate with a single
-call (or the matching CLI flag):
+The Greek stack provides a zero-dependency default plus three opt-in tiers
+activated with a single call or CLI flag:
 
-- **Offline baseline** (zero dependencies, the default): `greek.pipeline(text)`
-  with no backend active. The honest floor.
-- **Attested-gold**: `greek.use_treebank()` (CLI `--treebank`), a lookup in the
-  Perseus treebank lexicon.
-- **Trained pure-Python**: `greek.use_tagger()`, then `greek.use_lemmatizer()`
-  and `greek.use_parser()`, which generalize beyond the lookup.
-- **Neural**: `greek.use_neural_pipeline()` (the `[neural]` extra, CLI
-  `--neural`), one model that fills part of speech, morphology, lemma, and a
-  dependency tree per token. The neural pipeline, not the baseline, carries the
-  accuracy claims.
+- **Offline baseline** (zero dependencies, default): `greek.pipeline(text)`
+  with no extra backend enabled.
+- **Attested-gold lookup**: `greek.use_treebank()` (CLI `--treebank`), serving
+  attested lemmas, morphology, and POS from the Perseus treebank lexicon.
+- **Trained pure-Python**: `greek.use_tagger()`, `greek.use_lemmatizer()`, and
+  `greek.use_parser()`, generalizing beyond lookup without heavy dependencies.
+- **Neural**: `greek.use_neural_pipeline()` (`[neural]` extra, CLI `--neural`),
+  predicting UPOS, UD FEATS, lemma, and dependency trees in one pass. Published
+  benchmark figures apply to the neural pipeline.
 
-[Choosing a Pipeline](Choosing-a-Pipeline) weighs the tiers against your text
-type and constraints; [Greek NLP → the stages at a glance](Greek-NLP#the-stages-at-a-glance)
-and [Benchmarks](Benchmarks) give the measured accuracy of each.
+[Choosing a Pipeline](Choosing-a-Pipeline) compares these tiers by material and
+constraints; [Greek NLP](Greek-NLP) and [Benchmarks](Benchmarks) report
+measured accuracy for each.
 
-### 2. How much detail to keep
+### 2. How much detail to keep and review
 
-Output verbosity is a dial, from a bare lemma to a correctable table. Turn it up
-as far as your goal needs and no further:
+Choose the output granularity your task requires:
 
-| You want… | Use | What you get |
+| Need | API / CLI | Output |
 | --- | --- | --- |
-| Just the lemma | `greek.lemmatize(word)` | the citation form as a string |
-| The lemma and how it was reached | `greek.lemmatize_sourced(word)` | `(lemma, LemmaSource)`; `greek.needs_review(source)` gives a triage flag, and `greek.lemmatize_verbose` a plain `(lemma, known)` bool |
-| A full per-token analysis | `greek.pipeline(text)` | one `TokenRecord` per token carrying `lemma_source`, `lemma_resolved`, `lemma_verified`, and `review_recommended`, plus `head` / `relation` (under a parser or the neural pipeline) and `xpos` / `feats` (neural pipeline only) |
-| A table you can correct | `aegean review export` → fix → `aegean review apply` | machine annotations with a `needs_review` column, corrected columns, and a stamped reviewer |
+| Lemma only | `greek.lemmatize(word)` | citation form string |
+| Lemma with provenance | `greek.lemmatize_sourced(word)` | `(lemma, LemmaSource)`; `greek.needs_review(source)` flags fallbacks; `greek.lemmatize_verbose` returns `(lemma, known)` |
+| Full per-token analysis | `greek.pipeline(text)` | one `TokenRecord` per token with `lemma_source`, `lemma_resolved`, `lemma_verified`, and `review_recommended`, plus `head` / `relation` (with a parser or neural backend) and `xpos` / `feats` (neural only) |
+| Editable review table | `aegean review export` → edit → `aegean review apply` | CSV/editable spreadsheet with `needs_review`, corrected fields, and stamped reviewer metadata |
+| Interactive terminal review & conflict adjudication | `aegean tui --review` (or `r` in `aegean tui`) | field-level inspection, sentence context, calibrated-risk ordering, and multi-reviewer conflict resolution |
 
-The evidence class (`LemmaSource`: `attested`, `neural_lookup`, `neural_edit`, generic
-`neural`, `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or `user`) is
-the key to reading a parse: an `identity` or `unresolved` lemma is the pipeline flagging
-a token you should check.
-[Reading a Parse](Reading-a-Parse) explains every field, and
-[When the Tool Is Wrong](When-the-Tool-Is-Wrong) covers the export / fix /
-re-import loop in full.
+Each `LemmaSource` (`attested`, `neural_lookup`, `neural_edit`, generic
+`neural`, `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or
+`user`) records how a lemma was produced. Tokens marked `identity` or
+`unresolved` warrant inspection; resolved predictions can also contain errors.
+See [Reading a Parse](Reading-a-Parse) and
+[When the Tool Is Wrong](When-the-Tool-Is-Wrong).
 
-### 3. How to cite
+### 3. How to package and cite
 
-Every corpus and every subset carries its provenance, so you cite exactly what
-you used:
+Every corpus, subset, and bundle records its provenance:
 
-- `corpus.cite()` (and `.filter(...).cite()`, `QueryResults.cite()`) records the
-  edition, the licence, and the filter or query behind a subset.
-- `aegean.__version__` and `CITATION.cff` pin the tool release.
-- An evaluation receipt (`greek.eval_receipt`) records the settings behind any
-  accuracy figure you report.
-- Reviewed output keeps each machine value under a `<field>__pred` key and a
-  `review:` provenance note, so you can say which fields were machine-produced
-  and human-corrected.
+- `corpus.cite()`, `.filter(...).cite()`, and `QueryResults.cite()` record the
+  edition, license, and exact filter or query.
+- `aegean.__version__` and `CITATION.cff` pin the toolkit release.
+- `greek.eval_receipt` records the protocol and settings behind any measured
+  accuracy figure.
+- Reviewed corpora store machine predictions alongside corrections under
+  `<field>__pred` keys with a `review:` provenance note.
+- Portable research bundles (`aegean.bundle` / `aegean bundle create|inspect|verify|extract|hydrate`)
+  package redistributable corpora (or SHA-256 retrieval pointers for
+  non-commercial datasets), citations (`CITATIONS.bib`, `CITATIONS.txt`),
+  workbench workspace backups, editable review tables, and evaluation receipts
+  into one deterministic, SHA-256-verified `.zip` archive.
 
-The full how-to, including a worked methods-section phrasing, is on
-[Citing Computational Assistance](Citing-Computational-Assistance).
+See [Citing Computational Assistance](Citing-Computational-Assistance) for
+worked methods-section wording.
 
 ---
 
 ## Teaching and demonstration
 
-*You want to show how automated analysis works, and where it is unsure, on
-examples a class can read.*
+*Show how automated Greek or Aegean analysis behaves and where heuristics fail.*
 
-- **Corpus.** The bundled sample corpora and the offline NT sample (John 1 and
-  Philemon) work with no fetch, so a lesson runs anywhere. For a real passage,
-  fetch a single work once (`aegean greek work tlg0012.tlg001`).
-- **Pipeline.** Start on the zero-dependency baseline, because the point of
-  teaching is the contrast: on the baseline the evidence classes are visible (a
-  `seed` article, a `rule` guess on a regular ending, an `unresolved` form the
-  tool cannot handle), and then the same passage improves when you switch on
-  `use_treebank()` or `use_neural_pipeline()`. Running more than one tier is the
-  lesson.
-- **Verbosity.** Use `greek.pipeline` and show `lemma_source` alongside each
-  lemma; `needs_review` distinguishes identity/unresolved fallbacks from returned
-  decisions. Resolved decisions can still be wrong, so check the other rows too. [Reading a Parse](Reading-a-Parse) is written for exactly
-  this reader.
-- **Cite.** Even a classroom example should name its edition, so end with
-  `corpus.cite()`; it models the habit.
-- **Start from.** The [Tutorial](Tutorial) for the guided tour, then
-  [Reading a Parse](Reading-a-Parse), and the single-move recipes for scansion,
-  syllabification, and the Greek-reading bridge in [Recipes](Recipes).
+- **Corpus.** Bundled sample corpora, the bundled NT sample (`John 1`, `Phlm 1`),
+  and the bundled Swete LXX sample (`Gen 1:1–5`, `Ps 22:1–6`) run offline
+  (`from aegean.greek import bible`). To demonstrate a full literary passage,
+  fetch one work once (`aegean greek work tlg0012.tlg001`).
+- **Pipeline.** Run the zero-dependency baseline first so students can inspect
+  evidence classes (`seed` articles, `rule` guesses on regular endings,
+  `unresolved` irregular forms), then enable `use_treebank()` or
+  `use_neural_pipeline()` on the same passage to show the contrast.
+- **Detail.** Call `greek.pipeline()` and display `lemma_source` next to each
+  lemma. `needs_review` isolates identity/unresolved fallbacks; check resolved
+  rows as well, since heuristic tags can be wrong even when a lemma resolves.
+  See [Reading a Parse](Reading-a-Parse).
+- **Citation.** End classroom examples with `corpus.cite()` so students see the
+  edition and license attached to every dataset.
+- **Start with:** [Tutorial](Tutorial), [Reading a Parse](Reading-a-Parse), and
+  the single-task examples in [Recipes](Recipes).
 
 ## Research toward a citable result
 
-*You want an annotation, a statistic, or a subset that will go into a paper.*
+*Produce an annotated subset, lexical statistic, or corpus export for
+publication.*
 
-- **Corpus.** The edition your question needs: a literary work
-  (`greek.load_work`), the Koine New Testament with its gold annotations
-  (`greek.load_nt`), or one of the epigraphic and documentary corpora
-  (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `ddbdp`). For inscriptions and
-  papyri, keep the editorial apparatus in view: tokens carry a `ReadingStatus`
-  and each corpus an `edition_fidelity` flag (see
-  [Using Critical Editions](Using-Critical-Editions)). The Duke Databank
-  (`ddbdp`) is a search-and-stream corpus, not one to load into memory; recipe B
-  shows the method.
-- **Pipeline.** The highest tier you can run: `use_treebank()` for attested-gold
-  lemmas, or `use_neural_pipeline()` for the highest measured accuracy.
-  [Choosing a Pipeline](Choosing-a-Pipeline) weighs them for your text, and
-  [Benchmarks](Benchmarks) reports how far each generalizes off Classical
-  literary Greek.
-- **Verbosity.** Keep full `TokenRecord`s. `review_recommended` finds only
-  identity/unresolved lemmas; a false flag does not establish correctness. Triage with it,
-  and for anything you will publish, run the human-in-the-loop
-  step: `aegean review export` (add `--selection flagged` for flagged tokens or
-  `--selection unverified` for words without recorded lemma verification),
-  correct the table, and `aegean review apply`. Use the default `all` selection
-  when reviewing all annotation fields. The corrected corpus
-  records what a human changed. See
+- **Corpus.** Load the edition your question requires: a literary work
+  (`greek.load_work`), a Greek New Testament or Septuagint passage
+  (`from aegean.greek import bible` → `bible.load_nt`, `bible.load_lxx`),
+  Patristic or Byzantine texts (`patrologia`, `apostolic-fathers`,
+  `pseudepigrapha`, `byzantine`, `homer-scholia`), or any of the seven Greek
+  epigraphic corpora (`isicily`, `iip`, `iospe`, `igcyr`, `aphrodisias`,
+  `crete`, `edh`) and `ddbdp` documentary papyri. Install themed packs with
+  `aegean library install <pack>` (or individual datasets with `aegean data`).
+  For inscriptions and papyri, preserve the apparatus (`ReadingStatus` and
+  `edition_fidelity`; see [Using Critical Editions](Using-Critical-Editions)).
+  Query or stream `ddbdp` via `aegean find` / `aegean.db` instead of loading
+  all 57,331 texts into memory.
+- **Pipeline.** Use `use_treebank()` for attested-gold lemmas with minimal
+  dependencies, or `use_neural_pipeline()` for the highest measured accuracy
+  across UPOS, morphology, lemmas, and syntax. Check
+  [Choosing a Pipeline](Choosing-a-Pipeline) and [Benchmarks](Benchmarks) for
+  out-of-domain accuracy outside Classical literary prose.
+- **Review.** Retain full `TokenRecord` outputs. `review_recommended` catches
+  only `identity` and `unresolved` lemmas and does not verify correctness. For
+  publishable annotations, review tokens either through spreadsheet round-trips
+  (`aegean review export` with `--selection all|flagged|unverified` → edit →
+  `aegean review apply`) or directly in the terminal with `aegean tui --review`
+  (`r` key in `aegean tui`), which supports single-reviewer editing and
+  multi-reviewer conflict adjudication. See
   [When the Tool Is Wrong](When-the-Tool-Is-Wrong).
-- **Cite.** `cite()` on the exact subset, `aegean.__version__`, and an
-  `eval_receipt` for any accuracy figure. State which fields were
-  machine-produced and reviewed, per
-  [Citing Computational Assistance](Citing-Computational-Assistance).
-- **Start from.** The persona walkthroughs in
+- **Package and cite.** Record `cite()` on the exact subset,
+  `aegean.__version__`, and an `eval_receipt` for any reported accuracy score.
+  State which fields were machine-predicted and human-reviewed
+  ([Citing Computational Assistance](Citing-Computational-Assistance)). Use
+  `aegean bundle create` to archive a SHA-256-verified, license-clean snapshot
+  for supplementary materials or collaborators.
+- **Start with:** the end-to-end workflows in
   [Recipes → Workflows: end to end](Recipes#workflows-end-to-end):
-  [the epigraphist](Recipes#a--the-epigraphist-from-a-site-filter-to-a-citable-subset),
-  [the papyrologist](Recipes#b--the-papyrologist-ddbdp-without-loading-it),
-  [the literary classicist](Recipes#c--the-literary-classicist-catalogue-metre-gloss-citation),
-  [the New Testament scholar](Recipes#d--the-new-testament-scholar-gold-morphology-to-concordance),
-  [the corpus linguist](Recipes#e--the-corpus-linguist-numbers-with-a-receipt), and
-  [the toolsmith](Recipes#h--the-toolsmith-one-database-and-tools-for-agents).
+  [epigraphist](Recipes#a--the-epigraphist-from-a-site-filter-to-a-citable-subset),
+  [papyrologist](Recipes#b--the-papyrologist-ddbdp-without-loading-it),
+  [literary classicist](Recipes#c--the-literary-classicist-catalogue-metre-gloss-citation),
+  [New Testament scholar](Recipes#d--the-new-testament-scholar-gold-morphology-to-concordance),
+  [corpus linguist](Recipes#e--the-corpus-linguist-numbers-with-a-receipt), and
+  [toolsmith](Recipes#h--the-toolsmith-one-database-and-tools-for-agents).
 
 ## Exploratory decipherment
 
-*You want to hunt for structure in undeciphered material without asserting a
-reading.*
+*Investigate structural patterns in undeciphered Aegean material without
+claiming deciphered readings.*
 
-- **Corpus.** Linear A (`lineara`) and Cypro-Minoan (`cyprominoan`). For a
-  deciphered contrast, Linear B and Cypriot do read as Greek through the bridge
-  (`aegean bridge`), but that is established data, a different register from
-  anything below.
-- **Pipeline.** There is no reading pipeline for the undeciphered scripts, and
-  deliberately no Greek-reading bridge for Linear A. Start from what is secure
-  (the accounting shape, the sign inventory), then use the exploratory analysis
-  tools (morphological clusters, dispersion, sign surprisal, the structure
-  classifier), and test every hunch against a null model so a pattern is not
-  mistaken for a result. A negative is a result too.
-- **Verbosity and labeling.** Exploratory output carries an `[EXPLORATORY …]`
-  label and an auditable `trace()`; keep the label with the result. Any AI-layer
-  hypothesis is grounded and inspectable before a provider key is involved, and
-  remains a labeled hypothesis rather than a reading.
-- **Cite.** Present exploratory output as hypotheses generated with
-  computational assistance, carrying the label, and let the `trace()` travel so
-  others can confirm or refute it. See
-  [Citing Computational Assistance](Citing-Computational-Assistance) and the
-  validation path in [For Specialists](For-Specialists).
-- **Start from.**
-  [the Aegean-scripts researcher](Recipes#f--the-aegean-scripts-researcher-exploratory-and-labeled-as-such),
-  and, if key-gated generation is in play,
-  [the AI-assisted translator](Recipes#g--the-ai-assisted-translator-key-gated).
+- **Corpus.** Linear A (`lineara`, `sigla`) and Cypro-Minoan (`cyprominoan`).
+  Linear B (`linearb`, `damos`) and Cypriot (`cypriot`) are deciphered and
+  support the Greek-reading bridge (`aegean bridge`), providing a deciphered
+  comparative baseline.
+- **Tools.** Linear A and Cypro-Minoan have no reading pipeline or Greek
+  bridge. Start from established data (sign inventories, accounting structure),
+  apply exploratory quantitative tools (morphological clustering, dispersion,
+  sign surprisal, structure classification), and test patterns against null
+  models; a null result is still informative. To inspect any of the four Aegean
+  scripts visually in the browser (`workbench-app-v2.1.0`), run
+  `aegean workbench --corpus <id-or-path>` or export a multi-script bundle with
+  `aegean.io.to_workbench_bundle`.
+- **Labeling.** Exploratory and AI-assisted outputs carry `[EXPLORATORY …]`
+  labels and an inspectable `trace()`. Keep the label attached to derived
+  results; AI hypotheses remain exploratory and unverified until a specialist
+  evaluates them.
+- **Citation.** Report exploratory outputs as computationally generated
+  hypotheses with their `trace()` preserved so others can verify or refute
+  them. See [Citing Computational Assistance](Citing-Computational-Assistance)
+  and [For Specialists](For-Specialists).
+- **Start with:**
+  [Aegean-scripts researcher](Recipes#f--the-aegean-scripts-researcher-exploratory-and-labeled-as-such)
+  and, if generative assistance is used,
+  [AI-assisted translator](Recipes#g--the-ai-assisted-translator-key-gated).
 
 ## Reproducible benchmarking
 
-*You want to measure accuracy, or reproduce or challenge a published number.*
+*Measure accuracy, reproduce published scores, or audit error classes.*
 
-- **Data.** The Universal Dependencies Ancient Greek folds (UD-Perseus,
-  UD-PROIEL) and the Nestle 1904 NT gold. These are fetched for evaluation only,
-  never trained on; the leakage controls are documented on
+- **Data.** Universal Dependencies Ancient Greek folds (UD-Perseus, UD-PROIEL),
+  Nestle 1904 NT gold, and domain evaluation folds. Evaluation folds are
+  leakage-checked and never used in training; see
   [Methodology → leakage control](Methodology#3-leakage-control).
-- **Pipeline.** `use_neural_pipeline()` for the headline numbers. The offline
-  stack is reported as a floor, with an in-training upper-bound caveat on the
-  Perseus fold.
-- **How to run.** `greek.evaluate_on_ud("perseus", "test")` and
-  `evaluate_on_proiel` / `evaluate_on_nt` for the folds; `greek.bootstrap_ud`
-  for a confidence interval; `aegean greek eval … --drift` for an error analysis
-  instead of a single score; and `greek.evaluate_by_genre` (CLI
-  `aegean greek eval ud --by-genre --neural`) for a genre slice.
-- **Reproducibility.** Pin the data with `data.versions()` (CLI
-  `aegean data versions`) and record `aegean.__version__`. Every published number
-  lives in the claims registry (`training/results/published-claims.json`) and is
-  pinned to the docs, so a documented figure cannot drift silently.
-- **Cite.** Attach an `eval_receipt` to any number you report, and cite the
-  number with its protocol, not on its own
-  ([Citing Computational Assistance](Citing-Computational-Assistance)).
-- **Start from.** [Benchmarks](Benchmarks) for the protocol and the field's
-  published numbers, [Methodology](Methodology) for the whole picture in one
-  place, and [the corpus linguist](Recipes#e--the-corpus-linguist-numbers-with-a-receipt)
-  for the "numbers with a receipt" discipline, applied here to model accuracy.
+- **Pipeline.** Use `use_neural_pipeline()` for published benchmark scores. The
+  offline stack provides a floor (noting in-training overlap caveats where
+  applicable on Perseus).
+- **Execution.** Run `greek.evaluate_on_ud("perseus", "test")`,
+  `evaluate_on_proiel`, and `evaluate_on_nt`; compute confidence intervals with
+  `greek.bootstrap_ud`; inspect per-category errors with
+  `aegean greek eval … --drift`; and slice by genre with
+  `greek.evaluate_by_genre` (`aegean greek eval ud --by-genre --neural`).
+- **Reproducibility.** Pin datasets with `data.versions()` (`aegean data versions`)
+  and record `aegean.__version__`. Published figures live in
+  `training/results/published-claims.json` and are checked against documentation
+  by the test suite.
+- **Citation.** Attach an `eval_receipt` and report each figure alongside its
+  evaluation protocol
+  ([Citing Computational Assistance](Citing-Computational-Assistance)). Package
+  receipts and manifests into a verifiable `.zip` with `aegean bundle create`.
+- **Start with:** [Benchmarks](Benchmarks), [Methodology](Methodology), and
+  [corpus linguist](Recipes#e--the-corpus-linguist-numbers-with-a-receipt).
 
 ## See also
 
-- [Choosing a Pipeline](Choosing-a-Pipeline): which analysis tier to run on a
-  given text.
-- [Recipes](Recipes): the single-move task recipes and the eight end-to-end
-  persona walkthroughs this page routes into.
-- [Reading a Parse](Reading-a-Parse): the per-token fields and the evidence
+- [Choosing a Pipeline](Choosing-a-Pipeline): selecting a Greek backend by text
+  type and constraints.
+- [Recipes](Recipes): single-task recipes and eight end-to-end walkthroughs.
+- [Reading a Parse](Reading-a-Parse): token fields and `LemmaSource` evidence
   classes.
-- [When the Tool Is Wrong](When-the-Tool-Is-Wrong): the kinds of error to expect
-  and the correction loop.
-- [Citing Computational Assistance](Citing-Computational-Assistance): citing the
-  corpus, the version, a measured number, and reviewed output.
-- [Benchmarks](Benchmarks) and [Methodology](Methodology): the measured numbers
-  and the protocol behind them.
-- [For Specialists](For-Specialists): the register model and how to submit a
-  correction or a validation.
+- [When the Tool Is Wrong](When-the-Tool-Is-Wrong): common error classes and
+  the review loop.
+- [Citing Computational Assistance](Citing-Computational-Assistance): citing
+  corpora, tool versions, evaluation scores, and human-reviewed annotations.
+- [Benchmarks](Benchmarks) and [Methodology](Methodology): published scores and
+  evaluation protocol.
+- [For Specialists](For-Specialists): established vs. exploratory surfaces and
+  how to submit corrections.

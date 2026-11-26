@@ -201,7 +201,7 @@
     {
       "fact": "corpora.lineara.documents",
       "file": "wiki/Home.md",
-      "pattern": "Bundled (\\d[\\d,]*)-inscription corpus, the full Unicode Linear A"
+      "pattern": "Bundled (\\d[\\d,]*)-inscription corpus, \\d+-sign Unicode"
     },
     {
       "fact": "corpora.lineara.documents",
@@ -266,7 +266,7 @@
     {
       "fact": "corpora.cypriot.ig_xv1_inscriptions",
       "file": "wiki/Cypriot.md",
-      "pattern": "\\*\\*(\\d[\\d,]*) inscriptions\\*\\* ships"
+      "pattern": "snapshot of \\*\\*(\\d[\\d,]*)\\*\\* Cypriot syllabic"
     },
     {
       "fact": "corpora.cypriot.ig_xv1_inscriptions",
@@ -276,7 +276,7 @@
     {
       "fact": "corpora.cypriot.ig_xv1_inscriptions",
       "file": "wiki/Cypriot.md",
-      "pattern": "The (\\d[\\d,]*)-inscription \\*Inscriptiones"
+      "pattern": "The bundled (\\d[\\d,]*)-inscription corpus comes from the BBAW"
     },
     {
       "fact": "corpora.cypriot.ig_xv1_inscriptions",
@@ -311,7 +311,7 @@
     {
       "fact": "corpora.damos.documents",
       "file": "wiki/Linear-B.md",
-      "pattern": "len\\(corpus\\.documents\\)\\s*# (\\d[\\d,]*) —"
+      "pattern": "aegean\\.load\\(\"damos\"\\)[^\\n]*\\nlen\\(corpus\\.documents\\)\\s*# (\\d[\\d,]*)"
     },
     {
       "fact": "corpora.sigla.documents",
@@ -321,7 +321,7 @@
     {
       "fact": "corpora.sigla.documents",
       "file": "wiki/Data-and-Provenance.md",
-      "pattern": "\\*\\*(\\d[\\d,]*) documents\\*\\* with SigLA"
+      "pattern": "SigLA Linear A dataset v4: (\\d[\\d,]*) docs"
     },
     {
       "fact": "corpora.isicily.documents",
@@ -391,7 +391,7 @@
     {
       "fact": "corpora.ddbdp.documents",
       "file": "wiki/Data-and-Provenance.md",
-      "pattern": "(\\d[\\d,]*) Greek documentary papyri / ~4\\.4M tokens"
+      "pattern": "DDbDP documentary papyri: (\\d[\\d,]*) Greek texts / ~4\\.4M tokens"
     },
     {
       "fact": "corpora.aphrodisias.documents",
@@ -431,7 +431,7 @@
     {
       "fact": "sign_inventories.lineara.signs",
       "file": "wiki/Home.md",
-      "pattern": "\\((\\d[\\d,]*) signs;"
+      "pattern": "1,721-inscription corpus, (\\d[\\d,]*)-sign Unicode inventory"
     },
     {
       "fact": "sign_inventories.lineara.signs",
@@ -456,7 +456,7 @@
     {
       "fact": "sign_inventories.lineara.with_sound_values",
       "file": "wiki/Home.md",
-      "pattern": "signs; (\\d[\\d,]*) carry conventional"
+      "pattern": "inventory \\((\\d[\\d,]*) carry conventional"
     },
     {
       "fact": "sign_inventories.lineara.with_sound_values",
@@ -476,7 +476,7 @@
     {
       "fact": "sign_inventories.lineara.read",
       "file": "wiki/Linear-A.md",
-      "pattern": "Of those,\\s*\\*\\*(\\d[\\d,]*)\\*\\* appear in the corpus-aligned"
+      "pattern": "Of these, (\\d[\\d,]*)"
     },
     {
       "fact": "sign_inventories.cyprominoan.signs",
@@ -486,7 +486,7 @@
     {
       "fact": "sign_inventories.cyprominoan.signs",
       "file": "wiki/Cypro-Minoan.md",
-      "pattern": "✅ (\\d[\\d,]*) signs"
+      "pattern": "Supported \\((\\d[\\d,]*) signs\\)"
     },
     {
       "fact": "sign_inventories.cyprominoan.signs",

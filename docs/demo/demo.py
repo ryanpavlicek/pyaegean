@@ -450,7 +450,7 @@ _NT_SAMPLE_BOOKS = {
 def nt_verse(ref: str) -> str:
     """One verse of the bundled New Testament sample (John 1 + Philemon 1, Nestle 1904),
     with the gold lemma, Robinson morph, Strong's number, and UPOS per token — no network.
-    Greek strings are NFC-folded, as in ``greek.load_nt`` (the source edition mixes oxia
+    Greek strings are NFC-folded, as in ``bible.load_nt`` (the source edition mixes oxia
     and tonos precomposition)."""
     import unicodedata
 

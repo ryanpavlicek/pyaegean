@@ -1,20 +1,22 @@
 # How to read a pyaegean parse
 
-This page explains what pyaegean's per-token analysis actually tells you, field by field, and
-how to tell a grounded answer from a guess. It is written for someone who can read Ancient
-Greek but is new to automated analysis. If you want the how-to for running the pipeline,
-start at [Greek NLP](Greek-NLP); this page is about interpreting what comes back.
+This page explains each field on pyaegean's per-token Greek analysis and how to
+distinguish attested lookups, neural predictions, and unresolved fallbacks. For
+running the pipeline and enabling optional backends, see
+[Greek NLP](Greek-NLP).
 
-The one thing to carry away: **a parse is evidence, not a verdict.** pyaegean marks how it
-reached each answer so you can weigh it, and it is designed to say "I am guessing here" rather
-than hide it.
+Every `TokenRecord` stores both the predicted annotation and the mechanism that
+produced it, separating dictionary lookups from rule guesses and unresolved
+tokens.
 
-## One token, every field
+## Fields on `TokenRecord`
 
-`greek.pipeline(text)` returns one `TokenRecord` per token. Run on the opening of John:
+`greek.pipeline(text)` returns one `TokenRecord` per token. On the opening
+clause of John:
 
 ```python
 from aegean import greek
+
 for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος"):
     print(r.index, r.text, r.upos, r.lemma, r.lemma_source.value)
 # 1 ἐν    ADP  ἐν    seed
@@ -24,107 +26,106 @@ for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος"):
 # 5 λόγος NOUN λόγος seed
 ```
 
-| Field | What it means |
+| Field | Meaning |
 | --- | --- |
-| `text` | the token as it appears (punctuation is kept as its own token) |
-| `upos` | the coarse part of speech, in the Universal Dependencies scheme (NOUN, VERB, ADP, …) |
-| `lemma` | the dictionary (citation) form |
-| `lemma_source` | **where the lemma came from** (see the next section) |
-| `lemma_resolved` | whether the output is a real lemma decision rather than a surface fallback |
-| `lemma_verified` | whether an imported human lemma correction is recorded (`user`) |
-| `review_recommended` | whether the lemma source is `identity` or `unresolved`; not a general error flag |
-| `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
-| `head`, `relation` | the syntactic head (by `index`; `0` = sentence root) and its relation, filled only when a parser or the neural pipeline is active |
-| `xpos`, `feats` | the fine-grained morphological tag and its feature string, filled only by the neural pipeline |
-| `lemma_source_path` | the neural lemma composition path, when exposed (`lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback`) |
-| `token_confidence`, `sentence_confidence` | optional typed evidence with task/source/domain scope and explicit unavailable reasons; never a scholarly certainty |
+| `text` | Surface token (punctuation is kept as its own token) |
+| `upos` | Universal Dependencies coarse part of speech (`NOUN`, `VERB`, `ADP`, …) |
+| `lemma` | Dictionary citation form |
+| `lemma_source` | Origin of the lemma decision (see below) |
+| `lemma_resolved` | `True` when the output reflects a lemma decision rather than an identity or unresolved fallback |
+| `lemma_verified` | `True` when an imported human lemma correction (`user`) is recorded |
+| `review_recommended` | `True` when `lemma_source` is `identity` or `unresolved` (not a general error detector) |
+| `lemma_known` | Deprecated alias for `lemma_resolved` |
+| `head`, `relation` | Syntactic head (`index`; `0` = root) and dependency relation; populated when a parser or the neural pipeline is active |
+| `xpos`, `feats` | Fine-grained morphological tag and UD feature string; populated by the neural pipeline |
+| `lemma_source_path` | Internal neural lemma branch when exposed (`lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback`) |
+| `token_confidence`, `sentence_confidence` | Optional typed confidence evidence carrying task, source, domain, and explicit unavailability reasons |
 
-`head`/`relation`/`xpos`/`feats` are `None` under the zero-dependency baseline. They appear
-once you turn on a parser (`greek.use_parser()`) or the joint neural pipeline
-(`greek.use_neural_pipeline()`).
+Under the zero-dependency baseline, `head`, `relation`, `xpos`, and `feats` are
+`None`. Activating `greek.use_parser()` or `greek.use_neural_pipeline()`
+populates them.
 
-## The evidence class: `lemma_source`
+## Provenance classes: `lemma_source`
 
-Every lemma records how it was obtained. Provenance is not a confidence ranking:
-a resolved lookup or prediction can still be wrong in context.
+Every lemma records how it was selected. Provenance does not rank accuracy: an
+attested lookup or neural prediction can still be wrong in context.
 
-| `lemma_source` | How the lemma was found | Evidence and limits |
+| `lemma_source` | Source | Scope and limits |
 | --- | --- | --- |
-| `attested` | a direct hit in the Perseus treebank lexicon | high: an attested, correctly accented form |
-| `neural_lookup` | the joint model selected a lemma from its training-form lookup | model-resolved; not the same as human verification |
-| `neural_edit` | the joint model produced a non-identity contextual edit script | model-resolved; confidence depends on domain |
-| `neural` | an older neural backend produced a lemma but does not expose its internal branch | model-resolved; confidence depends on backend and domain |
-| `rule` | recovered by the ending-stripping rule layer (e.g. `νόμου` → `νόμος`) | good for the regular paradigms it covers |
-| `seed` | the bundled seed table or a closed-class word (the article, particles, …) | high: curated |
-| `paradigm` | a curated UniMorph inflection-table lookup, opt-in via `use_paradigms()` | high: a curated inflectional form |
-| `identity` | a model was asked but returned the surface form unchanged | **verify**: not a real analysis |
-| `unresolved` | the baseline was exhausted; the form is returned as-is | **verify**: the tool could not lemmatize it |
-| `punct` | a punctuation or numeral token, its own "lemma" | n/a |
-| `user` | a human correction imported through the review workflow | human-verified; the machine prediction and source remain preserved beside it |
+| `attested` | Direct lookup in the Perseus treebank lexicon | Attested, accented form; context-free |
+| `neural_lookup` | Joint neural model training-form lookup | Model-resolved; not human-verified |
+| `neural_edit` | Joint neural model non-identity contextual edit script | Model-resolved; accuracy varies by domain |
+| `neural` | Neural backend that does not expose its internal branch | Model-resolved; accuracy varies by backend and domain |
+| `rule` | Ending-stripping rule layer (e.g. `νόμου` → `νόμος`) | Reliable on regular paradigms only |
+| `seed` | Bundled seed table or closed-class form (articles, particles, pronouns) | Curated |
+| `paradigm` | Curated UniMorph inflection-table lookup (`greek.use_paradigms()`) | Curated inflectional form |
+| `identity` | Model returned the surface form unchanged as a fallback | Verify manually; no active resolution |
+| `unresolved` | Baseline rules exhausted; surface form returned unchanged | Verify manually; tool could not lemmatize |
+| `punct` | Punctuation or numeral token | Not applicable |
+| `user` | Human correction imported via the review workflow | Human-verified; prior prediction and source remain preserved beside it |
 
-`review_recommended` is `True` for `identity` and `unresolved`, so a quick filter for
-"which lemmas are unresolved?" is `[r for r in records if r.review_recommended]`.
-A false flag does not certify the lemma, POS, morphology, or dependency tree.
-On a pipeline `TokenRecord`, `lemma_verified` separately records an imported
-human lemma correction (`user`). A corpus review can also explicitly accept an
-unchanged prediction, setting its annotation's verification flag while retaining
-the prediction source. Blank legacy correction cells do not imply acceptance;
-neither kind of lemma verification certifies other fields. The
-["needs review" column](When-the-Tool-Is-Wrong) in a CSV honors an explicit valid
-review flag first, then the lemma source, then legacy metadata when no source is
-present. Missing review metadata does not certify correctness.
-`lemma_known` is a deprecated alias of `lemma_resolved`; new code should use the
-explicit evidence fields.
+`review_recommended` is `True` whenever `lemma_source` is `identity` or
+`unresolved`, letting you filter unresolved tokens directly:
+`[r for r in records if r.review_recommended]`. A `False` value does not
+certify the lemma, POS, morphology, or parse tree.
 
-A subtle but important point: a lemma can equal the surface form and still be a real
-analysis. `λόγος` is the lemma of `λόγος`; the neural model reports that as `neural` (a genuine
-analysis, normally `neural_lookup`) rather than `identity`. The class reflects *how the answer was
-reached*. It does not depend on whether the string changed.
+On `TokenRecord`, `lemma_verified` marks an imported human lemma correction
+(`user`). Through the corpus review workflow, a reviewer can also explicitly
+accept an unchanged prediction, setting its verification flag while preserving
+the original prediction source. Blank legacy correction cells do not imply
+acceptance, and verifying a lemma does not certify other fields. In review
+CSVs, the `needs_review` column checks an explicit review flag first, then
+`lemma_source`, then legacy metadata when no source is stored. Use
+`lemma_resolved` and `lemma_verified` in new code instead of the deprecated
+`lemma_known` alias.
 
-## Three registers of output
+A lemma identical to the surface form can still be a genuine analysis. For
+`λόγος`, the neural model reports `neural_lookup` (or `neural`) rather than
+`identity`; `lemma_source` records how the answer was produced, not whether the
+string changed.
 
-Across the whole toolkit, output falls into three registers. Reading the register is how you
-know what kind of claim you are looking at:
+## Evidence registers
 
-- **Established** (bridges for deciphered scripts, curated readings): if it is wrong, it is a
-  bug. Report it.
-- **Measured** (accuracy numbers, the neural pipeline): reproducible against a stated
-  protocol. Check it against [Benchmarks](Benchmarks) and expect the error rates documented
-  there, by text type where available.
-- **Exploratory** (Linear A / Cypro-Minoan analysis, AI readings, generative translation):
-  labeled unverified at the point of use. Treat it as a hypothesis to test, never as a
-  reading.
+Across pyaegean, outputs belong to three registers:
 
-A `lemma_source` of `identity` or `unresolved` is the pipeline being honest that a particular
-token has slipped from "measured" toward "you are on your own here." That is the signal to
-reach for a dictionary or a commentary.
+- **Established** (deciphered-script bridges, curated readings): errors are
+  bugs to report and correct.
+- **Measured** (statistical and neural NLP): reproducible under a stated
+  protocol; expect the per-genre error rates documented on
+  [Benchmarks](Benchmarks).
+- **Exploratory** (Linear A and Cypro-Minoan analysis, AI-layer readings and
+  translations): labeled unverified at the point of use; treat as hypotheses.
 
-## Confidence is scoped evidence, not a verdict
+When `lemma_source` is `identity` or `unresolved`, the token falls outside
+confident automated resolution and should be checked against a lexicon or
+commentary.
 
-With `with_confidence=True`, neural output may carry typed confidence for UPOS, XPOS,
-FEATS, lemma, head, relation, and a sentence aggregate. Every available value identifies
-the model, calibration, source path, optional domain, sample count, and measured metric; an
-unavailable value carries a reason such as `missing_calibration`, `unsupported_source`, or
-`unsupported_domain`. The legacy flat confidence fields are compatibility views and do not
-establish a domain claim. A `confidence_domain` label is supplied by the caller, not inferred
-by the model, and no out-of-domain warning is implied without evidence.
+## Scoped confidence evidence
 
-If you want calibrated probabilities (so a 0.85 score corresponds closely to an 85%
-accuracy rate on similar texts), turn on the bundled Schema-2 registry with
-`greek.use_calibration_registry()` and tell the pipeline whether you are working on
-literary prose (`confidence_domain="literary"`) or documentary papyri
-(`confidence_domain="documentary_native"`). Even calibrated confidence stays a model
-estimate rather than scholarly certainty. If a review workflow needs hard cutoffs, pass
-a caller-owned `AbstentionPolicy` as `confidence_policy` — it records its canonical hash
-and returns `accept`, `review`, or `unavailable` without altering the parse, and you can
-also sort a review spreadsheet by calibrated risk with `priority="calibrated_risk",
-budget=N` so you check the most uncertain words first. No default threshold is imposed on
-your edition.
+With `with_confidence=True`, neural output attaches typed confidence objects
+for UPOS, XPOS, FEATS, lemma, head, relation, and a sentence aggregate. Each
+populated value records its model, calibration source, source path, optional
+domain, sample count, and measured metric. Unavailable scores carry explicit
+reasons (`missing_calibration`, `unsupported_source`, `unsupported_domain`).
+Legacy flat confidence attributes remain for compatibility and carry no domain
+claim. The `confidence_domain` label is caller-supplied rather than detected
+automatically.
+
+For calibrated probabilities (where a 0.85 score tracks an ~85% empirical
+accuracy rate on matched texts), activate the bundled Schema-2 registry with
+`greek.use_calibration_registry()` and pass `confidence_domain="literary"` for
+literary prose or `confidence_domain="documentary_native"` for documentary
+papyri. Calibrated scores remain statistical estimates rather than scholarly
+certainty. To apply explicit review cutoffs without altering the parse, pass a
+caller-defined `AbstentionPolicy` via `confidence_policy` (returning `accept`,
+`review`, or `unavailable` alongside its canonical hash), or prioritize review
+spreadsheets by calibrated risk with `priority="calibrated_risk", budget=N`.
+pyaegean imposes no default threshold on an edition.
 
 ## See also
 
-- [Greek NLP](Greek-NLP): running the pipeline and turning on the backends.
-- [When the Tool Is Wrong](When-the-Tool-Is-Wrong): the kinds of mistakes to expect, and how
-  to correct them.
-- [For Specialists](For-Specialists): the register model in full, with the audit trail.
-- [Benchmarks](Benchmarks) and [Glossary](Glossary): the measured numbers and the terms.
+- [Greek NLP](Greek-NLP): running the pipeline and activating backends
+- [When the Tool Is Wrong](When-the-Tool-Is-Wrong): error profiles and
+  human-in-the-loop correction workflows
+- [For Specialists](For-Specialists): evidence registers and audit trails
+- [Benchmarks](Benchmarks) and [Glossary](Glossary): measured scores and terms

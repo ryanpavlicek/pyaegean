@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.71.0 (beta).** See the
+**Latest PyPI release: v0.72.0 (beta).** See the
 [scholarly workflow](scholarly-workflow.md) for source preservation, optional review,
 counting choices, and translation evidence.
 
@@ -69,11 +69,15 @@ The [getting-started notebook](https://colab.research.google.com/github/ryanpavl
 runs in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
 the core pipeline client-side.
 
-Recent releases also add named sentence policies (`prose`, `verse`, `inscription`, `papyrus`),
-compact editable review spreadsheets (`layout="editable"`) with calibrated-risk prioritization,
-resumable SQLite corpus annotation jobs (`aegean db annotate`), contextual dictionary grounding
-and clause-by-clause checking for AI translation, lossless CoNLL-U preservation, and optional
-[interoperability adapters](interoperability.md) for spaCy, Stanza, and CLTK. The
+Recent releases add multi-script Aegean support in `aegean workbench` (`workbench-app-v2.1.0`
+for Linear A, Linear B, Cypriot, and Cypro-Minoan), interactive annotation and conflict
+review in `aegean tui` (`r` key / `aegean tui --review`), portable SHA-256-verified
+research bundles (`aegean.bundle` / `aegean bundle`), named sentence policies (`prose`,
+`verse`, `inscription`, `papyrus`), compact editable review spreadsheets (`layout="editable"`)
+with calibrated-risk prioritization, resumable SQLite corpus annotation jobs
+(`aegean db annotate`), contextual dictionary grounding for AI translation, lossless CoNLL-U
+preservation, and optional [interoperability adapters](interoperability.md) for spaCy,
+Stanza, and CLTK. The
 [Greek NLP guide](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP#one-call-pipeline)
 shows runnable examples.
 

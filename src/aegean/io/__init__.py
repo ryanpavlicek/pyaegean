@@ -69,6 +69,7 @@ from .workbench import (
     load_workbench_backup,
     save_workbench_backup,
     to_workbench,
+    to_workbench_bundle,
 )
 
 # The corpus export formats `aegean export` accepts, in the order they are advertised.
@@ -137,6 +138,7 @@ __all__ = [
     "to_spacy",
     "to_stanza",
     "to_workbench",
+    "to_workbench_bundle",
     "write_epidoc",
     "write_interop_bundle",
 ]

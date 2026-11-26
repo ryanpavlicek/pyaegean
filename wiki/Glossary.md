@@ -1,26 +1,21 @@
 # Glossary
 
-A plain-language dictionary of the terms you'll meet across this documentation:
-the scripts, the linguistics, the file formats, and the source projects. Each
-entry is one or two sentences, with a runnable example where pyaegean actually
-does the thing, and a link to the page that covers it in depth. If you've ever
-hit a word like *lemmatize*, *scansion*, *ideogram*, or *EpiDoc* and weren't sure
-what it meant here, this is the page to keep open.
+Short definitions of the scripts, linguistic concepts, file formats, and source
+projects referenced across the pyaegean wiki, with runnable examples and links
+to detailed pages.
 
-> New to the toolkit entirely? Start with [Getting Started](Getting-Started). For
-> the full command reference see the [CLI](CLI) page; for every Greek function see
-> [Greek NLP](Greek-NLP).
+> New to pyaegean? Start with [Getting Started](Getting-Started). For commands
+> see [CLI](CLI); for Greek functions see [Greek NLP](Greek-NLP).
 
-The examples below use the `aegean` command-line tool and the `aegean` Python
-package. Where a feature has both a Python call and a
-shell command, both are shown.
+Examples below use the `aegean` Python package and the `aegean` CLI (`[cli]`
+extra).
 
 ---
 
-## The scripts at a glance
+## Supported scripts
 
-pyaegean knows five writing systems. Four are Aegean scripts; the fifth is the
-Greek alphabet itself. You can list them at any time:
+pyaegean supports five writing systems: four Aegean syllabic scripts and the
+Greek alphabet. List them with:
 
 ```python
 import aegean
@@ -28,22 +23,22 @@ aegean.registered_scripts()
 # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
-| Script id | Human name | Status | Where it's covered |
-|---|---|---|---|
+| Script ID | Name | Status | Documentation |
+| --- | --- | --- | --- |
 | `lineara` | Linear A | **Undeciphered** | [Linear A](Linear-A) |
 | `linearb` | Linear B | Deciphered (Mycenaean Greek) | [Linear B](Linear-B) |
 | `cypriot` | Cypriot syllabary | Deciphered (Arcadocypriot Greek) | [Cypriot](Cypriot) |
 | `cyprominoan` | Cypro-Minoan | **Undeciphered** | [Cypro-Minoan](Cypro-Minoan) |
-| `greek` | Greek alphabet |— | [Greek NLP](Greek-NLP) |
+| `greek` | Greek alphabet | Attested alphabetic tradition | [Greek NLP](Greek-NLP) |
 
 ---
 
 ## Scripts and decipherment
 
 ### Linear A
-The Bronze Age script of Minoan Crete (roughly 1800–1450 BCE), used for the
-still-**undeciphered** Minoan language. pyaegean ships the full GORILA-derived
-Linear A corpus offline (1,721 documents, a 342-sign inventory). See [Linear A](Linear-A).
+Bronze Age script of Minoan Crete (c. 1800–1450 BCE) recording an
+**undeciphered** language. pyaegean bundles a GORILA-derived Linear A corpus
+offline (1,721 documents, 342-sign inventory). See [Linear A](Linear-A).
 
 ```bash
 aegean info lineara
@@ -52,33 +47,33 @@ aegean info lineara
 ```
 
 ### Linear B
-The script Linear A evolved into, used at Knossos, Pylos, and elsewhere to write an
-early form of **Greek** (Mycenaean). Famously deciphered by Michael Ventris in
-1952, which is why pyaegean can *read* Linear B words as Greek (see the **bridge**
-entry below). See [Linear B](Linear-B).
+Descendant of Linear A used at Knossos, Pylos, Mycenae, and other Bronze Age
+palaces to write Mycenaean Greek. Deciphered by Michael Ventris in 1952;
+pyaegean provides transliteration and a Greek-reading bridge. See
+[Linear B](Linear-B).
 
 ### Cypriot syllabary
-An Iron Age syllabary used on Cyprus to write a Greek dialect (Arcadocypriot), and
-also the unrelated Eteocypriot language. Deciphered in the 1870s. See [Cypriot](Cypriot).
+Iron Age syllabary of Cyprus used primarily for Arcadocypriot Greek, alongside
+Eteocypriot and undetermined inscriptions. Deciphered in the 1870s. pyaegean
+bundles the 178-inscription IG XV 1 corpus plus two samples (180 documents).
+See [Cypriot](Cypriot).
 
 ### Cypro-Minoan
-A cluster of **undeciphered** scripts used on Bronze Age Cyprus, descended from (or
-cousins of) Linear A. pyaegean carries an illustrative sample plus the 99-sign
-Unicode inventory, not a full transcribed corpus. See [Cypro-Minoan](Cypro-Minoan)
-and [Limitations](Limitations).
+Cluster of **undeciphered** Bronze Age scripts from Cyprus related to Linear A.
+pyaegean bundles the 99-sign Unicode inventory and an illustrative sample. See
+[Cypro-Minoan](Cypro-Minoan) and [Limitations](Limitations).
 
 ---
 
-## How these scripts work (the writing-system terms)
+## Writing-system terms
 
 ### Syllabary
-A writing system where each sign stands for a whole **syllable** (like `da`, `ku`,
-`pa`) rather than a single consonant or vowel the way an alphabet does. Linear A,
-Linear B, the Cypriot syllabary, and Cypro-Minoan are all syllabaries.
+A writing system in which each phonetic sign represents a syllable (`da`, `ku`,
+`pa`) instead of a single consonant or vowel. Linear A, Linear B, Cypriot, and
+Cypro-Minoan are syllabaries.
 
 ### Syllabogram
-A single syllabary sign: one glyph carrying one syllable's worth of sound. You can
-look one up in any script's inventory:
+A single phonetic sign in a syllabary. Look up signs in any script inventory:
 
 ```bash
 aegean sign linearb DA --json
@@ -93,30 +88,30 @@ aegean sign cypriot PA --json
 ```
 
 ### Ideogram / Logogram
-A sign that stands for a **thing or commodity** (a word or idea) rather than a
-sound: think of the picture-sign for "wine," "oil," or "sheep" on an accounting
-tablet. The two terms are used interchangeably here. In a parsed Linear A document
-these are kept separate from the spelled-out words:
+A sign standing for a commodity, object, or concept (for example, wine, olive
+oil, or livestock on an accounting tablet) rather than a phonetic syllable. The
+two terms are used interchangeably in pyaegean. Parsed Aegean documents keep
+logograms separate from spelled words:
 
 ```python
 import aegean
 doc = next(d for d in aegean.load("lineara").iter_documents() if d.logograms)
 doc.id                                  # 'HT2'
 [t.text for t in doc.logograms][:5]     # ['OLE+U', 'OLE+A', 'OLE+E', 'OLE+U', 'OLE+A']
-#                                          OLE = the olive-oil ideogram
+#                                          OLE = olive-oil ideogram
 ```
 
 ### Sign value vs. sound value
-A sign's **value** is its identity in the inventory: its label (`DA`, `AB01`), its
-glyph, and its Unicode codepoint. Its **sound value** (the `phonetic` field above)
-is the syllable it's read as *where that's known*. For undeciphered scripts the sign
-value is solid but the sound value is provisional or absent; that distinction
-matters a lot; see [Limitations](Limitations).
+A sign's **value** is its inventory identity: label (`DA`, `AB01`), glyph, and
+Unicode code point. Its **sound value** (`phonetic` field) is the spoken
+syllable assigned to it where established. For undeciphered scripts, sign
+identities are established while sound values are conventional (borrowed from
+Linear B) or absent; keep the two distinct when analyzing undeciphered texts.
+See [Limitations](Limitations).
 
 ### Numeral
-Aegean tablets carry numbers (quantities of a commodity) alongside words and
-ideograms. pyaegean keeps these as their own token kind so a count never gets
-mistaken for a word:
+Numeric quantity on an inscription or tablet. pyaegean stores numerals as their
+own token kind so counts remain distinct from words:
 
 ```python
 doc = next(aegean.load("lineara").iter_documents())   # HT1
@@ -128,9 +123,8 @@ doc = next(aegean.load("lineara").iter_documents())   # HT1
 ## Reading deciphered scripts as Greek
 
 ### Bridge (Greek-reading bridge)
-For the **deciphered** syllabaries (Linear B and Cypriot), the bridge takes a
-transliterated word and gives you its attested Greek reading and meaning: the
-payoff of decipherment, in one call.
+For the deciphered syllabaries (Linear B and Cypriot), the bridge maps a
+transliterated word to its attested Greek reading and gloss:
 
 ```bash
 aegean bridge linearb po-me
@@ -140,17 +134,17 @@ aegean bridge cypriot pa-si-le-u-se
 # pa-si-le-u-se → βασιλεύς   (king)
 ```
 
-If a word has no attested reading in the bundled lexicon, the bridge says so
-plainly rather than guessing. Covered on [Linear B](Linear-B) and [Cypriot](Cypriot).
+If a word has no attested entry in the bundled lexicon, the bridge reports that
+no reading is attested. See [Linear B](Linear-B) and [Cypriot](Cypriot).
 
 ---
 
 ## Greek text terms
 
 ### Beta Code
-A way to type polytonic Greek using only plain ASCII keys: `lo/gos` for `λόγος`,
-`mh=nin` for `μῆνιν`: so you never need a Greek keyboard. pyaegean converts both
-directions.
+ASCII transliteration for polytonic Greek (`lo/gos` → `λόγος`, `mh=nin` →
+`μῆνιν`), allowing Greek input without a Greek keyboard. pyaegean converts in
+both directions:
 
 ```python
 from aegean import greek
@@ -164,42 +158,42 @@ aegean greek betacode "μῆνιν" --reverse # mh=nin
 ```
 
 ### Normalization
-Putting Greek text into one canonical Unicode form (so two visually identical words
-compare equal), optionally repairing OCR/Beta-Code artifacts with `--lenient`. See
-[Greek NLP](Greek-NLP#normalization--beta-code).
+Converting Greek text into canonical NFC Unicode form so visually identical
+strings compare equal, with optional `--lenient` repair of OCR and encoding
+artifacts. See [Greek NLP → Normalization](Greek-NLP#normalization--beta-code).
 
 ### Diacritics / strip
-Diacritics are the accents, breathings, and subscripts on Greek letters. "Stripping"
-removes them, useful for loose matching:
+Accents, breathings, and iota subscripts on Greek letters. Stripping removes
+diacritics for accent-insensitive matching:
 
 ```python
 greek.strip_diacritics("μῆνιν")         # 'μηνιν'
 ```
 
 ### Token
-The smallest unit a text is cut into: usually a word or a punctuation mark. In a
-syllabic corpus a token is one word, ideogram, or numeral; in Greek it's a word or
-mark. (See **tokenize** on the [Greek NLP](Greek-NLP) page.)
+Smallest unit emitted by tokenization: a word, ideogram, or numeral in Aegean
+corpora; a word, punctuation mark, numeral, or foreign span in Greek. See
+[Greek NLP](Greek-NLP).
 
 ### Syllabify / syllabification
-Splitting a Greek word into its spoken syllables, using rules plus a curated
-exception lexicon for compounds.
+Dividing a Greek word into spoken syllables using phonological rules and a
+compound-word exception lexicon:
 
 ```python
 greek.syllabify("ἄνθρωπος")             # ['ἄν', 'θρω', 'πος']
 ```
 
 ### Accentuation
-Where a Greek word's accent falls and what that pattern is called (oxytone,
-paroxytone, proparoxytone, and so on).
+Position and classification of a Greek word's accent (oxytone, paroxytone,
+proparoxytone, perispomenon, properispomenon):
 
 ```python
 greek.accentuation("λόγος").classification    # 'paroxytone'
 ```
 
 ### IPA
-The International Phonetic Alphabet: a reconstructed pronunciation written in
-standard phonetic symbols.
+International Phonetic Alphabet transcription of reconstructed Ancient Greek
+pronunciation (Attic or Koine):
 
 ```python
 greek.to_ipa("λόγος")                   # 'loɡos'
@@ -210,14 +204,14 @@ greek.to_ipa("λόγος")                   # 'loɡos'
 ## Linguistic annotation
 
 ### Lemma
-The dictionary headword for an inflected form: the entry you'd look up. `λόγοι`
-("words") and `λόγος` ("word") share the lemma `λόγος`.
+Dictionary headword for an inflected form. `λόγοι` ("words") and `λόγος`
+("word") share the lemma `λόγος`.
 
 ### Lemmatization
-The act of reducing each word to its lemma. With no extra backends installed
-pyaegean uses a bundled seed table plus a generalizing rule layer that strips the
-regular second-declension and thematic-verb endings back to the citation form;
-the opt-in neural pipeline is far more accurate (see [Greek NLP](Greek-NLP)).
+Reducing inflected forms to their dictionary headwords. The offline baseline
+combines a bundled seed table with suffix rules for regular paradigms; opt-in
+treebank and neural backends substantially increase coverage and accuracy (see
+[Greek NLP](Greek-NLP)).
 
 ```python
 greek.lemmatize("λόγοι")                # 'λόγος'
@@ -228,8 +222,8 @@ aegean greek lemmatize "λόγοι"
 ```
 
 ### UPOS (part of speech)
-A word's grammatical category: noun, verb, adjective, tagged with the
-**Universal Dependencies** coarse tag set (UPOS = Universal POS).
+Coarse grammatical category (noun, verb, adjective, etc.) using the **Universal
+Dependencies** POS tagset:
 
 ```python
 greek.pos_tag("θεός")                              # 'NOUN'
@@ -238,8 +232,9 @@ greek.pos_tags("θεὸς ἀγαθός")
 ```
 
 ### Morphology
-The full grammatical breakdown of a word form: case, number, gender, tense, voice,
-mood, person, degree, often with more than one candidate parse:
+Grammatical feature breakdown of a word form (case, number, gender, tense,
+voice, mood, person, degree), returning candidate analyses when a form is
+ambiguous:
 
 ```python
 greek.analyze("λόγοι")[0]
@@ -251,30 +246,36 @@ aegean greek morph "λόγοι"
 ```
 
 ### Treebank / AGDT
-A **treebank** is a corpus where every sentence is annotated with its grammatical
-**tree** (which word depends on which). **AGDT** is the *Ancient Greek Dependency
-Treebank* (from the Perseus project), pyaegean's main source of gold parses,
-glosses, and the lexicon that the opt-in Greek backends are trained from. See
+A **treebank** is a corpus annotated with sentence-level grammatical trees.
+**AGDT** (*Ancient Greek Dependency Treebank*, Perseus) supplies the gold
+parses and lexicon used by pyaegean's opt-in treebank and trained backends. See
 [Greek NLP](Greek-NLP) and [Data & Provenance](Data-and-Provenance).
 
 ### Parse (dependency parse)
-Working out the grammatical structure of a sentence: which word is the subject,
-which the object, and so on, as a tree of relations. pyaegean can emit UD relations
-(with the neural parser) or AGDT-style relations. See [Greek NLP](Greek-NLP).
+Directed syntactic tree linking each token to its head with a grammatical
+relation (subject, object, modifier, etc.). pyaegean outputs Universal
+Dependencies relations under the neural pipeline and AGDT-style relations under
+the pure-Python parser. See [Greek NLP](Greek-NLP).
 
 ### Pipeline
-The one-call convenience that runs normalize → tokenize → tag → lemmatize → morph in
-sequence and hands you one record per token. See [Greek NLP](Greek-NLP).
+Single call running normalization, tokenization, POS tagging, lemmatization,
+morphology, and (when enabled) dependency parsing, returning one `TokenRecord`
+per token. See [Greek NLP](Greek-NLP).
 
 ### Gloss
-A short dictionary meaning for a word. pyaegean ships the Koine (New Testament)
-Dodson lexicon **offline** and can fetch five additional prebuilt dictionary
-indexes on demand — LSJ, Middle Liddell, Cunliffe (Homeric), Autenrieth
-(Homeric), and Abbott-Smith (NT) — through the dictionary registry.
+Short dictionary definition for a Greek lemma. pyaegean bundles the Koine
+Dodson lexicon offline and fetches five additional prebuilt dictionary indexes
+on demand (LSJ, Middle Liddell, Cunliffe, Autenrieth, and Abbott-Smith) via the
+dictionary registry, alongside Extended Strong's in `aegean.greek.bible`:
 
 ```bash
+aegean greek gloss λόγος -d dodson
+# λόγος: a word, speech, divine utterance, analogy
+
 aegean bible strongs λόγος
-# a word, speech, divine utterance, analogy
+# G3056  λόγος  logos  G:N-M
+#   Gloss: word
+#   Definition: ...
 ```
 
 ---
@@ -282,8 +283,9 @@ aegean bible strongs λόγος
 ## Metre (scansion)
 
 ### Scansion / metre
-Working out the rhythm of a line of verse: marking each syllable **heavy** (long,
-`—`) or **light** (short, `⏑`) and matching the pattern to a known metre.
+Determining the rhythmic pattern of a verse line by marking each syllable
+**heavy** (long, `—`) or **light** (short, `⏑`) and matching it to a metrical
+scheme:
 
 ```python
 greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ").pattern
@@ -297,40 +299,42 @@ aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτρο
 ```
 
 ### Quantity (heavy / light / common)
-The "weight" of a single syllable: **heavy** (long), **light** (short), or
-**common** (can be either). This is the raw material scansion is built from.
+Metrical weight of an individual syllable: **heavy** (long), **light** (short),
+or **common** (scanning as either):
 
 ```bash
 aegean greek quantities "μῆνιν"
 # μῆνιν → μῆ:heavy | νιν:heavy
 ```
 
-The metres pyaegean can scan (the `--meter` option of `aegean greek scan`):
+Metres accepted by `--meter` on `aegean greek scan`:
 
-| Meter name | What it is |
-|---|---|
-| `hexameter` | Dactylic hexameter (epic verse: Homer, Hesiod) |
-| `pentameter` | Elegiac pentameter (paired with hexameter in elegiac couplets) |
-| `trimeter` | Iambic trimeter (the spoken line of drama) |
-| `glyconic` | Aeolic lyric line (fixed template) |
-| `pherecratean` | Aeolic lyric line |
-| `sapphic_hendecasyllable` | Aeolic lyric line |
-| `adonean` | Aeolic lyric line |
-| `alcaic_hendecasyllable` | Aeolic lyric line |
-| `alcaic_enneasyllable` | Aeolic lyric line |
-| `alcaic_decasyllable` | Aeolic lyric line |
+| Meter name | Description |
+| --- | --- |
+| `hexameter` | Dactylic hexameter (Homer, Hesiod) |
+| `pentameter` | Elegiac pentameter |
+| `trimeter` | Iambic trimeter (tragedy and comedy) |
+| `glyconic` | Fixed-template Aeolic lyric line |
+| `pherecratean` | Fixed-template Aeolic lyric line |
+| `sapphic_hendecasyllable` | Fixed-template Aeolic lyric line |
+| `adonean` | Fixed-template Aeolic lyric line |
+| `alcaic_hendecasyllable` | Fixed-template Aeolic lyric line |
+| `alcaic_enneasyllable` | Fixed-template Aeolic lyric line |
+| `alcaic_decasyllable` | Fixed-template Aeolic lyric line |
 
-> Scansion is conservative: a line that only scans via *synizesis* (two vowels read as
-> one) on a word outside the curated lexicon is reported as not scanning, rather than
-> the tool guessing. See [Greek NLP](Greek-NLP) and [Limitations](Limitations).
+> Scansion applies synizesis (two vowels scanned as one syllable) only for
+> entries in its curated lexicon; lines requiring unlisted synizesis are
+> reported as unscanned. See [Greek NLP](Greek-NLP) and
+> [Limitations](Limitations).
 
 ---
 
 ## Corpus structure
 
 ### Corpus
-A whole collection of documents in one script: what you get back from
-`aegean.load(...)`. It knows its size, its provenance, and how to filter and export.
+Collection of documents in one script returned by `aegean.load(...)` or
+`aegean.open(...)`, carrying document count, provenance, filtering, querying,
+and export methods:
 
 ```python
 corpus = aegean.load("lineara")
@@ -338,8 +342,8 @@ len(corpus)                             # 1721
 ```
 
 ### Document
-One inscription, tablet, or text within a corpus — with an id, its lines, and its
-tokens (words, ideograms, numerals).
+Single inscription, tablet, or literary passage inside a corpus, holding an ID,
+metadata, lines, and typed tokens (words, ideograms, numerals, punctuation):
 
 ```python
 doc = next(aegean.load("lineara").iter_documents())
@@ -348,11 +352,11 @@ doc.words[0].text                       # 'QE-RA₂-U'
 ```
 
 ### Catalogue (Greek works)
-The bundled, offline discovery index of every Greek work pyaegean can fetch: 1,778
-works that have a Greek edition in the Perseus canonical-greekLit and First1KGreek
-collections, each with its `id`, author, English and Greek title, and source. It is
-pure metadata, so searching it needs no network; anything it lists, `load_work` can
-load. (Distinct from `popular_works()`, the curated 25-work short list.)
+Bundled offline metadata index of all 1,778 Greek editions available from
+Perseus *canonical-greekLit* and *First1KGreek*, searchable by `id`, author,
+English or Greek title, and source. Every returned ID loads with
+`greek.load_work`. Distinct from `popular_works()`, which lists 25 curated
+titles.
 
 ```python
 from aegean import greek
@@ -366,40 +370,42 @@ greek.catalog(title="Ἰλιάς")            # search by Greek title
 aegean greek catalog --author plato     # 39 matches
 ```
 
-See [Greek Works and Books](Greek-Works-and-Books#3-finding-any-other-work).
+See [Greek Works & Books](Greek-Works-and-Books#3-finding-any-other-work).
 
 ---
 
-## File formats and source projects
+## File formats, archives, and source projects
 
-| Term | What it is | More |
-|---|---|---|
-| **GORILA** | *Recueil des inscriptions en linéaire A* (Godart & Olivier 1976–1985): the standard Linear A edition; pyaegean's bundled Linear A corpus is derived from it. | [Linear A](Linear-A), [Data & Provenance](Data-and-Provenance) |
-| **DAMOS** | *Database of Mycenaean at Oslo*: a Linear B corpus (~5,900 tablets) with scribal hands, find context, and object class; fetched on demand. | [Linear B](Linear-B), [Data & Provenance](Data-and-Provenance) |
-| **SigLA** | The *Signs of Linear A* database (Salgarella & Castellan): a Linear A dataset (802 documents) with its own word division and commodity ideograms; fetched on demand. | [Linear A](Linear-A), [Data & Provenance](Data-and-Provenance) |
-| **Greek inscription corpora** | I.Sicily, IIP, IOSPE, IGCyr/GVCyr, and the EDH Greek subset: openly-licensed EpiDoc databases of Greek inscriptions (2,855 / 2,113 / 1,194 / 997 / 1,286 texts), each fetched on demand with per-token editorial reading status. | [Data & Provenance](Data-and-Provenance), [Using Critical Editions](Using-Critical-Editions) |
-| **DDbDP** | The *Duke Databank of Documentary Papyri* (papyri.info): 57,331 Greek documentary papyri, hosted as a SQLite database with full-text search; fetched on demand. | [Data & Provenance](Data-and-Provenance) |
-| **AGDT** | *Ancient Greek Dependency Treebank* (Perseus): gold grammatical annotation behind the Greek backends. | [Greek NLP](Greek-NLP) |
-| **EpiDoc** | A community standard (a flavour of TEI XML) for encoding ancient inscriptions; pyaegean can both **import** and **export** EpiDoc TEI (preserving supported editorial reading status and typed forms). | [CLI](CLI), [Data & Provenance](Data-and-Provenance) |
-| **Pleiades** | The open gazetteer of ancient places; pyaegean tags located sites with their Pleiades id where one exists. | [Geography](Geography) |
+| Term | Definition | Reference |
+| --- | --- | --- |
+| **GORILA** | *Recueil des inscriptions en linéaire A* (Godart & Olivier 1976–1985): standard Linear A edition behind pyaegean's bundled Linear A corpus. | [Linear A](Linear-A), [Data & Provenance](Data-and-Provenance) |
+| **DAMOS** | *Database of Mycenaean at Oslo*: ~5,900 Linear B tablets with scribal hands, find contexts, and object classes; fetched on demand. | [Linear B](Linear-B), [Data & Provenance](Data-and-Provenance) |
+| **SigLA** | *Signs of Linear A* database (Salgarella & Castellan): 802 Linear A documents with sign-level annotations and commodity ideograms; fetched on demand. | [Linear A](Linear-A), [Data & Provenance](Data-and-Provenance) |
+| **Greek inscription corpora** | Seven openly licensed EpiDoc databases fetched on demand with per-token editorial reading status: I.Sicily (2,855), IIP (2,113), IOSPE (1,194), IGCyr/GVCyr (997), Aphrodisias / IAph2007 (1,471), Crete (600), and EDH Greek subset (1,286). | [Data & Provenance](Data-and-Provenance), [Using Critical Editions](Using-Critical-Editions) |
+| **DDbDP** | *Duke Databank of Documentary Papyri* (papyri.info): 57,331 Greek documentary papyri in an on-demand SQLite FTS database. | [Data & Provenance](Data-and-Provenance) |
+| **AGDT** | *Ancient Greek Dependency Treebank* (Perseus): gold grammatical annotations behind the Greek treebank and trained backends. | [Greek NLP](Greek-NLP) |
+| **EpiDoc** | TEI XML schema for ancient inscriptions; pyaegean imports and exports EpiDoc TEI while preserving supported editorial reading statuses and typed forms. | [CLI](CLI), [Data & Provenance](Data-and-Provenance) |
+| **Research bundle (`aegean.bundle`)** | Deterministic, SHA-256-verified `.zip` archive (`aegean bundle create\|inspect\|verify\|extract\|hydrate`) packaging redistributable corpora (or retrieval pointers for NC-licensed datasets), citations, workbench state, editable review tables, and analysis receipts. | [Data & Provenance](Data-and-Provenance), [CLI](CLI) |
+| **Workbench (`workbench-app-v2.1.0`)** | Local multi-script browser UI for Linear A, Linear B, Cypriot, and Cypro-Minoan served via `aegean workbench --corpus` and interoperable with `aegean.io.to_workbench_bundle`. | [CLI](CLI), [Linear A](Linear-A) |
+| **Pleiades** | Open gazetteer of ancient places; pyaegean attaches Pleiades IDs to aligned Aegean sites where available. | [Geography](Geography) |
 
 ```bash
 aegean geo lineara
 # lineara: 52 located site(s) of 52
 # site            lat    lon    pleiades   contested
 # Apodoulou       35.16  24.73  119143959
-# Arkhalkhori     35.15  25.27  220781958
+# Arkhalkhori     35.15  25.3   220781958
 # Gournia         35.11  25.79  771100776
 # Haghia Triada   35.06  24.79  589672
 # ...
 ```
 
-A site with no Pleiades id leaves that cell blank. The `contested` column reads
-`disputed` for a find-spot the project carries but does not accept as genuine (here
-Margiana), and is blank for every other site.
+Sites without a Pleiades ID leave that cell blank. The `contested` column reads
+`disputed` for find-spots carried in the record but not accepted as genuine
+(here Margiana) and is blank elsewhere.
 
-You can export to EpiDoc TEI (and other formats) from the [CLI](CLI). EpiDoc export
-writes one TEI file per document, so point `--output` at a directory:
+EpiDoc export writes one TEI XML file per document, so pass a directory path to
+`--output`:
 
 ```bash
 aegean export lineara --format epidoc --output lineara_tei/   # one file per doc
@@ -410,10 +416,9 @@ aegean export lineara --format epidoc --output lineara_tei/   # one file per doc
 ## Stance and method
 
 ### Exploratory
-A label this project uses for anything generative or speculative, most of all the
-[AI Layer](AI-Layer). An exploratory result is **evidence for a human expert to
-weigh, distinct from an attested reading or established translation**. Every AI command is
-marked exploratory for this reason:
+Marker attached to generative or speculative outputs, including all [AI Layer](AI-Layer)
+commands and undeciphered-script hypotheses. Exploratory outputs require human
+evaluation and are distinct from attested readings or verified translations:
 
 ```bash
 aegean ai --help
@@ -422,26 +427,26 @@ aegean ai --help
 ```
 
 ### Grounding
-The factual material a generative answer is tied to: the local lexicon, the
-transliteration, the corpus context, so the model is reasoning *from the evidence*
-rather than free-associating. The `aegean ai ask` command answers **strictly from
-the provided grounding**; the AI layer translates by grounding first, then calling a
-model. See [AI Layer](AI-Layer).
+Local evidence supplied alongside a generative prompt (lexicon entries,
+transliteration, corpus context) so model output is tied to verifiable inputs.
+`aegean ai ask` answers strictly from the provided grounding; translation
+commands build local grounding before calling a model. See [AI Layer](AI-Layer).
 
 ---
 
 ## Notes and limitations
 
-- **Undeciphered means undeciphered.** Linear A and Cypro-Minoan have solid *sign*
-  values but no agreed *language*; nothing here "translates" them, and the AI layer's
-  hypotheses are explicitly speculative.
-- **Sound values are provisional** for undeciphered scripts, and even for deciphered
-  ones the bridge only returns *attested* readings: it won't invent one.
-- **Cypriot ships the 178-inscription IG XV 1 corpus** (CC BY 4.0) plus a couple of
-  illustrative samples; **Cypro-Minoan is an illustrative sample only** (undeciphered).
-  Neither is the complete transcribed corpus, but both sign inventories are full.
-- **The richer Greek backends and gold datasets are opt-in downloads**, not bundled:
-  the core install works offline.
+- **Linear A and Cypro-Minoan are undeciphered.** Sign identities are
+  established, while the underlying languages are unknown; pyaegean does not
+  translate them, and AI hypotheses are explicitly speculative.
+- **Sound values are provisional** for undeciphered scripts. Even for
+  deciphered scripts (Linear B, Cypriot), the bridge returns only attested
+  readings.
+- **Cypriot bundles 178 IG XV 1 inscriptions** (CC BY 4.0) plus two samples;
+  **Cypro-Minoan bundles an illustrative sample only**. Both scripts include
+  complete Unicode sign inventories.
+- **Opt-in Greek backends and hosted datasets download on demand** into the
+  local cache (`aegean library` / `aegean data`); the core install runs
+  offline.
 
-For the full, honest list of what pyaegean does and does not claim, read
-[Limitations](Limitations).
+For the full scope and limits of each module, read [Limitations](Limitations).

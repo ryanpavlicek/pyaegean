@@ -1,36 +1,38 @@
 # New Testament
 
-The Greek New Testament ships as a pre-annotated corpus in pyaegean. One call,
-`greek.load_nt(...)`, returns the Koine text of the NT (the **Nestle 1904** edition)
-as a standard `Corpus` in which **every token already carries gold annotations**: a
-dictionary `lemma`, a Robinson-style `morph` parse, a `strongs` number, a reconciled
-Universal Dependencies `upos`, the `normalized` form, and a short Koine `gloss`. You
-never have to run a tagger to work with it: the analysis is already there, and it is
-gold (from the edition), not pyaegean's own prediction.
+`aegean.greek.bible` (CLI: `aegean bible`, TUI shortcut: `b`) provides pyaegean's
+tooling for Biblical and Koine Greek: nine New Testament editions with word-level
+variant comparison, thirteen 2nd–5th century CE manuscript witnesses, an Extended
+Strong's lexicon with root trees, the 55-book Swete Septuagint with LXX/Masoretic
+Psalm conversion, and 86 indexed Greek patristic commentaries.
 
-Running `greek.pipeline()` on the verse text, including with the neural backend,
-produces fresh predictions rather than reading those source annotations.
-`greek.annotate_corpus()` returns a new corpus, replaces existing lemma/POS values,
-and clears prior lemma evidence and neural coverage/warnings before writing fresh
-evidence when enabled. Other keys, such as source morphology and historical review
-records, remain. Keep the source-annotated corpus separately when comparing
-predictions with it.
+The default New Testament edition, **Nestle 1904**, ships as a pre-annotated
+`Corpus` in which every token carries gold annotations from the edition: a
+dictionary `lemma`, a Robinson-style `morph` tag, a `strongs` number, a reconciled
+Universal Dependencies `upos`, a `normalized` form, and a brief English `gloss`.
+Those annotations come from the edition itself rather than from pyaegean's taggers.
 
-This page covers the Python API (`aegean.greek.bible` and `greek.load_nt`) and the
-`aegean bible` command suite (see [CLI: Biblical & Koine Greek](CLI-Bible) for the
-complete CLI reference). For classical literary works (`load_work` / CTS IDs) see
+Running `greek.pipeline()` on the text (with or without the neural backend)
+produces fresh predictions without reading the edition's annotations.
+`greek.annotate_corpus()` returns a new corpus, replaces existing lemma and POS
+values, and clears prior lemma evidence and neural coverage or warnings before
+writing fresh predictions. Other keys, such as source morphology and prior review
+records, remain intact; keep the source-annotated corpus separate if you plan to
+compare predictions against gold.
+
+For the full CLI reference, see [CLI: Biblical & Koine Greek](CLI-Bible). For
+classical literary works (`greek.load_work` and CTS IDs), see
 [Greek Works and Books](Greek-Works-and-Books); for general Greek NLP (scansion,
-tagging, parsing) see [Greek NLP](Greek-NLP).
+tagging, parsing), see [Greek NLP](Greek-NLP).
 
 ---
 
 ## Quick start
 
 ```python
-from aegean import greek
 from aegean.greek import bible
 
-corpus = greek.load_nt("John", ref="1.1-1.3")   # John 1:1–3, offline (bundled Nestle 1904)
+corpus = bible.load_nt("John", ref="1.1-1.3")   # John 1:1-3, offline (bundled Nestle 1904)
 doc = corpus.documents[0]
 doc.id                                # 'John 1'
 doc.meta.name                         # 'John 1'
@@ -42,7 +44,7 @@ t.annotations
 #  'upos': 'ADP', 'ref': 'John.1.1', 'gloss': 'in, on, among'}
 ```
 
-On the command line:
+From the command line:
 
 ```bash
 aegean bible read John 1
@@ -50,35 +52,37 @@ aegean bible status         # check which Biblical bundles are cached locally
 aegean bible install        # download all 5 Biblical bundles (~25 MB) at once
 ```
 
-In Python, `aegean.library.install("biblical")` installs the same 5 bundles (`nt-corpus`,
-`nt-editions`, `nt-witnesses`, `strongs-greek`, `lxx-corpus`). In the TUI (`aegean tui`,
-press `b`), missing bundles offer an inline one-click **Download** bar directly inside the
-screen (`f` downloads and reloads automatically).
+In Python, `aegean.library.install("biblical")` installs the same five bundles
+(`nt-corpus`, `nt-editions`, `nt-witnesses`, `strongs-greek`, `lxx-corpus`). In
+the TUI (`aegean tui`, press `b`), any missing bundle displays an inline download
+bar (`f` downloads and reloads in place).
 
 ---
 
-## `load_nt(book=None, ref=None, *, edition="nestle1904", offline=False, force=False)`
+## Loading the New Testament: `bible.load_nt()`
 
-Available on both `aegean.greek.load_nt` and `aegean.greek.bible.load_nt` (the same
-function). Returns a `Corpus` with **one `Document` per chapter**; token annotations
-live in `Token.annotations`, so `to_dataframe(level="token")` surfaces them as
+`bible.load_nt(book=None, ref=None, *, edition="nestle1904", offline=False, force=False)`
+returns a `Corpus` with **one `Document` per chapter**. Token annotations live in
+`Token.annotations`, so `to_dataframe(level="token")` exposes them directly as
 columns.
 
-| argument | meaning |
+| Argument | Meaning |
 |----------|---------|
 | `book` | Book name or abbreviation (`"John"`, `"Jn"`, `"1Cor"`, `"Rev"`). Omit or pass `None` for all 27 books. |
 | `ref` | Chapter, verse, or range within the book (e.g. `"1"`, `"1.1-18"`, `"8.28"`). Requires `book`. |
-| `edition` | `"nestle1904"` (default, gold lemma/morph/Strong's), `"sblgnt"`, `"srgnt"`, `"bhp"`, `"tisch"`, `"wh"`, `"byz"`, `"antoniades"`, or `"tr"`. |
-| `offline` | Use local cache / bundled offline sample without network access. |
+| `edition` | `"nestle1904"` (default; gold lemma, morph, Strong's), `"sblgnt"`, `"srgnt"`, `"bhp"`, `"tisch"`, `"wh"`, `"byz"`, `"antoniades"`, or `"tr"`. |
+| `offline` | Read only from local cache and bundled offline samples without network access. |
 | `force` | Re-fetch the corpus asset even if already cached. |
 
 ```python
-greek.load_nt("John")                          # Gospel of John (Nestle 1904)
-greek.load_nt("John", ref="1.1-18")            # John 1:1–18
-greek.load_nt("John", ref="1.18", edition="sblgnt")
-greek.load_nt("John", ref="1.18", edition="tisch")
-greek.load_nt("Rom", ref="8.28")               # Romans 8:28
-greek.load_nt()                                # all 27 books
+from aegean.greek import bible
+
+bible.load_nt("John")                          # Gospel of John (Nestle 1904)
+bible.load_nt("John", ref="1.1-18")            # John 1:1-18
+bible.load_nt("John", ref="1.18", edition="sblgnt")
+bible.load_nt("John", ref="1.18", edition="tisch")
+bible.load_nt("Rom", ref="8.28")               # Romans 8:28
+bible.load_nt()                                # all 27 books
 ```
 
 Token text, lemmas, and normalized forms are NFC-normalized at load time so gold
@@ -86,10 +90,10 @@ strings compare directly with the rest of `aegean.greek`.
 
 ---
 
-## The CLI: `aegean bible …`
+## Command-line overview (`aegean bible`)
 
-All Biblical & Koine Greek CLI commands live under `aegean bible` (full command-by-command
-guide: [CLI: Biblical & Koine Greek](CLI-Bible)):
+All Biblical and Koine Greek CLI commands live under `aegean bible` (full
+reference: [CLI: Biblical & Koine Greek](CLI-Bible)):
 
 ```bash
 aegean bible read John 1                    # whole chapter (Nestle 1904)
@@ -100,40 +104,45 @@ aegean bible read John 1 -o john1.json      # save as a Corpus (.json or .db)
 aegean export john1.json -f csv --level token -o john1.csv
 ```
 
+The same commands run inside the bare `aegean` / `aegean repl` shell and the TUI
+`:` console, with inline completion for NT and LXX book names, edition IDs, and
+manuscript sigla.
+
 ---
 
 ## Addressing a passage with `ref`
 
-`ref` mirrors `load_work`, read as **chapter.verse**:
+`ref` uses **chapter.verse** notation, parallel to `greek.load_work`:
 
-| `ref` | selects |
+| `ref` | Selects |
 |-------|---------|
 | `"3"` | chapter 3 |
 | `"3.16"` | chapter 3, verse 16 |
 | `"3.16-3.18"` | verses 3:16–3:18 |
-| `"3.16-18"` | the same range, shorthand (the high end inherits the low end's chapter) |
+| `"3.16-18"` | verses 3:16–3:18 (shorthand: the upper end inherits the chapter) |
 | `"3-5"` | chapters 3 through 5 |
 
-A malformed reference is rejected with a message that names the accepted shapes,
-never a raw `int()` traceback.
-Unavailable chapters or range endpoints also raise rather than silently truncating
-the requested passage. `corpus.cite()` records the canonical book and selected
+A malformed reference raises a `ValueError` listing the accepted formats.
+Unavailable chapters or range endpoints also raise an error instead of returning a
+truncated passage. `corpus.cite()` records the canonical book and selected
 chapter/verse range, including the actual extent of an offline sample.
 
 ---
 
 ## Book names and aliases
 
-`load_nt` (and the CLI) accept any book by its canonical name **or** by a common
-abbreviation, case-insensitively, ignoring spaces and dots: `"Matthew"`, `"Matt"`,
-`"mt"`, `"1 Cor"`, `"1cor"`, and `"1Cor."` all resolve. The canonical `name` is what
-appears in document ids (`John 1`, `Phlm 1`).
+`bible.load_nt()` and the `aegean bible` CLI accept any book by its canonical name
+or common abbreviation, case-insensitively and ignoring spaces and periods:
+`"Matthew"`, `"Matt"`, `"mt"`, `"1 Cor"`, `"1cor"`, and `"1Cor."` all resolve.
+Document IDs always use the canonical `name` (`John 1`, `Phlm 1`).
 
-`greek.nt_books()` lists all 27 in canonical order (pure metadata, no download):
+`bible.nt_books()` returns all 27 books in canonical order (bundled metadata, no
+network call):
 
 ```python
-from aegean import greek
-books = greek.nt_books()
+from aegean.greek import bible
+
+books = bible.nt_books()
 len(books)         # 27
 books[3]           # {'name': 'John', 'aliases': ['john', 'jn', 'jhn']}
 ```
@@ -146,7 +155,7 @@ aegean bible books lxx         # 55 Swete Septuagint books
 aegean bible books nt --json   # JSON output
 ```
 
-| book | accepted names |
+| Book | Accepted names |
 |------|----------------|
 | Matt | matthew, matt, mt |
 | Mark | mark, mk, mrk |
@@ -176,31 +185,34 @@ aegean bible books nt --json   # JSON output
 | Jude | jude, jud |
 | Rev | revelation, rev, rv, apocalypse |
 
-An unrecognized book name prints a suggestion (`aegean bible books nt` lists all 27; Septuagint books like `Gen` or `Ps` are auto-detected by `aegean bible read`).
+Passing an unrecognized name prints a close-match suggestion. Septuagint books
+such as `Gen` or `Ps` are auto-detected by `aegean bible read`, and loaded in
+Python with `bible.load_lxx()`.
 
 ---
 
-## Per-token annotation fields
+## Per-token annotation fields (Nestle 1904)
 
-Every token in a loaded NT corpus carries these in `Token.annotations`:
+Every token loaded from the default `nestle1904` edition carries these keys in
+`Token.annotations` (the other eight editions populate `ref` and `edition`):
 
-| field | what it is |
-|-------|------------|
-| `lemma` | dictionary headword (gold, from Nestle 1904) |
+| Field | Meaning |
+|-------|---------|
+| `lemma` | Dictionary headword (gold, from Nestle 1904) |
 | `morph` | Robinson-style morphology tag, e.g. `N-NSM`, `V-PAI-3S` |
 | `strongs` | Strong's number (e.g. `3972` = Paul) |
-| `upos` | coarse Universal Dependencies part of speech, reconciled from `morph` |
-| `normalized` | accent/diacritic-normalized form |
-| `ref` | canonical address of the token, e.g. `John.1.1` |
-| `gloss` | brief English gloss (bundled Dodson lexicon, when available) |
+| `upos` | Coarse Universal Dependencies POS, reconciled from `morph` |
+| `normalized` | Accent/diacritic-normalized form |
+| `ref` | Canonical token address, e.g. `John.1.1` |
+| `gloss` | Brief English gloss (bundled Dodson lexicon, when available) |
 
-Turn a chapter into a table where each field is its own column:
+Converting a chapter into a tabular dataframe puts each field in its own column:
 
 ```python
 import pandas as pd
-from aegean import greek
+from aegean.greek import bible
 
-corpus = greek.load_nt("Philemon", ref="1.1")
+corpus = bible.load_nt("Philemon", ref="1.1")
 rows = [{"text": t.text, **t.annotations} for t in corpus.documents[0].tokens]
 pd.DataFrame(rows)[["text", "lemma", "morph", "upos", "strongs", "gloss"]].head()
 #      text    lemma morph  upos strongs                             gloss
@@ -211,7 +223,7 @@ pd.DataFrame(rows)[["text", "lemma", "morph", "upos", "strongs", "gloss"]].head(
 #       καὶ      καί  CONJ CCONJ    2532           and, even, also, namely
 ```
 
-The Robinson-to-UPOS mapping that fills `upos` is exposed if you want it directly:
+The Robinson-to-UPOS mapping function is importable directly:
 
 ```python
 from aegean.scripts.greek.nt import robinson_to_upos
@@ -225,149 +237,144 @@ robinson_to_upos("A-NUI")     # 'NUM'    (indeclinable numeral)
 
 ---
 
-## Source, licence, and provenance
+## Offline sample vs. full corpus
 
-The text is the **Nestle 1904** edition (*Novum Testamentum Graece*, ed. Eberhard
-Nestle). The per-token morphology, lemmas, and Strong's numbers come from the
-`biblicalhumanities/Nestle1904` digital edition and are dedicated to the public
-domain under **CC0**; the base Greek text is itself public domain. That CC0 status is
-what lets pyaegean both fetch the full corpus and bundle an offline sample without any
-attribution burden on you. The provenance travels with the corpus:
+pyaegean bundles **two annotated Nestle 1904 chapters** inside the package for
+offline use: **John 1** and **Philemon 1**.
 
 ```python
-corpus = greek.load_nt("John", ref="1")
-corpus.provenance.source
-# 'Nestle 1904 Greek NT — morphology/lemmas (biblicalhumanities/Nestle1904)'
-corpus.provenance.license
-# "CC0-1.0 (morphology, lemmas, Strong's); base Greek text public domain"
-corpus.provenance.data_version
-# 'nt-corpus-v1@713f28a3b7d4d66132f5aa809fa223fe79762e5d'
+from aegean.greek import bible
+
+bible.load_nt("John", ref="1", offline=True)        # bundled offline sample
+bible.load_nt("Philemon", ref="1", offline=True)    # bundled offline sample (Phlm 1)
 ```
 
-The full corpus is a sha256-pinned release asset, so the same request gives you the
-same text tomorrow. Set `PYAEGEAN_NT_CORPUS_URL` to point `load_nt` at a local or
-alternate copy. See [Data and Provenance](Data-and-Provenance) for how the cache,
-pins, and licences work across the whole toolkit.
-
----
-
-## Offline sample vs. the full corpus
-
-pyaegean bundles **two fully annotated chapters inside the package as an offline
-sample: John 1 and Philemon 1**. Those two reads work with no network at all:
+All other books, chapters, and whole-NT reads (`bible.load_nt()`) fetch the pinned
+`nt-corpus` asset to your local cache on first use and read offline afterward. If
+network access is unavailable and you request a book outside the bundled sample,
+`bible.load_nt()` raises a `ValueError` naming the offline books and the
+`PYAEGEAN_NT_CORPUS_URL` override:
 
 ```python
-greek.load_nt("John", ref="1")        # offline
-greek.load_nt("Philemon", ref="1")    # offline  (Phlm 1)
-```
-
-Everything else (the rest of John, all the other books, or the whole NT with
-`load_nt()`) is fetched to your local cache on first use and then read offline
-thereafter. When the full asset cannot be fetched and you ask for a book outside the
-bundled sample, the error says so plainly rather than failing obscurely:
-
-```python
-greek.load_nt("Romans")
+bible.load_nt("Romans")
 # ValueError: 'Romans' is not in the bundled offline sample (only John, Phlm is
 # available offline); the full 27-book corpus could not be fetched. Retry with
 # network access, or set PYAEGEAN_NT_CORPUS_URL to a local copy.
 ```
 
-Loaded corpora record which path was taken: the bundled sample notes in its
-provenance that it is the offline fallback.
+Loaded corpora record which path was used; offline fallback loads note that status
+in `corpus.provenance`.
 
 ---
 
-## Glossing without loading a book
+## Multi-edition comparison, witnesses, Strong's, LXX, and commentaries
 
-To look up a Koine word or Strong's number without loading a book, use the bundled
-Dodson lexicon (`greek.gloss_nt(...)` / `greek.lookup_nt(...)` /
-`greek.gloss_strongs(...)` or `greek.bible.strongs_entry(...)`), or from the CLI:
+`aegean.greek.bible` integrates six groups of Koine, Septuagint, and patristic
+resources, each fetched on demand to your local cache so the core package stays
+small:
 
-```bash
-aegean bible strongs "ἀγάπη"             # love
-aegean bible strongs G3056 --roots       # Strong's entry + recursive root tree
-```
+1. **Nine Greek New Testament editions and word-level variant diffs**
+   (`bible.nt_editions()`, `bible.load_nt(..., edition=...)`,
+   `bible.compare_editions()`; asset `nt-editions`, 3.29 MB gzip):
+   - `nestle1904` — Nestle 1904 (gold lemma, Robinson morphology, Strong's, UD UPOS; CC0)
+   - `sblgnt` — SBL Greek New Testament (Holmes 2010; CC BY 4.0 / MorphGNT CC BY-SA 3.0)
+   - `srgnt` — CNTR Statistical Restoration GNT (CC BY 4.0)
+   - `bhp` — CNTR Bunning Heuristic Prototype GNT (CC BY 4.0)
+   - `tisch` — Tischendorf 8th Critical Edition (1869–1872; Public Domain)
+   - `wh` — Westcott–Hort (1881, unaccented Unicode; Public Domain)
+   - `byz` — Robinson–Pierpont Byzantine Majority Textform (Public Domain)
+   - `antoniades` — Antoniades 1904 Patriarchal Edition (unaccented Unicode; Public Domain)
+   - `tr` — CNTR Textus Receptus / KJTR (CC BY 4.0)
 
----
+2. **Thirteen 2nd–5th century CE Greek NT manuscript witnesses**
+   (`bible.witnesses()`, `bible.load_witness()`, `bible.compare_witnesses()`,
+   `bible.parse_mes()`, `bible.expand_nomina_sacra()`; asset `nt-witnesses`, ~2.0 MB
+   gzip; CNTR Class 1, CC BY-SA 4.0):
+   - Major uncials: Sinaiticus (`01`/ℵ), Alexandrinus (`02`/A), Vaticanus (`03`/B),
+     Ephraemi (`04`/C), Bezae (`05`/D), Washingtonianus (`032`/W).
+   - Early papyri: `P45`, `P46`, `P47`, `P52` (Rylands), `P66`, `P72`, `P75`.
+   - Preserves diplomatic CNTR MES transcriptions (original vs. corrector hands,
+     lacunae, line breaks) and expands *nomina sacra* (`=θσ` → `Θεός`, `=ιυ` →
+     `Ἰησοῦ`, `=πνα` → `Πνεῦμα`).
 
-## Measuring a tagger on the NT
+3. **Extended Strong's Greek Lexicon and etymological root trees**
+   (`bible.use_strongs()`, `bible.strongs_entry()`, `bible.strongs_roots()`,
+   `bible.search_strongs()`; asset `strongs-greek`, ~1.5 MB gzip; STEPBible TBESG
+   CC BY 4.0 + OpenScriptures Strong's CC BY-SA):
+   - 11,142 entries covering the NT, Septuagint (LXX), Apocrypha, and Apostolic
+     Fathers, with recursive root chains and Hebrew equivalents.
+   - Falls back offline to the bundled Dodson lexicon (CC0) without downloading.
 
-Because the Nestle 1904 annotations are gold and independent of pyaegean's own
-predictions, the NT doubles as an out-of-domain benchmark. `greek.evaluate_on_nt()`
-(CLI `aegean greek eval nt`) scores the neural pipeline against Nestle 1904 gold
-lemmas and reconciled UPOS. The shipped models train on AGDT, Gorman, and Pedalion,
-not on the NT. Measured figures and lemma-convention details are in
-[Benchmarks](Benchmarks).
+4. **Septuagint (LXX) corpus, concordance, and Psalm numbering**
+   (`bible.lxx_books()`, `bible.load_lxx()`, `bible.search_lxx()`,
+   `bible.convert_psalm()`, `bible.psalm_mt_to_lxx()`, `bible.psalm_lxx_to_mt()`;
+   asset `lxx-corpus`, ~1.7 MB gzip; Swete 1887–1894 Public Domain base text via
+   First1KGreek CC BY-SA 4.0):
+   - Verse-indexed reading and Greek concordance search across all **55 Swete
+     Septuagint books** (29,248 verses, including LXX-plus sub-verses and
+     prologues).
+   - Ships with an offline Swete sample (`Gen 1:1–5` and LXX `Ps 22:1–6` [MT Psalm
+     23]), plus bidirectional LXX ↔ Masoretic Psalm conversion
+     (`bible.psalm_mt_to_lxx(23) == (22,)`).
 
-Evaluation requires the fetched, pinned **full 27-book corpus**. The bundled John 1
-and Philemon sample remains useful for offline reading and API examples, but it is too
-small to produce a representative benchmark; `evaluate_on_nt()` and `eval nt` stop
-with a fetch instruction instead of reporting a sample-derived score.
+5. **Greek patristic commentaries, word studies, and concordance search**
+   (`bible.patristic_commentaries()`, `bible.load_commentary()`,
+   `bible.commentary_excerpt()`, `bible.word_study()`, `bible.search_bible()`):
+   - **86 indexed commentary works** across 10 Church Fathers and traditions: **30
+     Greek NT *Catenae* volumes** (`tlg4102.*`), **41 Origen** commentaries and
+     homilies (`tlg2042.*`), **6 First1KGreek Fathers** (Cyril of Alexandria,
+     Methodius, Eusebius, Clement of Alexandria, *Vitae Prophetarum* / Hesychius),
+     and **9 *Patrologia Graeca* commentary volumes** (`PG071`, `PG073` Cyril on
+     John; `PG087_1` Procopius of Gaza; `PG101` Photius; `PG118` Oecumenius;
+     `PG123`–`PG126` Theophylact of Bulgaria).
+   - `bible.word_study()` combines lexicon lookup, root tree, NT occurrence counts,
+     and morphological distribution; `bible.search_bible()` searches NT text by
+     word, lemma, morphology, or Strong's number.
 
----
+6. **Related Early Christian and Second Temple corpora**
+   (`aegean library install patristic`):
+   - `aegean.load("apostolic-fathers")`: 15 Apostolic Fathers works (64,944 tokens:
+     1–2 Clement, Ignatius, Polycarp, Didache, Barnabas, Hermas, Diognetus).
+   - `aegean.load("pseudepigrapha")`: 44 Greek OT Pseudepigrapha works (171,306
+     tokens: 1 Enoch, Psalms of Solomon, Testaments of the 12 Patriarchs, Aristeas,
+     Sibylline Oracles, 3–4 Baruch, 3–4 Maccabees, and others).
+   - `aegean.load("patrologia")` or `bible.load_commentary("PG073")` (or
+     `aegean.scripts.greek.load_patrologia("PG073")`): 33 *Patrologia Graeca*
+     volumes (6.79M words, automated OCR).
 
-## Biblical & Koine Greek Specialist Suite (`aegean.greek.bible` & `aegean bible`)
-
-Beyond the single Nestle 1904 corpus, `aegean.greek.bible` (CLI `aegean bible …`, and key `b` in `aegean tui`) provides a Koine, Septuagint, and Patristic Greek workbench covering six scholarly resources — all fetched on demand into your local cache so the core wheel stays lightweight:
-
-1. **Nine Greek New Testament editions + word-level variant comparison** (`nt-editions`, 3.29 MB gzip):
-   - `nestle1904` (gold lemma, Robinson morphology, Strong's, UD UPOS; CC0)
-   - `sblgnt` (SBL Greek New Testament, Holmes 2010; CC BY 4.0 / MorphGNT CC BY-SA 3.0)
-   - `srgnt` (CNTR Statistical Restoration GNT; CC BY 4.0)
-   - `bhp` (Biblical Humanities Open GNT; CC BY 4.0)
-   - `tisch` (Tischendorf 8th Critical Edition, 1869–1872; Public Domain)
-   - `wh` (Westcott–Hort, 1881; Public Domain)
-   - `byz` (Robinson–Pierpont Byzantine Majority Textform; Public Domain)
-   - `antoniades` (1904 Patriarchal Text of Constantinople; Public Domain)
-   - `tr` (CNTR Textus Receptus / KJTR; CC BY 4.0)
-2. **Thirteen 2nd–5th century CE Greek NT manuscript witnesses** (`nt-witnesses`, ~2.0 MB gzip; CNTR Class 1, CC BY-SA 4.0):
-   - Major uncials: Sinaiticus (`01`/ℵ), Alexandrinus (`02`/A), Vaticanus (`03`/B), Ephraemi (`04`/C), Bezae (`05`/D), Washingtonianus (`032`/W).
-   - Landmark early papyri: `P45`, `P46`, `P47`, `P52` (Rylands), `P66`, `P72`, `P75`.
-   - Preserves diplomatic CNTR MES transcriptions (original vs. corrector hands, lacunae, line breaks) and expands *nomina sacra* (`=θσ` → `Θεός`, `=ιυ` → `Ἰησοῦ`, `=πνα` → `Πνεῦμα`).
-3. **Extended Strong's Greek Lexicon & etymological root trees** (`strongs-greek`, ~1.5 MB gzip; STEPBible TBESG CC BY 4.0 + OpenScriptures Strong's CC BY-SA):
-   - 11,142 entries covering NT, Septuagint (LXX), Apocrypha, and Apostolic Fathers, with recursive root chains and Hebrew equivalents. Falls back offline to the bundled Dodson lexicon (CC0).
-4. **Septuagint (LXX) corpus, concordance & Psalm numbering** (`lxx-corpus`, ~1.7 MB gzip; Swete 1887–1894 Public Domain base text via First1KGreek CC BY-SA 4.0):
-   - Fast verse-indexed access (`load_lxx()`) and Greek concordance search (`search_lxx()`) across all **55 Swete Septuagint books** (29,248 verses, including LXX-plus sub-verses and prologues), with an always-offline Swete sample (`Gen 1:1–5` and LXX `Ps 22:1–6` [MT Psalm 23]), plus bidirectional LXX ↔ Masoretic Psalm conversion (`convert_psalm(23)` / `psalm_mt_to_lxx(23) == (22,)`).
-5. **Greek Patristic Commentaries (86 indexed works across 10 Church Fathers / traditions), *Nomina Sacra* & Word Studies**:
-   - Friendly book-name reading and Greek search (`commentary_excerpt()`, `load_commentary()`) over **30 Greek NT *Catenae* volumes** (`tlg4102.*`), **41 Origen** commentaries/homilies (`tlg2042.*`), **6 First1KGreek Fathers** (Cyril of Alexandria, Methodius, Eusebius, Clement of Alexandria, *Vitae Prophetarum*/Hesychius), and **9 *Patrologia Graeca* commentary volumes** (`PG071`, `PG073` Cyril on John; `PG087_1` Procopius of Gaza; `PG101` Photius; `PG118` Oecumenius; `PG123`–`PG126` Theophylact of Bulgaria).
-   - Also includes sentence-level *nomina sacra* expansion (`expand_nomina_sacra()`), unified word-study reports (`word_study()`), and NT concordance search (`search_bible()`).
-6. **Related Early Christian & Second Temple Corpora** (`aegean library install patristic`):
-   - `aegean.load("apostolic-fathers")` — 15 Apostolic Fathers works (64,944 tokens; 1–2 Clement, Ignatius, Polycarp, Didache, Barnabas, Hermas, Diognetus).
-   - `aegean.load("pseudepigrapha")` — 44 Greek OT Pseudepigrapha works (171,306 tokens; 1 Enoch, Psalms of Solomon, Testaments of the 12 Patriarchs, Aristeas, Sibylline Oracles, 3–4 Baruch, 3–4 Maccabees, etc.).
-   - `aegean.load("patrologia")` / `load_patrologia("PG073")` — 33 *Patrologia Graeca* volumes (6.79M words, automated OCR).
+### Python examples
 
 ```python
-import aegean
+from aegean.greek import bible
 
-bib = aegean.greek.bible
-
-# Compare all 9 NT editions with word-level textual diffs
-cmp = bib.compare_editions("John", "1.18")
+# List all 9 NT editions and compare variants word by word
+editions = bible.nt_editions()
+cmp = bible.compare_editions("John", "1.18")
 for v in cmp.verses[0].variants:
     print(v.edition, v.kind, v.base_words, "->", v.edition_words)
 
-# Inspect 2nd-5th c. CE manuscript readings & expand nomina sacra
-for w in bib.compare_witnesses("John", "1.18")[0].witnesses:
+# Load a single manuscript witness or compare witnesses with expanded nomina sacra
+p66 = bible.load_witness("P66", "John", "1.1-5")
+for w in bible.compare_witnesses("John", "1.18")[0].witnesses:
     print(f"{w.siglum} ({w.alias}, {w.century}): {w.reading.readable}")
-print(bib.expand_nomina_sacra("εν αρχη ην ο λογος προς τον θν")[0])
+print(bible.expand_nomina_sacra("εν αρχη ην ο λογος προς τον θν")[0])
 
 # Extended Strong's lookup, root tree, and unified word study
-bib.use_strongs()
-study = bib.word_study("G3056")        # λόγος: gloss, roots, NT distribution, morphology
+bible.use_strongs()
+entry = bible.strongs_entry("G3056")       # StrongsEntry(lemma='λόγος', gloss='word', ...)
+roots = bible.strongs_roots("G3056")
+study = bible.word_study("G3056")          # gloss, roots, NT distribution, morphology
 print(study.total_occurrences, study.by_morph)
 
-# Septuagint (LXX) reading, concordance search, Psalm conversion & Patristic Commentaries
-bib.convert_psalm(23)                  # {'system': 'mt', 'input': 23, 'mt': [23], 'lxx': [22], ...}
-lxx_gen = bib.load_lxx("Gen", ref="1.1-5", offline=True)
-lxx_hits = bib.search_lxx("φῶς", offline=True)
-catena_excerpts = bib.commentary_excerpt("John", query="λόγος", limit=3)
-cyril_excerpts = bib.commentary_excerpt("John", work_id="PG073", query="λόγος", limit=3)
+# Septuagint reading, concordance search, Psalm conversion, and patristic commentaries
+bible.convert_psalm(23)                    # {'system': 'mt', 'input': 23, 'mt': [23], 'lxx': [22], ...}
+lxx_gen = bible.load_lxx("Gen", ref="1.1-5", offline=True)
+lxx_hits = bible.search_lxx("φῶς", offline=True)
+catena_excerpts = bible.commentary_excerpt("John", query="λόγος", limit=3)
+cyril_excerpts = bible.commentary_excerpt("John", work_id="PG073", query="λόγος", limit=3)
 ```
 
-From the command line — or inside the bare `aegean` / `aegean repl` shell and
-the TUI `:` console (with live inline prediction and dropdown completion for NT/LXX
-books, editions, and early manuscript sigla):
+### Shell examples
 
 ```bash
 aegean bible read John 1.1 --interlinear
@@ -375,6 +382,7 @@ aegean bible read Gen 1.1-5 --lxx --offline
 aegean bible compare John 1.18
 aegean bible witnesses John 18.37 --sigla P52,01,03
 aegean bible strongs G3056 --roots
+aegean bible strongs "ἀγάπη"
 aegean bible word-study ἀγάπη
 aegean bible search V-AAI --by morph --book John
 aegean bible search φῶς --lxx --offline
@@ -385,28 +393,81 @@ aegean bible commentary PG073 --search λόγος --limit 3
 aegean library install patristic
 ```
 
-In `aegean tui`, press **`b`** to open the dedicated **Biblical Greek study screen** (Interlinear Reader, 9-Edition Comparison, Early Manuscripts, Strong's Word Study, and inline LXX reader/search & Patristic Commentaries). The offline Koine & Septuagint tools are also exposed on the [MCP server](MCP) (`biblical_strongs`, `biblical_word_study`, `biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`, `biblical_lxx`).
+In `aegean tui`, press `b` to open the Biblical Greek study screen (Interlinear
+Reader, 9-Edition Comparison, Early Manuscripts, Strong's Word Study, LXX
+reader/search, and Patristic Commentaries). Nine biblical tools are also exposed
+on the [MCP server](MCP): `biblical_strongs`, `biblical_word_study`,
+`biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`, `biblical_lxx`,
+`biblical_compare_editions`, `biblical_witnesses`, and `biblical_commentary`.
+
+---
+
+## Source, licence, and provenance
+
+The default annotated NT text is **Nestle 1904** (*Novum Testamentum Graece*, ed.
+Eberhard Nestle). Per-token morphology, lemmas, and Strong's numbers come from
+`biblicalhumanities/Nestle1904` under **CC0**; the base Greek text is public
+domain. Because of that CC0 dedication, pyaegean can both redistribute the full
+corpus asset and bundle the two-chapter offline sample without downstream
+attribution requirements. Provenance travels on every loaded `Corpus`:
+
+```python
+from aegean.greek import bible
+
+corpus = bible.load_nt("John", ref="1")
+corpus.provenance.source
+# 'Nestle 1904 Greek NT — morphology/lemmas (biblicalhumanities/Nestle1904)'
+corpus.provenance.license
+# "CC0-1.0 (morphology, lemmas, Strong's); base Greek text public domain"
+corpus.provenance.data_version
+# 'nt-corpus-v1@713f28a3b7d4d66132f5aa809fa223fe79762e5d'
+```
+
+The full corpus is a SHA-256-pinned release asset. Set `PYAEGEAN_NT_CORPUS_URL` to
+point `bible.load_nt()` at a local or alternate copy. See
+[Data and Provenance](Data-and-Provenance) for caches, pins, and licences across
+all datasets.
+
+---
+
+## Measuring a tagger on the NT
+
+Because the Nestle 1904 annotations are gold and independent of pyaegean's
+predictions, the NT also functions as an out-of-domain benchmark.
+`greek.evaluate_on_nt()` (CLI: `aegean greek eval nt`) scores the neural pipeline
+against Nestle 1904 gold lemmas and reconciled UPOS. The shipped models train on
+AGDT, Gorman, and Pedalion, not on the NT. Measured figures and lemma-convention
+notes are in [Benchmarks](Benchmarks).
+
+Evaluation requires the fetched, pinned **full 27-book corpus**. The bundled John 1
+and Philemon sample works for offline reading and examples, but it is too small
+for a benchmark; `evaluate_on_nt()` and `eval nt` stop with a fetch instruction
+if only the offline sample is present.
 
 ---
 
 ## Notes and limitations
 
-- **Nestle 1904 annotations are gold and fixed** (Robinson morphology), not pyaegean's own
-  prediction, which is what makes the corpus usable as a benchmark.
-- **One `Document` per chapter.** A whole-book load is a corpus of chapters; a `ref`
-  range trims the verses within the affected chapters.
-- **A `ref` needs a book.** You cannot address a verse across all 27 books at once.
-- **Septuagint (LXX) and patristic commentaries** load from `lxx-corpus`, First1KGreek, or `patrologia-graeca-corpus` rather than the Nestle 1904 NT asset, so they do not carry Nestle 1904 gold Robinson tags (use `aegean.greek.pipeline()` or `annotate_corpus()` to analyze them). *Patrologia Graeca* (`PG*`) volumes are automated OCR transcriptions (`edition_fidelity="ocr"`).
+- **Nestle 1904 annotations are gold and fixed** (Robinson morphology), independent
+  of pyaegean's taggers, which makes the corpus usable as an evaluation benchmark.
+- **One `Document` per chapter.** Loading a whole book returns one document per
+  chapter; passing `ref` filters the verses within the selected chapters.
+- **A `ref` requires a `book`.** Verse ranges cannot span across all 27 books at
+  once.
+- **Unannotated editions, LXX, and commentaries.** The eight non-Nestle NT
+  editions (`nt-editions`), the Septuagint (`lxx-corpus`), and patristic
+  commentaries (First1KGreek and `patrologia-graeca-corpus`) do not carry Nestle
+  1904 Robinson tags; run `greek.pipeline()` or `greek.annotate_corpus()` to
+  analyze them. *Patrologia Graeca* (`PG*`) volumes are automated OCR
+  transcriptions (`edition_fidelity="ocr"`).
 
 ---
 
 ## See also
 
-- [Greek Works and Books](Greek-Works-and-Books): the classical literary corpus and
-  the `load_work` / CTS-id path, alongside this NT section
-- [Greek NLP](Greek-NLP): syllabify, scan, tag, lemmatize, and parse a loaded corpus,
-  plus the Dodson glossing details
+- [CLI: Biblical & Koine Greek](CLI-Bible): command-by-command reference for `aegean bible`
+- [Greek Works and Books](Greek-Works-and-Books): classical literary works (`greek.load_work` and CTS IDs)
+- [Greek NLP](Greek-NLP): syllabification, scansion, tagging, lemmatization, and parsing
 - [Data and Provenance](Data-and-Provenance): caches, pinned commits, and licences
-- [Getting Started](Getting-Started) and the [Tutorial](Tutorial): first steps
-- [Limitations](Limitations): overall scope and known gaps
-
+- [Getting Started](Getting-Started) and the [Tutorial](Tutorial): introductory guides
+- [Limitations](Limitations): scope and known gaps

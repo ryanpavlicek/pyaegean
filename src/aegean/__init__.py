@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 # Keep top-level import independent of importlib.metadata's comparatively large
 # discovery stack. The release gate pins this value to pyproject.toml.
-__version__ = "0.71.0"
+__version__ = "0.72.0"
 
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from ._log import set_verbosity  # opt-in library logging (off by default; stdlib logging)
@@ -44,14 +44,26 @@ from .core import (
 )
 
 if TYPE_CHECKING:
-    from . import ai, analysis, cache, geo, greek, io, library, search, translate, viz
+    from . import ai, analysis, bundle, cache, geo, greek, io, library, search, translate, viz
     from .core.diagnose import DiagnoseReport, diagnose
     from .core.resolve import open_corpus as open
     from .core.resolve import read_corpus
 
 
 _LAZY_SUBMODULES: frozenset[str] = frozenset(
-    {"ai", "analysis", "cache", "geo", "greek", "io", "library", "search", "translate", "viz"}
+    {
+        "ai",
+        "analysis",
+        "bundle",
+        "cache",
+        "geo",
+        "greek",
+        "io",
+        "library",
+        "search",
+        "translate",
+        "viz",
+    }
 )
 _LAZY_ATTRS: dict[str, tuple[str, str]] = {
     "open": (".core.resolve", "open_corpus"),
@@ -140,6 +152,7 @@ __all__ = [
     "registered_scripts",
     "set_verbosity",
     "analysis",
+    "bundle",
     "cache",
     "geo",
     "greek",

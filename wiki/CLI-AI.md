@@ -1,22 +1,21 @@
 # CLI: AI, MCP & Troubleshooting
 
-Reference for key-gated AI commands (`aegean ai …`), the MCP server (`aegean-mcp`), common CLI
-recipes, and troubleshooting.
+Reference for key-gated AI commands (`aegean ai …`), the MCP server
+(`aegean-mcp`), common CLI troubleshooting, and shell recipes.
 
-Back to [CLI Overview](CLI) · [CLI Cheatsheet](CLI-Cheatsheet) · [CLI: Corpora, Analysis & Data](CLI-Corpora) · [CLI: Greek NLP & Review](CLI-Greek) · [CLI: Biblical & Koine Greek](CLI-Bible)
+Back to [CLI Overview](CLI) · [CLI Cheatsheet](CLI-Cheatsheet) · [CLI: Corpora, Library, Analysis & Data](CLI-Corpora) · [CLI: Greek NLP & Review](CLI-Greek) · [CLI: Biblical & Koine Greek](CLI-Bible)
 
 ---
 
 ## AI — `aegean ai …` (exploratory, key-gated)
 
-The generative layer. **Every result here is exploratory**: a labeled model
-hypothesis carrying its grounding evidence, never a citable fact, and never a
-"decipherment." It needs a provider SDK (an extra such as
-`pip install "pyaegean[anthropic]"`) and, for a hosted provider, that provider's
-API key in your environment; the `local` provider instead points at a running local
-server (Ollama, LM Studio, llama.cpp) and needs no key. Without a key, a
-hosted-provider command exits `1` with a clear message: it never
-silently calls out.
+Every output from `aegean ai` is **exploratory**: a labeled model hypothesis
+paired with its grounding evidence, never a citable fact or decipherment. Each
+command requires a provider SDK extra (such as
+`pip install "pyaegean[anthropic]"`) and, for hosted providers, that provider's
+API key in the environment. The `local` provider connects to a local server
+(Ollama, LM Studio, llama.cpp) and requires no key. Without a key, hosted
+commands exit `1` with an error message and make no network request.
 
 ```bash
 aegean ai providers
@@ -28,74 +27,77 @@ aegean ai providers
 # openrouter
 ```
 
-The commands (each takes `--provider` / `--model`, and most take `--trace`):
+Commands (all take `--provider` and `--model`; most take `--trace`):
 
 ```bash
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"                      # grounded hybrid translation
-aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --mode full          # + rare-word glosses in the grounding
+aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --mode full          # + rare-word glosses in grounding
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --greek-backend neural --verify --trace
-aegean ai translate "KU-RO 130" --script lineara              # exploratory (undeciphered!)
+aegean ai translate "KU-RO 130" --script lineara              # exploratory (undeciphered)
 aegean ai gloss "μῆνιν ἄειδε θεά"                             # interlinear word-by-word gloss
-aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt          # short, grounded summary
-aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara     # cautious decipherment hypotheses
-aegean ai ask "What is KU-RO?" --corpus lineara --trace       # answer strictly from grounding
-aegean ai extract "OLE S 1" --fields commodity,amount         # structured JSON, ready for jq
+aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt          # grounded summary
+aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara     # exploratory decipherment hypotheses
+aegean ai ask "What is KU-RO?" --corpus lineara --trace       # answer from supplied grounding
+aegean ai extract "OLE S 1" --fields commodity,amount         # structured JSON for jq
 aegean ai eval --provider anthropic                           # grounding-fidelity eval
 ```
 
-`--corpus NAME` grounds the answer on that corpus's frequent words. `--trace`
-prints the grounding provenance under the answer: the local corpus / lexicon /
-analysis facts the model was given, grouped by source, so you can audit exactly
-what it was (and wasn't) told. `extract` always prints JSON, so it pipes straight
-into `jq`. For Greek, `translate` grounds with local, provisional **morphology** by default
-(`--mode morphology`): lemma, part of speech, voice, case roles, and the clause skeleton,
-with rare words flagged but no auto-selected dictionary senses. `--mode full` adds concise,
-rarity-gated glosses from the available dictionary cascade; `--mode lemma` is the
-legacy lemma+LSJ grounding, and `--mode none` sends the
-text ungrounded. Grammatical predictions and dictionary matches can be wrong in
-context. `--verify` is optional: it generates an ungrounded draft, then asks the
-same provider to check it against full grounding in a second call. The analysis
-cannot bias the initial draft, but a wrong analysis can mislead the check. This
-remains model output, with no guarantee of improvement or independent scholarly
+`--corpus NAME` grounds the prompt on that corpus's frequent words. `--trace`
+prints the grounding provenance beneath the answer, grouped by source (local
+corpus, lexicon, or analysis facts). `extract` always outputs JSON for piping to
+`jq`.
+
+For Greek, `translate` grounds on local, provisional **morphology** by default
+(`--mode morphology`): lemma, part of speech, voice, case roles, and clause
+structure, with rare words flagged and no auto-selected dictionary senses.
+`--mode full` adds concise, rarity-gated glosses from active dictionaries;
+`--mode lemma` selects legacy lemma+LSJ grounding; `--mode none` sends the text
+ungrounded. Grammatical predictions and dictionary matches can be wrong in
+context.
+
+`--verify` runs a two-call check: an ungrounded draft first, then a second call
+checking that draft against full grounding. Local analysis cannot bias the
+initial draft, though an analysis error can mislead the check. Output remains
+model-generated and carries no guarantee of accuracy or independent scholarly
 verification.
 
-`--check-policy clauses` with Greek `--verify` requests explicit checks of roles,
-negation, qualifications and speech acts. JSON and traces retain exact quotations,
-model findings and local literal alignment/coverage issues; alignment does not
-verify meaning. `--lexical-evidence contextual` selects bounded excerpts and
-alternative senses from already active dictionaries, with provenance and omissions.
-It requires Greek full/lemma mode or `--verify`, with glosses enabled. The defaults
-remain `--check-policy standard --lexical-evidence concise`.
-Use repeatable `--dictionary ID` options to activate hosted dictionaries for this
-command, for example `--dictionary middle-liddell --dictionary cunliffe`. Explicit
-activation may fetch the cache on first use; grounding itself does not activate it.
-Pass `--source-context TEXT` or `--source-context-file PATH` to supply surrounding lines
-separately from the target passage, and `--max-tokens N` (default `2048`) to set the
-per-call output token allowance.
+With Greek `--verify`, `--check-policy clauses` requests checks on roles,
+negation, qualifications, and speech acts. JSON and traces preserve exact
+quotations, model findings, and local literal alignment/coverage gaps; alignment
+does not verify meaning. `--lexical-evidence contextual` supplies bounded
+excerpts and alternative senses from active dictionaries with provenance and
+omissions (requires Greek `full`/`lemma` mode or `--verify` with glosses
+enabled). Defaults remain `--check-policy standard` and
+`--lexical-evidence concise`. Pass repeatable `--dictionary ID` flags (for
+example `--dictionary middle-liddell --dictionary cunliffe`) to activate hosted
+dictionaries for that command (fetching their cache on first use). Pass
+`--source-context TEXT` or `--source-context-file PATH` to supply surrounding
+lines separately from the target passage, and `--max-tokens N` (default `2048`)
+to set the per-call output token limit.
 
-`--greek-backend default|baseline|neural` makes the Greek analysis owner explicit.
-With `neural`, add `--greek-variant default|fast|compact|balanced` to select its runtime
-artifact. Only `default` is currently available; a reserved label fails without fallback and
-before the translation provider is created.
-`default` preserves the module-level facade, `baseline` creates an isolated
-zero-dependency analyzer, and `neural` creates an isolated joint-model analyzer for that
-run. The complete runtime configuration appears in `--trace` and JSON provenance;
-the provider receives a compact backend, availability, and coverage summary as
-evidence. `--greek-long-input strict|partial|windowed` controls neural long-input
-handling separately; the default is strict. `--grounding-failure best-effort|strict`
-controls required local analysis failures: best-effort keeps available evidence and records the degradation;
-strict stops before any provider call. Optional dictionaries and rarity data remain
-optional. Because morphology/full request a dependency analysis, an isolated baseline is
-normally paired with best-effort; use neural for a strict morphology/parse contract.
+`--greek-backend default|baseline|neural` selects the Greek analysis backend:
+`default` uses the module-level facade, `baseline` creates an isolated
+zero-dependency analyzer, and `neural` creates an isolated joint-model analyzer
+for that run. With `neural`, `--greek-variant default|fast|compact|balanced`
+selects the runtime artifact; only `default` is currently available, and
+reserved labels exit with an error before contacting the translation provider.
+Full runtime configuration appears in `--trace` and JSON provenance; the prompt
+receives a compact backend, availability, and coverage summary.
+`--greek-long-input strict|partial|windowed` (default `strict`) controls neural
+long-input handling. `--grounding-failure best-effort|strict` controls required
+local analysis failures: `best-effort` retains available evidence and records
+degradation, while `strict` stops before any provider call. Optional
+dictionaries and rarity data remain optional. Because `morphology` and `full`
+request dependency analysis, pair an isolated `baseline` run with `best-effort`,
+or use `neural` for a strict morphology/parse contract.
 
-#### Reading styles and the checking audit
+### Reading styles and audit output
 
-`--style annotated` (default) shows the final translation with model-reported
-uncertainty and change notes. `--style concise` keeps the reading short and shows
-how many notes and changes were reported; their details remain in JSON and
-`--trace`. The provider's wording and notes vary by run and model. The default
-`--provider` is `anthropic`; each hosted provider reads its own key from the
-environment, and without one the command stops on one line:
+`--style annotated` (default) displays the translation alongside model-reported
+uncertainty and change notes. `--style concise` prints the translation and the
+note/change counts while retaining full details in JSON and `--trace`. Wording
+and notes vary by model and run. The default `--provider` is `anthropic`;
+without its API key, the command exits `1` on stderr:
 
 ```bash
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"
@@ -103,41 +105,36 @@ aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"
 ```
 
 ```bash
-# Requires the provider extra and its key:
+# Requires the provider extra and its API key:
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --provider openrouter --style annotated
 aegean ai translate "μῆνιν ἄειδε θεά" --provider openrouter --mode full --style concise
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --provider openrouter --verify --style concise --trace
 ```
 
-For a structured response, `text` contains the translation only, while `data`
-retains `translation`, `uncertainties`, and `changes`. Each reported change has
-`before`, `after`, `reason`, and `evidence`; those are model reports, not validated
-scholarship. `raw_response` keeps the exact response and `format_status` describes
-its shape, not linguistic accuracy. A malformed or incomplete response remains
-verbatim with an explicit warning that separate audit information is unavailable;
-the toolkit makes no extra format-repair calls.
+For structured responses, `text` holds the translation alone, while `data` keeps
+`translation`, `uncertainties`, and `changes` (`before`, `after`, `reason`,
+`evidence`, all model-reported). `raw_response` preserves the exact response and
+`format_status` reports its schema status, not linguistic accuracy. Malformed or
+incomplete responses are kept verbatim with an explicit warning that structured
+audit fields are unavailable; no extra format-repair calls are made.
 
-With `--verify`, the original result, notes, and provenance remain in `draft`.
-Omitting a draft uncertainty from the final notes does not establish its
-resolution. For consistent structured draft/final pairs, `text_changed` compares
-exact wording, and `change_report_status` flags a text difference the model did
-not report. This comparison assesses neither meaning nor quality. Raw or
-inconsistent drafts are `not_comparable`, rather than treating removed commentary
-as a changed translation.
+With `--verify`, `draft` stores the initial result, notes, and provenance.
+Omitting a draft uncertainty from final notes does not mean it was resolved. For
+consistent structured draft/final pairs, `text_changed` compares exact wording
+and `change_report_status` flags unreported text differences without assessing
+meaning or quality. Raw or inconsistent drafts are marked `not_comparable`.
 
-Baseline coverage and degraded grounding are reported explicitly. Activating
-neural analysis gives contextual predictions and a dependency parse, without
-making either authoritative.
+Baseline coverage and degraded grounding are recorded explicitly. Activating
+neural analysis provides contextual predictions and a dependency parse, though
+neither is authoritative.
 
-**Save the output, label and all.** `translate`, `gloss`, `summarize`, `hypotheses`,
-`ask`, and `extract` take `--output/-o`. A `.json` file carries the text plus its provenance
-and grounding evidence. Translation JSON also keeps all audit fields and the
-checking draft; translation `.txt` files append the full audit trace to the
-labeled text, including when concise style is selected. Other `.txt` results
-contain labeled text, plus the trace when `--trace` is requested. The exploratory label
-stays attached on disk: a saved result never loses the "this is a hypothesis, not
-a finding" framing. (`ai eval` takes `--output/-o` too, saving its case table as
-`.json`, `.csv`, or `.txt`.)
+**Saving outputs with provenance.** `translate`, `gloss`, `summarize`,
+`hypotheses`, `ask`, and `extract` accept `--output/-o`. `.json` files store the
+text, provenance, grounding evidence, and (for `translate`) all audit fields and
+checking drafts. Translation `.txt` files append the full audit trace to the
+labeled text even under `--style concise`; other `.txt` exports append the trace
+when `--trace` is passed. Saved files retain the exploratory label on disk.
+(`ai eval -o` writes `.json`, `.csv`, or `.txt`.)
 
 ```bash
 aegean ai translate "μῆνιν ἄειδε θεά" --verify --style concise -o translation.json
@@ -145,42 +142,40 @@ aegean ai gloss "μῆνιν ἄειδε θεά" -o gloss.json        # text + p
 aegean ai ask "What is KU-RO?" --corpus lineara -o answer.txt
 ```
 
-In Python the same lives on `ExploratoryResult`: `.to_dict()`, `.to_json(path)`,
-and `ExploratoryResult.from_dict(data)` round-trip a result through disk with its
-label and grounding intact. The full design and the meaning of "grounded" are on
-[AI Layer](AI-Layer); the hard limits are on [Limitations](Limitations).
+In Python, `ExploratoryResult.to_dict()`, `.to_json(path)`, and
+`ExploratoryResult.from_dict(data)` round-trip results with label and grounding
+intact. See [AI Layer](AI-Layer) for the grounding design and
+[Limitations](Limitations) for scope boundaries.
 
 ---
 
 ## MCP server — `aegean-mcp`
 
-> Full reference: the [MCP server](MCP) page. This section is a quick tour.
+> Full reference: [MCP](MCP).
 
-A separate console script (the `[mcp]` extra) that exposes the toolkit to AI
-agents (Claude Code and other MCP clients) over stdio, so an agent can use
-pyaegean without writing Python.
+`aegean-mcp` (installed by the `[mcp]` extra) exposes pyaegean's read and
+analysis surface to AI agents (Claude Code and other MCP clients) over stdio.
 
 ```bash
 pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It exposes **23 read/analysis tools** across corpora, Greek NLP, and Biblical &
-Koine Greek (see [MCP server](MCP) for the full tool reference). Corpora and
-works are addressed by registry name or catalogue work id only (never a
-filesystem path), and a domain miss returns a structured error with a
-did-you-mean hint.
+It exposes **29 read/analysis tools** across corpora, unified library discovery,
+Greek NLP, and Biblical, Septuagint, and Patristic Greek (see [MCP](MCP) for the
+complete tool table). Corpora and works are addressed by registry name or
+catalogue work id only, never by filesystem path, and domain misses return a
+structured JSON error with a did-you-mean hint.
 
 ---
 
-## When something goes wrong
+## Troubleshooting
 
-Three error shapes cover most first-week trouble. All of them are one line on
-stderr with exit code `1`, and each names its own fix. (The messages below are
-real runs.)
+Three error shapes account for most CLI failures. Each prints one line on stderr
+with exit code `1` and names the fix.
 
-**1. A name pyaegean does not recognise.** Corpus ids, dataset names, and
-query fields all answer a typo with the nearest real name:
+**1. Unknown name.** Corpus ids, dataset names, and query fields suggest the
+nearest valid name:
 
 ```bash
 aegean info linera
@@ -190,26 +185,23 @@ aegean data fetch grc-jiont
 # aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 39)
 ```
 
-The fix is in the message: take the suggestion, or list the valid names
-(`aegean data list`, `aegean query CORPUS --fields`).
+Use the suggested name or inspect valid names with `aegean data list` or
+`aegean query CORPUS --fields`.
 
-**2. A missing optional extra.** The zero-dependency core is a supported
-install, so features with heavier needs live behind extras, and reaching one
-you have not installed stops with the exact `pip install` line:
+**2. Missing optional extra.** Features with third-party dependencies live
+behind extras and print the exact `pip install` command when missing:
 
 ```bash
 aegean tui
 # aegean: the TUI needs the [tui] extra — install it with: pip install 'pyaegean[tui]'
 ```
 
-`plot` (`[viz]`), `export -f parquet` (`[parquet]`), the neural flags
-(`[neural]`), and the AI providers (`[anthropic]` and friends) all guard the
-same way. Run the printed install line and re-run your command;
-`aegean doctor` lists every extra's state with its install line.
+`plot` (`[viz]`), `export -f parquet` (`[parquet]`), neural flags (`[neural]`),
+and AI providers (`[anthropic]`, `[openai]`, `[gemini]`) behave the same way.
+`aegean doctor` lists every extra's status and install command.
 
-**3. Data (or a key) that is not on this machine.** Most fetched corpora
-download themselves on first use, so the messages you actually see are about
-the store's state, or a missing credential, each naming the next step:
+**3. Missing local data or API key.** Commands that expect cached data or a
+credential state the exact remediation:
 
 ```bash
 aegean data remove linearb-corpus
@@ -219,17 +211,17 @@ aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"
 # aegean: no API key for 'anthropic'; set $ANTHROPIC_API_KEY or pass api_key=
 ```
 
-One dataset is special: `linearb-corpus` has no generic download, so
-`aegean data fetch linearb` prints a short option list instead of fetching
-(fetch DAMOS, browse LiBER online, or import your own licensed export). If a
-download was interrupted, `aegean doctor` spots the leftover partial file and
-names the `aegean data remove` that reclaims it.
+`linearb-corpus` has no default remote source: `aegean data fetch linearb`
+prints the available options (fetch DAMOS, browse LiBER online, or import a
+licensed export). If an interrupted download leaves a partial file,
+`aegean doctor` flags it and prints the `aegean data remove` command to clear
+it.
 
 ---
 
 ## Recipes
 
-Reconcile every Linear A account and keep only the failures:
+Reconcile Linear A accounts and filter for discrepancies:
 
 ```bash
 aegean balance lineara --json | jq '[.[] | select(.balances | not)]' > discrepancies.json
@@ -241,21 +233,21 @@ Lemmatize a file of Greek, one lemma per line:
 cat chapter.txt | aegean greek lemmatize - --json | jq -r '.[].lemma'
 ```
 
-Scan a poem line by line, keeping only the lines that scan:
+Scan a poem line by line, printing only lines that scan:
 
 ```bash
 while read -r line; do aegean greek scan "$line" --json 2>/dev/null | jq -r .pattern; done < poem.txt
 ```
 
-Map a word's distribution and cite the subset you used:
+Map find-sites and cite the filtered subset:
 
 ```bash
 aegean geo lineara --output sites.geojson
 aegean cite lineara --site "Zakros" --style bibtex >> paper.bib
 ```
 
-Build one searchable database of all of Homer straight from work ids, then keep
-growing it: no Python anywhere:
+Build one searchable SQLite database from Greek work ids and append another work
+later:
 
 ```bash
 aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db     # Iliad + Odyssey (see Greek Works and Books for ids)
@@ -263,34 +255,32 @@ aegean db add tlg0011.tlg002 -o homer.db                     # add Sophocles' An
 aegean db search homer.db μῆνιν --limit 3
 ```
 
-Save a query subset once, reuse it everywhere:
+Save a query subset once and reuse it in downstream commands:
 
 ```bash
 aegean query lineara --where "site-is=Zakros" -o zakros.json
 aegean keyness zakros.json --reference lineara --top 5 -o zakros-keyness.csv
 ```
 
-More worked pipelines are on [Recipes](Recipes).
+More pipelines appear on [Recipes](Recipes).
 
 ---
 
 ## Notes and limits
 
-- **The AI layer is exploratory.** Translations, glosses, and "hypotheses" for
-  undeciphered material are labeled model output with grounding, not findings. The
+- **The AI layer is exploratory.** Translations, glosses, and hypotheses for
+  undeciphered material are labeled model output with grounding, not findings.
   Linear A and Cypro-Minoan remain undeciphered. See [Limitations](Limitations).
-- **Heavy commands download on first use.** Anything marked heavy here
-  (`--neural`, `greek work`, `greek eval`, `gloss`, the fetched corpora) pulls
-  data to the cache the first time, with a note on stderr; afterwards it's offline.
-  Pre-fetch with `aegean data fetch` before going offline.
-- **`--json` is the contract; the table view is for humans.** Don't parse the
-  rich tables: pass `--json` and use `jq`. `--limit`/`--top` cap the JSON lists
-  too (`0` lifts the cap); where a payload carries totals (`matched`), they stay
-  untruncated.
-- **Metre and accuracy are bounded.** Lyric metres beyond the fixed aeolic
-  templates are out of scope, and the trainable backends have measured ceilings:
-  both documented on [Meters](Meters) and
-  [Limitations](Limitations#measured-accuracy-boundaries).
+- **Heavy commands download on first use.** `--neural`, `greek work`,
+  `greek eval`, `gloss`, and hosted corpora fetch data into the local cache on
+  first use (with a stderr notice) and run offline afterward. Pre-fetch with
+  `aegean library install` or `aegean data fetch` before going offline.
+- **`--json` is the scripting contract.** Parse `--json` output with `jq`, not
+  formatted terminal tables. `--limit`/`--top` cap JSON lists too (`0` lifts the
+  cap); payloads carrying totals (`matched`) keep the untruncated total.
+- **Meter and accuracy bounds.** Lyric meters beyond the fixed Aeolic templates
+  are out of scope, and trainable backends have measured accuracy limits: see
+  [Meters](Meters) and [Limitations](Limitations#measured-accuracy-boundaries).
 
-For the terse one-page index of every command and flag, see the
+For the one-page index of every command and flag, see
 [CLI Cheatsheet](CLI-Cheatsheet).

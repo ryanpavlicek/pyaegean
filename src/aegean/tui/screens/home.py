@@ -14,13 +14,13 @@ __all__ = ["HomeScreen"]
 
 _KEYS = (
     "keys:  c corpus browser   g Greek workbench   b Biblical Greek   l library manager   "
-    "w works   d data/env   : console   t theme   Esc back   ? help   ctrl+p commands   q quit"
+    "r review   w works   d data/env   : console   t theme   Esc back   ? help   ctrl+p commands   q quit"
 )
 
 _INTRO = (
     "pyaegean — Ancient Greek and the Aegean syllabic scripts. Select a corpus below "
     "(↑/↓ then Enter) to browse documents, or press l (library manager — download/remove "
-    "corpora, packs, works, and models), b (Biblical Greek), g (Greek workbench), or : (console)."
+    "corpora, packs, works, and models), b (Biblical Greek), g (Greek workbench), r (annotation review), or : (console)."
 )
 
 _CORPORA_TITLE = "Corpora  —  ↑/↓ to choose, Enter to browse"

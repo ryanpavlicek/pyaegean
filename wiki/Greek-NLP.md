@@ -1,48 +1,43 @@
 # Greek NLP
 
-`aegean.greek` is the Ancient Greek NLP pipeline: a chain of small, independent
-steps that take you from raw text to syllables, metre, morphology, parses, and
-glosses. You would reach for it to type Greek without a Greek keyboard (Beta
-Code), break words into syllables, scan a line of verse, tag and lemmatize a
-passage, look words up in a dictionary, or load and analyse a real Greek work or
-the Greek New Testament.
+`aegean.greek` provides pyaegean's Ancient Greek NLP pipeline: Beta Code
+conversion, Unicode normalization, tokenization, syllabification, accentuation,
+metrical scansion, phonology, POS tagging, morphology, lemmatization, dependency
+parsing, dictionary glossing, and work loaders.
 
-Each stage is a plain function you can call on its own, and you can chain them
-into your own pipeline, **or** call `pipeline()` once and get every field at
-once. The core runs **fully offline with no API key and zero third-party
-dependencies**; the opt-in treebank, LSJ, tagger, lemmatizer, parser, and
-neural-pipeline backends fetch their data over the network on first use, then
-cache it.
+Every stage is an independent function that can be called directly or chained
+through `pipeline()`. The core package runs offline with zero third-party
+dependencies and no API key. Opt-in treebank, lexicon, pure-Python ML, and
+neural backends fetch their data assets to your local cache on first use.
 
-Everything below is available **two ways**: a Python function and an
-`aegean greek …` CLI subcommand. Every example here is real, runnable output.
-Import the module once for the Python side:
+Each operation has both a Python API (`from aegean import greek`) and a matching
+CLI subcommand (`aegean greek …`, installed via `pip install "pyaegean[cli]"`),
+with `--json` available on every CLI command. Biblical and Koine Greek corpus
+and lexicon tools live under `aegean.greek.bible` and `aegean bible …` (see
+[New Testament](New-Testament)).
 
 ```python
 from aegean import greek
 ```
 
-The supported facade signatures and generated docstrings are collected in the
-[Greek API reference](https://pyaegean.xyz/api/greek/); this page explains the
-behavioral choices and source-evidence contracts around them.
+Generated facade signatures and docstrings are published in the
+[Greek API reference](https://pyaegean.xyz/api/greek/); this page covers
+behavioral contracts, configuration, and source-evidence semantics. See
+[CLI](CLI) for shell tooling, [Getting Started](Getting-Started) for first
+steps, [Meters](Meters) for metrical scansion, and
+[Greek Works and Books](Greek-Works-and-Books) for corpus loaders.
 
-The CLI lives behind one extra (`pip install "pyaegean[cli]"`) and every command
-takes `--json` for machine-readable output. See the [CLI](CLI) page for the rest
-of the shell tooling, [Getting Started](Getting-Started) if you are new to
-Python, [Meters](Meters) for the metrical scansion in depth, and
-[Greek Works and Books](Greek-Works-and-Books) for the corpus loaders.
+> **Scope and benchmarks.** The zero-dependency core prioritizes portability,
+> fast import time, reproducible evaluation, metrical scansion, and corpus I/O.
+> The opt-in **[neural pipeline](#the-neural-pipeline-opt-in)**
+> (`use_neural_pipeline`, `[neural]` extra) is evaluated end-to-end on UD
+> Ancient Greek (Perseus); full protocols, measured rows, comparisons, and
+> caveats live in [Benchmarks](Benchmarks).
 
-> **Where this fits.** The zero-dependency core optimizes for portability, an instant
-> import, transparent leakage-free evaluation, metrical scansion, and a scriptable data
-> layer. The opt-in **[neural pipeline](#the-neural-pipeline-opt-in)**
-> (`use_neural_pipeline`, the `[neural]` extra) is measured end-to-end on the UD Ancient
-> Greek (Perseus) benchmark; the full protocol, numbers, comparison rows, and limitations live in
-> [Benchmarks](Benchmarks).
+## Pipeline stages
 
-## The stages at a glance
-
-Every stage is callable on its own; the CLI mirrors each one. The opt-in
-backends layer in extra accuracy without changing the call you make.
+Each stage is callable independently and mirrored in the CLI. Opt-in backends
+upgrade accuracy behind the same function calls.
 
 | Stage | Python | CLI | Network? |
 | --- | --- | --- | --- |
@@ -65,27 +60,27 @@ backends layer in extra accuracy without changing the call you make.
 | LSJ gloss | `gloss` / `lookup` | `aegean greek gloss` | yes (first use) |
 | Dialect / register | `usage` | `aegean greek usage` | yes (LSJ) |
 | Terminology rarity | `terminology_rarity` | `aegean greek rarity` | reference corpus |
-| Koine (NT) gloss | `gloss_nt` / `bible.strongs_entry` | `aegean bible strongs` | no (bundled) |
+| Koine / Strong's gloss | `bible.strongs_entry` / `bible.word_study` | `aegean bible strongs` | no (bundled Dodson; extended on demand) |
 | One-call pipeline | `pipeline` | `aegean greek pipeline` | opt-in backends |
-| Load a real work | `load_work` | `aegean greek work` | yes (first use) |
-| Load the Greek NT | `load_nt` / `bible.load_nt` | `aegean bible read` | no for the bundled sample; yes for the rest |
-| Discover works / books | `popular_works` / `catalog` / `nt_books` | `aegean greek works` / `catalog` / `aegean bible books` | no |
+| Load a classical work | `load_work` | `aegean greek work` | yes (first use) |
+| Load Biblical Greek (NT / LXX) | `bible.load_nt` / `bible.load_lxx` | `aegean bible read` | no for bundled samples; yes for full corpora |
+| Discover works / books | `popular_works` / `catalog` / `bible.nt_books` / `bible.lxx_books` | `aegean greek works` / `catalog` / `aegean bible books` | no |
 | Import your own text | `io.from_text` / `from_text_file` / `from_csv` / … | `aegean import` | no |
-| Reproduce the numbers | `evaluate_on_ud` / `evaluate_on_proiel` / … | `aegean greek eval` | yes (gold data) |
+| Reproduce benchmarks | `evaluate_on_ud` / `evaluate_on_proiel` / … | `aegean greek eval` | yes (gold data) |
 
 ## One call: `pipeline()`
 
-> **Available in v0.71.0.** Isolated pipeline instances, explicit long-input and runtime-variant
-> selection, analysis receipts, source alignment, typed editorial form states, and lossless
-> CoNLL-U representation are part of the current release.
+> **Available in v0.72.0.** Isolated pipeline instances, explicit long-input and
+> runtime-variant selection, analysis receipts, source alignment, typed editorial
+> form states, and lossless CoNLL-U representation are part of the current
+> release.
 
-Every stage below is independently callable, but you don't have to compose them:
-`pipeline` runs tokenize → sentence split → POS-tag → lemmatize (→ parse) over a
-text and returns one record per token (punctuation included: nothing is dropped).
-Pass `sentence_policy="prose"`, `"verse"`, `"inscription"`, or `"papyrus"` when
-the material needs a named rule set; `segmenter=` accepts a validated caller
-segmenter for edition-specific evidence. The policy is applied per call, before
-the backend sees the sentence-sized word lists:
+`pipeline()` chains tokenization, sentence splitting, POS tagging,
+lemmatization, and optional dependency parsing in one call, returning one
+`TokenRecord` per token (punctuation retained). Pass `sentence_policy="prose"`,
+`"verse"`, `"inscription"`, or `"papyrus"` for genre-specific boundary rules, or
+supply `segmenter=` with a custom segmenter. Segmentation runs per call before
+sentence word lists reach the active backend:
 
 ```python
 records = greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")
@@ -94,7 +89,7 @@ records = greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")
 #  ('ὁ','DET','ὁ'), ('λόγος','NOUN','λόγος'), ('.','PUNCT','.')]
 ```
 
-The same from the shell renders a table (and `--json` gives the records):
+From the shell (`--json` emits the structured records):
 
 ```bash
 aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος."
@@ -107,66 +102,65 @@ aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος."
 #  0   6   .       PUNCT   .
 ```
 
-The `src` column names the lemma's evidence class for identity fall-throughs and
-unresolved misses. A blank cell means a resolved lemma, not a verified analysis;
-`head`, `rel`, and `feats` fill in once a parsing backend is active.
+The `src` column flags identity fall-throughs and unresolved misses; a blank
+cell indicates a resolved lemma, not a verified one. `head`, `rel`, and `feats`
+populate when a parsing or neural backend is active.
 
-Each `TokenRecord` is a dataclass with these fields:
+Each `TokenRecord` exposes these fields:
 
 | Field | Meaning |
 | --- | --- |
 | `sentence` | 0-based sentence index |
 | `index` | 1-based token index within the sentence |
-| `text` | the surface token (punctuation included) |
+| `text` | surface token (punctuation included) |
 | `upos` | UD coarse part of speech |
-| `lemma` | the lemma |
-| `lemma_source` | exact lemma provenance: `attested`, `neural_lookup`, `neural_edit`, generic `neural`, `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or human-corrected `user` |
-| `lemma_source_path` | exact neural composition path: `lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback` (when typed neural confidence is requested) |
-| `lemma_resolved` | whether a real lemma decision exists, rather than a surface fallback |
+| `lemma` | predicted or resolved lemma |
+| `lemma_source` | lemma provenance: `attested`, `neural_lookup`, `neural_edit`, generic `neural`, `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or human-corrected `user` |
+| `lemma_source_path` | neural composition route: `lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback` (when typed neural confidence is requested) |
+| `lemma_resolved` | whether a lemma decision was made rather than a surface fallback |
 | `lemma_verified` | whether an imported human lemma correction is recorded (`user`) |
-| `review_recommended` | whether the lemma source is `identity` or `unresolved`; not a general error flag |
+| `review_recommended` | whether `lemma_source` is `identity` or `unresolved` (not a general error detector) |
 | `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
-| `head` | head token index (only when parsed) |
-| `relation` | dependency relation (only when parsed) |
+| `head` | syntactic head token index (when parsed) |
+| `relation` | dependency relation (when parsed) |
 | `xpos` | language-specific tag (neural pipeline only) |
 | `feats` | UD FEATS string (neural pipeline only) |
-| `upos_confidence`, `lemma_confidence` | legacy flat confidence fields retained for compatibility; they are not source- or domain-scoped |
-| `token_confidence` | typed per-task confidence records (UPOS, XPOS, FEATS, lemma, head, relation), each available value or explicit unavailable reason |
+| `upos_confidence`, `lemma_confidence` | legacy flat confidence floats retained for compatibility (not source- or domain-scoped) |
+| `token_confidence` | typed per-task confidence records (`upos`, `xpos`, `feats`, `lemma`, `head`, `relation`) with calibrated values or explicit unavailable reasons |
 | `sentence_confidence` | typed sentence-level aggregate, component names, evidence scope, and optional policy decision |
-| `neural_analyzed` | per-token neural coverage (`False` only for a partial-mode placeholder; `None` offline) |
-| `analysis_complete`, `analysis_warning` | sentence-level neural coverage and any partial-mode warning |
-| `analysis_receipt` | exact model, asset, manifest, runtime, provider, profile, and preprocessing receipt |
-| `alignment` | exact original text, source IDs, Unicode code-point span, preceding whitespace, and normalization provenance |
-| `form_state` | typed diplomatic, regularized, normalized, and exact model-input forms when analyzing pre-tokenized corpus tokens |
-| `boundary_policy`, `boundary_policy_id` | the named policy and stable identity that ended this sentence (on its terminal token) |
-| `boundary_provenance`, `boundary_confidence` | `rule`, `explicit`, or `plugin`; built-in rules have no confidence, while a plugin may provide a finite `[0, 1]` estimate |
-| `boundary_start_char`, `boundary_end_char` | the half-open source span for the sentence boundary, when alignment proves it |
+| `neural_analyzed` | per-token neural coverage (`False` only for partial-mode placeholders; `None` offline) |
+| `analysis_complete`, `analysis_warning` | sentence-level neural coverage flag and any partial-mode warning |
+| `analysis_receipt` | model, asset, manifest, runtime, provider, profile, and preprocessing receipt |
+| `alignment` | original text slice, source IDs, Unicode code-point span, preceding whitespace, and normalization operations |
+| `form_state` | typed diplomatic, regularized, normalized, and model-input forms for pre-tokenized corpus input |
+| `boundary_policy`, `boundary_policy_id` | named segmentation policy and stable ID ending this sentence (on the terminal token) |
+| `boundary_provenance`, `boundary_confidence` | `rule`, `explicit`, or `plugin`; built-in rules carry no confidence, while plugins may attach a finite `[0, 1]` value |
+| `boundary_start_char`, `boundary_end_char` | half-open source span for the sentence boundary when alignment proves it |
 
-UD feature labels describe the supplying annotation convention. `Tense=Past`
-does not by itself identify a Greek tense/aspect or the event's time;
-`Aspect=Perf` also needs its convention (the Perseus conversion uses it for
-Greek perfect forms). Subjunctives, infinitives, and participles do not establish
-past event time from a past-tagged form. The hybrid translator retains the raw
-FEATS alongside readable morphology and labels its clause summary as predicted:
-it includes supplied subordinate predicates and coordinated subjects, marks
-omissions, and does not infer or repair subject attachments. See
-[Translation](Translation#the-grounding-what-the-model-is-told).
+UD feature labels reflect the supplying treebank convention. `Tense=Past` alone
+does not distinguish Greek tense/aspect or event time, and `Aspect=Perf`
+depends on the scheme (Perseus uses it for Greek perfect forms). Subjunctives,
+infinitives, and participles do not establish past time from a past-tagged form.
+The hybrid translator keeps raw FEATS alongside readable morphology and labels
+clause summaries as predicted: it lists supplied subordinate predicates and
+coordinated subjects, marks omissions, and does not infer missing subject
+attachments. See [Translation](Translation#the-grounding-what-the-model-is-told).
 
-`TokenRecord.lemma_verified` derives from the human-correction `user` source.
+`TokenRecord.lemma_verified` reflects an imported human correction (`user`).
 A separate corpus review can accept a predicted lemma while retaining its
-prediction source; its per-field decision and verification annotations record
-that acceptance. Neither form of lemma review certifies POS, morphology, a
-dependency tree, or a lexical sense. See [Validation and Review](Validation-and-Review).
+original prediction source in per-field review annotations. Neither certifies
+POS, morphology, syntax, or lexical sense. See
+[Validation and Review](Validation-and-Review).
 
 ### Exact source alignment
 
-Every `pipeline()` record carries an immutable `SourceAlignment`. Its `start_char` and
-`end_char` are half-open Python Unicode code-point offsets into the exact input string,
-not UTF-8 bytes and not offsets into normalized text. `original_text` is the exact source
-slice. `normalized_text` is the NFC form used by the current neural path, and
-`normalization_ops` records `unicode:nfc` only when that operation changed the token.
-This keeps decomposed accents, canonical Greek punctuation, and numeral signs available
-even when a model consumes a canonically equivalent form.
+Every `pipeline()` record carries an immutable `SourceAlignment`. `start_char`
+and `end_char` are half-open Python Unicode code-point offsets into the exact
+input string (not UTF-8 bytes and not offsets into normalized text).
+`original_text` stores the exact slice, `normalized_text` holds the NFC string
+fed to the neural path, and `normalization_ops` records `unicode:nfc` only when
+normalization changed the text. Decomposed accents, Greek punctuation, and
+numeral signs remain traceable even when the model sees an NFC form.
 
 ```python
 text = "  α\u0301\tλόγος."
@@ -180,83 +174,80 @@ a.whitespace_before                                   # '  '
 a.normalization_ops                                   # ('unicode:nfc',)
 ```
 
-`document_id` defaults to `"input"`; pass a stable identifier when results will be
-exported or reviewed. `sentence_id` is stable for unchanged segmentation, and
-`source_token_id` is deterministic for the same document ID and exact source snapshot.
-The pipeline maps analyses back by token ordinal, so repeated words and NFC-equivalent
-spellings cannot be confused by string matching. JSON CLI, MCP, and TUI pipeline rows
-flatten the value as `alignment_*` fields. The terminal token of each sentence also
-receives the `boundary_*` fields above; those fields are metadata about the boundary,
-not a per-token prediction.
+`document_id` defaults to `"input"`; pass a stable identifier for export or
+review workflows. `sentence_id` is stable for unchanged segmentation, and
+`source_token_id` is deterministic for the same document ID and source snapshot.
+Analyses map back by token ordinal so repeated tokens and NFC-equivalent
+spellings cannot collide. JSON CLI, MCP, and TUI outputs flatten these values
+into `alignment_*` fields. Each sentence's terminal token also carries the
+`boundary_*` metadata fields.
 
-For tokenization without analysis, `greek.tokenize_aligned(text, document_id=...)`
-returns ordinary `Token` values carrying the same mappings. The older `tokenize()` and
-`sentences()` result shapes remain unchanged. Corpus `Token.alignment` and
-`Document.source_text` persist through schema-2 JSON and SQLite; schema-1 artifacts still
-load with these fields absent. Typed `Token.form_state` is persisted by schema-3 JSON and
-SQLite. CoNLL-U structure uses its own lossless document model (below), while editorial
-restoration/damage state remains distinct from Unicode normalization.
+For alignment without running analysis, `greek.tokenize_aligned(text,
+document_id=...)` returns `Token` objects carrying the same spans; `tokenize()`
+and `sentences()` keep their original shapes. `Token.alignment` and
+`Document.source_text` persist in schema-2 JSON and SQLite (schema-1 files load
+with those fields absent), and `Token.form_state` persists in schema-3 JSON and
+SQLite. Editorial damage/restoration state remains distinct from Unicode
+normalization.
 
 ### Editorial form state and the analyzer input
 
-Pre-tokenized input can carry a `TokenFormState` alongside the display `Token.text`.
-`diplomatic` is the source or original spelling, `regularized` is an editorial
-correction or expansion, and `normalized` is an optional preprocessing form.
-`model_input` records the exact value sent to the analyzer, with
-`model_input_source` and `model_input_ops` explaining its selection and any
-normalization. These evidence fields are not interchangeable: a model input is a
-record of computation, not a new reading of the source.
+Pre-tokenized input can attach a `TokenFormState` beside the display
+`Token.text`: `diplomatic` holds the original source spelling, `regularized`
+holds an editorial correction or expansion, and `normalized` holds an optional
+preprocessing form. `model_input` records the exact string passed to the
+analyzer, alongside `model_input_source` and `model_input_ops`. These fields
+are kept distinct so a computed analyzer input is never mistaken for an
+editorial reading.
 
-`greek.pipeline_tokens(tokens)` selects an explicit model input first, then
-regularized, normalized, diplomatic, and finally the legacy `Token.text` value.
-The returned `TokenRecord.form_state` contains the selected input. A neural NFC
-conversion is added to the ordered operations when it changes the string. Plain
-`greek.pipeline(text)` tokenizes raw text and therefore has no typed editorial
-state unless callers use `pipeline_tokens()` with pre-tokenized values.
+`greek.pipeline_tokens(tokens)` selects an explicit `model_input` first, then
+`regularized`, `normalized`, `diplomatic`, and finally `Token.text`, recording
+the choice on `TokenRecord.form_state` (and appending `unicode:nfc` when the
+neural path normalizes the string). `greek.pipeline(text)` tokenizes raw strings
+and produces no typed editorial form state unless pre-tokenized tokens are
+passed through `pipeline_tokens()`.
 
 ### Sentence segmentation: named policies and an extension seam
 
-`greek.segment_text(text)` returns an immutable `SegmentationResult` with the exact
-source, ordered `SentenceBoundary` records, `policy`, `policy_id`, and
-`provenance`. Each boundary is a half-open Python code-point span (`start`, `end`),
-so its `text` slice retains terminal punctuation and any closing mark. The older
-`greek.sentences(text)` projection keeps its historical shape: trimmed strings with
-terminal sentence marks removed. `segment_sentences()` is an alias for
-`segment_text()`; use either when spans or metadata matter. The result has a strict JSON
-schema (`to_json()` / `SegmentationResult.from_json()`).
+`greek.segment_text(text)` (aliased as `segment_sentences()`) returns an
+immutable `SegmentationResult` containing the exact source string, ordered
+`SentenceBoundary` spans, `policy`, `policy_id`, and `provenance`. Each
+boundary is a half-open Python code-point span `(start, end)` whose slice
+retains terminal punctuation and closing marks. `greek.sentences(text)` keeps
+its legacy trimmed-string projection with terminal marks removed.
+`SegmentationResult` serializes strictly via `to_json()` and
+`SegmentationResult.from_json()`.
 
-The built-in `RuleBasedSentenceSegmenter` has five named policies, described in
-plain language by `greek.POLICY_RULES`. Their stable IDs are in `greek.POLICY_IDS`,
-alongside a sixth reserved `explicit` ID that identifies caller-supplied sentence
-boundaries rather than a segmenter rule set:
+`RuleBasedSentenceSegmenter` ships five named policies (described in
+`greek.POLICY_RULES`, with stable IDs in `greek.POLICY_IDS` alongside a sixth
+reserved `explicit` ID for caller-supplied boundaries):
 
 | Policy | Rule |
 | --- | --- |
-| `default` | Conservative period, semicolon/Greek question mark, ano teleia/middle dot, `!`, and `?`; dotted abbreviations and numbers are protected. |
-| `prose` | The same conservative punctuation policy, named for literary prose. |
-| `verse` | The prose punctuation rules plus every non-empty physical line as a boundary. |
-| `inscription` | Only strong `.`, `!`, and `?`; semicolon and ano teleia remain uncommitted. |
-| `papyrus` | Strong `.`, `!`, and `?`; marks inside balanced `[]`, `⟦⟧`, or `<>` editorial brackets are ignored. |
+| `default` | Conservative period, semicolon/Greek question mark, ano teleia/middle dot, `!`, and `?`; protects dotted abbreviations and numerals. |
+| `prose` | Same conservative punctuation rules, named for literary prose. |
+| `verse` | Prose punctuation rules plus every non-empty physical line as a boundary. |
+| `inscription` | Strong `.`, `!`, and `?` only; semicolon and ano teleia stay uncommitted. |
+| `papyrus` | Strong `.`, `!`, and `?`; punctuation inside balanced `[]`, `⟦⟧`, or `<>` editorial brackets is ignored. |
 
-The rules are deterministic and deliberately carry no confidence score. A caller
-can pass `RuleBasedSentenceSegmenter(policy="prose", abbreviations=["sig."])`
-to add protected abbreviations. A plugin implements `segment(text)` (or is a
-callable) and may return a `SegmentationResult`, boundary mappings, or `(start, end)`
-pairs. `segment_text(..., segmenter=plugin)` normalizes every form and rejects
-unknown fields, out-of-range or overlapping spans, uncovered non-whitespace text,
-and boundary/result-policy mismatches. When tokenization consumes a plugin result, it additionally
-rejects boundaries that bisect a token. Plugin output is stamped
-`provenance="plugin"`; a plugin cannot claim a reserved built-in policy ID. An
-optional plugin confidence is metadata in `[0, 1]`, not a measured accuracy claim.
+Built-in rules are deterministic and carry no confidence score. Extend protected
+abbreviations with `RuleBasedSentenceSegmenter(policy="prose",
+abbreviations=["sig."])`. Custom plugins implement `segment(text)` (or a plain
+callable) returning a `SegmentationResult`, boundary dicts, or `(start, end)`
+tuples. `segment_text(..., segmenter=plugin)` validates every boundary,
+rejecting unknown keys, out-of-range or overlapping spans, uncovered
+non-whitespace text, policy mismatches, and (during tokenization) boundaries
+that split a token. Plugin results are tagged `provenance="plugin"` and cannot
+claim a reserved built-in policy ID; optional plugin confidence is metadata in
+`[0, 1]`, not a measured accuracy claim.
 
-For pre-tokenized `pipeline_tokens()` input, complete contiguous runs of
-`Token.alignment.sentence_id` take precedence over punctuation, `sentence_policy`,
-and the plugin seam. Partial, non-contiguous, or cross-document sentence IDs are
-rejected before analysis. When those IDs are absent, the selected policy is applied
-to the typed token stream and editorial punctuation (`UNCLEAR`, `RESTORED`, or
-`LOST`) is not treated as observed sentence evidence. A corpus token often carries
-its terminal mark inside the word rather than as a separate `PUNCT` token, so a
-word-final sentence mark ends the sentence there too:
+For `pipeline_tokens()`, complete contiguous runs of
+`Token.alignment.sentence_id` take precedence over punctuation,
+`sentence_policy`, and plugins; partial, non-contiguous, or cross-document
+sentence IDs are rejected. When sentence IDs are absent, the chosen policy runs
+over the typed token stream, ignoring editorial punctuation marked `UNCLEAR`,
+`RESTORED`, or `LOST`. Word-final terminal punctuation inside a `WORD` token
+also terminates the sentence:
 
 ```python
 from aegean import Token, TokenKind
@@ -268,23 +259,25 @@ tokens = [Token(text=t, kind=TokenKind.WORD) for t in ("λόγος.", "καὶ",
 
 ### Lossless CoNLL-U structure and the model projection
 
-`greek.load_conllu_document(path)` preserves the complete CoNLL-U document: ordered
-comments, all ten columns, multiword-token ranges, empty decimal nodes (including
-`0.1`), enhanced `DEPS`, `MISC`, row order, and the original line endings. Its
-sentences deliberately expose both views:
+`greek.load_conllu_document(path)` retains complete CoNLL-U files: ordered
+comments, all ten columns, multiword-token ranges, empty decimal nodes
+(including `0.1`), enhanced `DEPS`, `MISC`, row order, and original line
+endings. Each sentence exposes two aligned views:
 
-- `sentence.rows` is the complete ordered row stream.
-- `sentence.tokens` contains only integer-ID syntactic words, preserving the earlier
-  `UDSentence` contract used by training and evaluation code.
-- `sentence.items` interleaves comments and rows for structural inspection.
-- `sentence.projection` maps model ordinals to original integer IDs and lists omitted
-  range and empty-node IDs. It also reports whether enhanced dependencies are present.
+- `sentence.rows`: complete ordered row stream.
+- `sentence.tokens`: integer-ID syntactic words matching the `UDSentence`
+  training and evaluation contract.
+- `sentence.items`: interleaved comments and rows for structural inspection.
+- `sentence.projection`: mapping from model ordinals to original integer IDs,
+  omitted range and empty-node IDs, and enhanced-dependency presence flags.
 
-A word row may carry typed editorial state in the reserved `AegeanFormState` MISC
-entry, encoded as URL-safe base64 JSON with schema 1. The loader decodes that entry
-into `UDToken.form_state`; unknown MISC entries remain ordered and untouched. Strict
-loading rejects malformed, duplicate, unknown-schema, or oversized state values,
-while lenient loading retains the original MISC entry without a typed state.
+Word rows may store typed editorial form state in the reserved
+`AegeanFormState` MISC key (URL-safe base64 JSON, schema 1), decoded into
+`UDToken.form_state` while leaving other MISC entries untouched. `strict=True`
+rejects malformed, duplicate, unknown-schema, or oversized entries as well as
+broken columns, IDs, or basic trees with line-aware errors; lenient loading
+(the default for legacy research folds) preserves the raw MISC entry without
+decoding a typed state.
 
 ```python
 from aegean import greek
@@ -297,59 +290,51 @@ sentence.projection.omitted_empty_nodes
 greek.write_conllu(document, "treebank-copy.conllu")
 ```
 
-An unchanged document writes back exactly; `canonical=True` produces deterministic
-ten-column output after an immutable value has been changed or constructed, while
-matching metadata keys exactly so extension comments (such as `# text_en = …` or
-`# sent_id_orig = …`) are preserved during canonical serialization as well. Keep
-the original file when editing it.
-The default loader remains lenient for older research folds, while `strict=True` rejects malformed
-columns, identifiers, row placement, references, and basic trees with line-aware errors.
-The CLI mirrors this as `aegean greek conllu inspect` and `conllu export`.
+Unchanged documents round-trip verbatim; `canonical=True` emits deterministic
+ten-column output after edits while preserving extension comments (`# text_en =
+…`, `# sent_id_orig = …`). The CLI exposes this through
+`aegean greek conllu inspect` and `aegean greek conllu export`.
 
-This is a representation capability, not a new model claim. The current v3 pipeline
-still analyzes and predicts only the syntactic-word projection. It does not predict
-multiword rows, empty nodes, or enhanced arcs, and those preserved gold annotations are
-not copied into system output or scores. Typed form state is an input annotation, not
-a predicted CoNLL-U structure, so the model's own CoNLL-U projection does not emit it;
-use `greek.dump_conllu()` or `greek.write_conllu()` to serialize a `UDToken` that
-carries state. Callers that require complete predictive
-support can request the explicit error policy rather than accepting that projection.
+This is a lossless representation layer only: the shipped `grc-joint-v3` model
+still analyzes and predicts syntactic words alone, and does not generate
+multiword rows, empty nodes, or enhanced arcs. Preserved gold annotations are
+never copied into system output or scores, and the model's CoNLL-U projection
+does not emit `AegeanFormState` (serialize stateful `UDToken` records directly
+with `greek.dump_conllu()` or `greek.write_conllu()`). Callers requiring full
+structural prediction can select the strict error policy instead of accepting
+the syntactic-word projection.
 
-For a field-by-field guide to interpreting a record, including what each `lemma_source`
-class means for how far to trust a lemma, see [Reading a Parse](Reading-a-Parse).
+For a field-by-field guide to interpreting `TokenRecord` and `lemma_source`,
+see [Reading a Parse](Reading-a-Parse).
 
-To compare this structure with a framework document, use the optional `aegean.io`
-interoperability adapters. `from_conllu()`/`to_conllu()` retain the complete row stream;
-`to_spacy()`/`from_spacy()`, `to_stanza()`/`from_stanza()`, and
-`to_cltk()`/`from_cltk()` populate each target's native fields and carry the remaining
-metadata in a SHA-256-bound `aegean.interop/v1` sidecar. The binding detects stale,
-mismatched, or hash-inconsistent data; it is not a digital signature or proof of
-authorship. The adapters do not run a model or
-turn preserved MWT, empty-node, or enhanced annotations into predictions. See
-[Interoperability](Interoperability) for field support, optional-install costs, and
-serializer caveats.
+For interop with external NLP libraries, `aegean.io` provides `from_conllu()` /
+`to_conllu()` (retaining the full row stream) and `to_spacy()` / `from_spacy()`,
+`to_stanza()` / `from_stanza()`, and `to_cltk()` / `from_cltk()` (populating
+native framework fields and storing remaining metadata in a SHA-256-bound
+`aegean.interop/v1` sidecar that detects stale or mismatched data without
+acting as a cryptographic signature). See [Interoperability](Interoperability).
 
-`pipeline` uses whatever backends are **active**: with none, the zero-dependency
-baseline; after `use_treebank()`/`use_tagger()` etc., their better answers; after
-`use_neural_pipeline()`, one model pass fills every field of every record.
-`parse=True` (CLI `--parse`) without the neural pipeline requires `use_parser()`
-(CLI `--parser`). The CLI flags `--treebank`, `--tagger`, `--lemmatizer`,
-`--neural-lemmatizer`, and `--neural` turn the matching backend on for that run.
-To choose the backend that fits your material (clean text, a damaged inscription,
-OCR, teaching, benchmarking), see [Choosing a Pipeline](Choosing-a-Pipeline).
+`pipeline()` dispatches to whichever backends are active: the zero-dependency
+baseline by default, upgraded by `use_treebank()` / `use_tagger()` /
+`use_lemmatizer()` / `use_parser()`, or replaced in one pass by
+`use_neural_pipeline()`. Calling `pipeline(..., parse=True)` (CLI `--parse`)
+without the neural backend requires `use_parser()` (CLI `--parser`). On the
+CLI, `--treebank`, `--tagger`, `--lemmatizer`, `--neural-lemmatizer`, and
+`--neural` activate the corresponding backend for that invocation. See
+[Choosing a Pipeline](Choosing-a-Pipeline) for choosing a configuration by
+genre and task.
 
 ## The neural pipeline (opt-in)
 
-If you just want a parse, call `greek.use_neural_pipeline()` and then
-`greek.pipeline(...)`; the rest of this section explains the model and its configuration
-options.
+Activate the joint model with `greek.use_neural_pipeline()` and call
+`greek.pipeline(...)` or `greek.analyze_sentence(...)`.
 
-One jointly-trained model: a GreBerta encoder with tagging heads, a biaffine dependency
-parser decoded by a single-root MST (non-projectivity handled natively), and an
-edit-script lemmatizer: serving **UPOS, full morphology (UD FEATS), UD dependency
-trees, and lemmas** from a single forward pass. Trained leakage-clean on the AGDT +
-Gorman + Pedalion treebanks (1.41M tokens, with the evaluation folds' sentences excluded
-from training).
+The shipped model (`grc-joint-v3`) combines a GreBerta encoder, tagging heads,
+a biaffine dependency parser with single-root MST decoding (handling
+non-projective trees natively), and an edit-script lemmatizer to produce
+**UPOS, UD FEATS, dependency trees, and lemmas** in a single forward pass. It
+is trained leakage-clean on AGDT + Gorman + Pedalion (1.41M tokens, excluding
+all sentences overlapping the evaluation folds).
 
 ```bash
 pip install "pyaegean[neural]"     # onnxruntime + tokenizers + numpy; no torch
@@ -368,20 +353,20 @@ ana.feats[1]                       # 'Case=Dat|Gender=Fem|Number=Sing'
 
 ### Runtime variants: what the names mean
 
-Runtime variants are different packaged forms of a neural model, not different Greek
-analysis modes. The stable labels are:
+Runtime variants identify packaged neural artifacts rather than analysis modes.
+Four stable labels exist:
 
-| Label | Meaning now | Claim |
+| Label | Status | Qualification rule |
 | --- | --- | --- |
-| `default` | Available; the unchanged `grc-joint-v3` artifact | The artifact selected by this release. The name itself makes no speed or size claim. |
-| `fast` | Reserved, unavailable | Will require repeated same-environment CPU measurements that meet the frozen latency rule. |
-| `compact` | Reserved, unavailable | Will require a qualified artifact no larger than 90% of its reference. |
-| `balanced` | Reserved, unavailable | Optional; will require the compact rule plus the frozen latency and peak-memory bounds. |
+| `default` | Available (`grc-joint-v3`) | Release-selected artifact; the label carries no speed or size guarantee. |
+| `fast` | Reserved, unavailable | Requires repeated same-environment CPU measurements meeting the frozen latency rule. |
+| `compact` | Reserved, unavailable | Requires a qualified artifact at most 90% the size of its reference. |
+| `balanced` | Reserved, unavailable | Optional; requires the compact size rule plus frozen latency and peak-memory bounds. |
 
-No label is inferred from a filename, ONNX precision, or a developer's expectation. A
-reserved label raises an error before optional-dependency checks, download, or cache changes;
-it never falls back to `default`. Omitting `variant=` is exactly the same as asking for
-`variant="default"`:
+Labels are never inferred from filenames or ONNX precision. Requesting a
+reserved label raises immediately before checking optional dependencies,
+downloading, or touching the cache, and never falls back to `default`. Omitting
+`variant=` is identical to `variant="default"`:
 
 ```python
 greek.neural_variants()                         # inspect all four stable labels
@@ -391,37 +376,36 @@ greek.use_neural_pipeline(variant="default")
 owned = greek.GreekPipeline.neural(variant="default")
 ```
 
-Different available artifacts use different dataset/cache keys, so they can coexist and
-`force=True` refreshes only the selected artifact. `GreekPipelineConfig` schema 2 records
-the label, registry digest, artifact manifest, and any award/qualification digests.
-`AnalysisReceipt` schema 4 carries the same selection provenance with the exact execution
-environment. `GreekPipeline.from_config()` refuses registry drift or an unavailable label
-before loading a model. The CLI uses `--neural-variant` alongside `--neural`; translation's
-isolated neural owner uses `--greek-backend neural --greek-variant LABEL`.
+Distinct artifacts use separate cache keys, so `force=True` refreshes only the
+selected variant. `GreekPipelineConfig` schema 2 records the label, registry
+digest, artifact manifest, and any qualification digests; `AnalysisReceipt`
+schema 4 binds the same selection provenance together with the live runtime
+environment. `GreekPipeline.from_config()` rejects registry drift or
+unavailable labels before loading. On the CLI, pass `--neural-variant LABEL`
+with `--neural`; translation accepts `--greek-backend neural --greek-variant
+LABEL`.
 
-The module-level calls above are a facade over
-`greek.default_pipeline()`. Applications that need simultaneous configurations can own
-isolated instances instead:
+The module-level helpers are a convenience facade over
+`greek.default_pipeline()`. Applications needing concurrent or isolated
+configurations can instantiate `GreekPipeline` objects directly:
 
-| Similar name | What it does | What it changes |
+| Name | Behavior | Side effects |
 | --- | --- | --- |
-| `greek.pipeline(text)` | Analyzes text now | Nothing; it uses the current module-level default |
-| `greek.use_neural_pipeline()` | Loads neural support into the module-level facade | Future module-level POS, lemma, parse, and `pipeline` calls |
-| `greek.GreekPipeline.neural()` | Creates an isolated neural analyzer | Nothing outside that instance; call `instance.analyze(text)` |
+| `greek.pipeline(text)` | Analyzes text immediately | None; reads the module-level default facade |
+| `greek.use_neural_pipeline()` | Activates the neural backend on the module-level facade | Affects subsequent module-level POS, lemma, parse, and `pipeline` calls |
+| `greek.GreekPipeline.neural()` | Constructs an isolated neural pipeline instance | None outside that instance; call `instance.analyze(text)` |
 
-In short, lowercase `pipeline(...)` is an analysis operation, `use_neural_pipeline()` is
-a default-backend selector, and capitalized `GreekPipeline` is the independently configured
-instance type.
+Lowercase `pipeline(...)` runs analysis, `use_neural_pipeline()` switches the
+module-level default backend, and `GreekPipeline` is an independently owned
+instance.
 
-The hybrid translator follows the same distinction explicitly: omit
-`translate(..., greek_pipeline=...)` to use the module-default facade, or pass a
-`GreekPipeline` instance to isolate its grounding. From the shell, the matching choice is
-`aegean ai translate ... --greek-backend default|baseline|neural`. When that owner is
-`neural`, `--greek-variant` selects its runtime artifact. Long-input handling is a
-separate explicit choice through `greek_long_input=` or `--greek-long-input`; the
-selected configuration and long-input mode appear in translation provenance, separately
-from the evidence sent to the provider. Translation currently uses the pipeline's default
-document sentence policy; its interface does not expose a separate `sentence_policy` option. See
+The hybrid translator follows the same pattern: omit `greek_pipeline=` in
+`translate()` to use the module default, or pass a `GreekPipeline` instance
+for isolation. From the shell, pass `--greek-backend default|baseline|neural`
+(plus `--greek-variant` when `neural` is selected) and `--greek-long-input` for
+long-sentence handling. Translation provenance records the backend config and
+long-input mode separately from the linguistic grounding sent to the LLM.
+Translation currently uses the pipeline's default sentence policy. See
 [Translation](Translation#which-greek-backend-supplies-the-grounding).
 
 ```python
@@ -436,20 +420,15 @@ config = greek.GreekPipelineConfig.from_json(config_json)
 same_runtime = greek.GreekPipeline.from_config(config)
 ```
 
-Each instance owns its neural model, tokenizer, inference annotation profile, normalization,
-backend segmentation contract, and execution-provider selection. For a neural
-instance, `GreekPipelineConfig.segmentation` is copied from the model bundle's
-preprocessing contract (`pretokenized` for the published `grc-joint-v3` artifact):
-the joint model receives already tokenized sentence word lists. It is not a document
-sentence splitter and it does not override a call's `sentence_policy`.
-
-Instance calls are context-local,
-so concurrent pipelines do not replace one another or observe module-level backend
-activation. `GreekPipelineConfig` is immutable and exact for configuration identity;
-per-analysis package and library versions, asset identity, input coverage, and other
-result-specific facts remain in the more detailed `AnalysisReceipt`. Loading several
-neural instances also loads several ONNX sessions, so reuse an instance when its
-configuration is shared.
+Each instance owns its model session, tokenizer, annotation profile,
+normalization, backend segmentation contract (`pretokenized` for
+`grc-joint-v3`, distinct from document-level `sentence_policy`), and execution
+provider list. Instance calls are context-local, so concurrent pipelines never
+interfere with one another or with module-level state. `GreekPipelineConfig`
+captures immutable configuration identity, while `AnalysisReceipt` records
+per-run package versions, asset digests, input coverage, and runtime details.
+Because each neural instance loads its own ONNX session, reuse shared
+instances where practical.
 
 ```mermaid
 flowchart LR
@@ -463,164 +442,159 @@ flowchart LR
     A --> R["Results plus exact analysis receipt"]
 ```
 
-Neural input is strict by default. If a pretokenized sentence cannot fit the model
-bundle's subword limit, `analyze_sentence` raises `NeuralInputTooLongError` instead of
-returning plausible-looking placeholders. Split the sentence when its real boundary is
-known. Two explicit alternatives serve different needs:
+Neural input length is strict by default: if a pre-tokenized sentence exceeds
+the bundle's subword limit, `analyze_sentence()` raises
+`NeuralInputTooLongError`. Split long text at true sentence boundaries when
+possible, or select an explicit long-input mode:
 
-- `long_input="partial"` keeps the model's fitting prefix and marks every uncovered token
-  as a placeholder. Use it for inspection, never as an apparently complete parse.
-- `long_input="windowed"` analyzes supported long sentences in overlapping whole-word
-  windows. Each token's tags, lemma script, and any typed confidence evidence come from the window
-  where the token is farthest from a boundary. Candidate dependency arcs and relations come
-  from that same owner window, are mapped back to sentence indexes, and are decoded once as
-  a sentence-global single-root tree. The result warns that distant token pairs which never
-  share a window were not arc candidates, and its receipt records `windowed=True`.
+- `long_input="partial"` analyzes the fitting prefix and marks uncovered tail
+  tokens as placeholders. Use this for inspection only, not as a complete parse.
+- `long_input="windowed"` runs overlapping whole-word windows across the
+  sentence. Each token's tags, lemma edit script, and typed confidence come
+  from the window in which it sits farthest from a window edge; candidate arcs
+  from each token's owner window are mapped to sentence indices and decoded
+  once into a global single-root tree. The result emits a warning noting that
+  distant token pairs never sharing a window were not arc candidates, and sets
+  `receipt.windowed = True`.
 
-Both modes preserve every input token and expose their status:
+Both modes retain every input token and expose coverage explicitly:
 
 ```python
 greek.use_neural_pipeline()
 
 ana = greek.analyze_sentence(words, long_input="partial")
 ana.complete, ana.truncated             # (False, True) when the limit was reached
-ana.analyzed                             # one bool per token
-ana.warnings                             # explains that uncovered values are placeholders
+ana.analyzed                            # one bool per token
+ana.warnings                            # explains that uncovered values are placeholders
 
 records = greek.pipeline(text, long_input="partial")
-records[-1].neural_analyzed              # False for an uncovered token
-records[-1].analysis_complete            # sentence-level status
+records[-1].neural_analyzed             # False for an uncovered token
+records[-1].analysis_complete           # sentence-level status
 
 long_ana = greek.analyze_sentence(long_words, long_input="windowed")
-long_ana.complete, long_ana.truncated     # (True, False) when all windows reconcile
-long_ana.receipt.windowed                 # True when multiple windows were actually used
+long_ana.complete, long_ana.truncated   # (True, False) when all windows reconcile
+long_ana.receipt.windowed               # True when multiple windows were used
 ```
 
-Window boundaries are measured from complete untruncated word pieces and never split a
-word. The overlap target is the lesser of 64 body subwords or one quarter of the model's
-body budget; when one whole token alone exceeds that target, the runtime retains that token
-to preserve overlap. It refuses input that cannot keep at least one complete overlapping
-token with forward progress. To bound dense global dependency decoding, windowed sentences
-are limited to 4,096 tokens and 1,000,000 input characters. Short input still uses the
-ordinary one-pass path exactly; requesting windowed mode does not change its predictions or
-mark its receipt as windowed. Partial and windowed modes require a neural backend rather
-than being silently ignored by the baseline pipeline.
+Windows align to whole words without splitting tokens. Overlap targets the
+lesser of 64 body subwords or one quarter of the model's body budget (retaining
+a single longer token to preserve overlap), and input that cannot retain at
+least one overlapping token with forward progress is rejected. To bound dense
+global MST decoding, windowed input is capped at 4,096 tokens and 1,000,000
+characters. Sentences that fit in a single pass run through the ordinary path
+unchanged and do not set `receipt.windowed`. Both `partial` and `windowed`
+require an active neural backend and raise on the baseline pipeline.
 
-The maximum comes from the validated bundle contract, not a runtime constant. Activation
-checks the manifest, every listed file's byte length and SHA-256, tokenizer revision and
-special-token policy, label maps, lemma tables, output heads, and schema compatibility
-before installing the model as active. The immutable v3 archive predates the versioned
-schema, so it is accepted only through an exact published-file compatibility record; any
-different unversioned bundle must use a new model ID and schema.
+The subword limit comes from the validated bundle contract. Activation verifies
+the manifest, every listed file's size and SHA-256, tokenizer revision and
+special-token settings, label maps, lemma tables, output heads, and schema
+compatibility before enabling the model. Because the frozen v3 archive predates
+versioned manifests, it is accepted solely via its exact published-file
+compatibility record; any different unversioned archive must ship under a new
+model ID and schema.
 
-Every production `SentenceAnalysis` also carries `receipt`, a canonical, serializable
-`AnalysisReceipt`. It records:
+Every production `SentenceAnalysis` attaches a canonical, serializable
+`AnalysisReceipt` recording:
 
-- the exact model ID, asset and manifest SHA-256 values, and bundle schema;
-- the tokenizer revision;
-- the package, Python, and neural-library versions;
-- the live execution providers;
-- the inference annotation profile;
-- the normalization and model-input segmentation contract;
-- the limit and truncation/window status.
+- model ID, asset and manifest SHA-256 digests, and bundle schema;
+- tokenizer revision;
+- package, Python, and ONNX Runtime / NumPy / tokenizers versions;
+- active execution providers;
+- inference annotation profile;
+- normalization and model-input segmentation contract;
+- length limit and truncation or windowing status.
 
-Schema 4 also binds the runtime label, complete variant registry, qualification/award
-identities when applicable, composed output profile, and ordered post-processing identity.
-Receipt schemas 1 through 3 remain readable for current hosted evidence, but they do not
-invent the missing runtime-label provenance. `receipt.to_json()` is
-stable and `receipt.sha256` content-addresses it. Passing a prior receipt as
-`use_neural_pipeline(expected_receipt=receipt)` refuses a runtime or artifact mismatch rather
-than silently approximating the old analysis.
+Receipt schema 4 also binds the runtime variant label, variant registry digest,
+qualification/award digests when present, composed output profile, and ordered
+post-processing chain. Schemas 1–3 remain readable for existing hosted evidence
+without inventing absent variant fields. `receipt.to_json()` is canonical and
+`receipt.sha256` content-addresses it. Passing a prior receipt to
+`use_neural_pipeline(expected_receipt=receipt)` fails fast on any runtime or
+artifact mismatch.
 
-Lemma provenance is similarly explicit. Joint-model lookups use
-`LemmaSource.NEURAL_LOOKUP`, non-identity edit scripts use `NEURAL_EDIT`, and a surface
-fallback uses `IDENTITY`. `TokenRecord.lemma_resolved` says whether a real lemma decision
-exists, `lemma_verified` is true only for an imported human correction, and
-`review_recommended` flags only identity/unresolved lemmas. It is not a confidence
-threshold and does not detect wrong resolved lemmas or errors in other fields.
-The older deprecated `lemma_known` property is
-an alias of `lemma_resolved`; new code should use the explicit fields.
+Lemma provenance is tracked on every token: joint-model lookups emit
+`LemmaSource.NEURAL_LOOKUP`, non-identity edit scripts emit `NEURAL_EDIT`, and
+surface fallbacks emit `IDENTITY`. `TokenRecord.lemma_resolved` indicates
+whether a real lemma decision occurred, `lemma_verified` is `True` only for an
+imported human correction, and `review_recommended` flags `identity` and
+`unresolved` tokens (not general prediction errors). The deprecated
+`lemma_known` property aliases `lemma_resolved`.
 
-Once active, the standard functions use it: `pos_tags`/`pos_tag`, `lemmatize`, and
-`parse`: which then returns **UD relations** (`nsubj`, `obj`, `advcl`, …) with the
-predicted 9-character morphological tag on each token. `disable_neural_pipeline()`
-restores the cascades above. From the shell, add `--neural` to `tag`, `lemmatize`,
-`parse`, or `pipeline` to use it for that command, and optionally add
-`--neural-variant LABEL`. Evaluation commands intentionally reproduce the release-selected
-default and do not accept a variant override. The `[neural]` extra is required either way.
+Once the neural pipeline is active, `pos_tags`/`pos_tag`, `lemmatize`, and
+`parse` route through it, with `parse()` emitting **UD relations** (`nsubj`,
+`obj`, `advcl`, …) and 9-character XPOS tags. Call `disable_neural_pipeline()`
+to return to the baseline cascade. From the CLI, pass `--neural` (optionally
+with `--neural-variant LABEL`) to `tag`, `lemmatize`, `parse`, or `pipeline`.
+Evaluation commands always evaluate the release-selected default and do not
+accept `--neural-variant`.
 
-**Measured: UD Ancient Greek test folds, official CoNLL 2018 evaluator, through the
-shipped package, gold tokenization:**
+**Measured: UD Ancient Greek test folds, official CoNLL 2018 evaluator, through
+the shipped package, gold tokenization:**
 
 | UD Perseus test | UPOS | UFeats | Lemma | UAS | LAS |
 | --- | --- | --- | --- | --- | --- |
 | neural pipeline | **97.0** | **96.0** | **94.3** | **90.2** | **85.7** |
 
-Measured again end-to-end from raw text, the package's own tokenizer reaches
-tokens F1 99.97 on this fold and the scores track these figures closely, so
-tokenization is not a bottleneck here.
+Evaluated end-to-end from raw text, pyaegean's tokenizer reaches tokens F1
+99.97 on Perseus and overall scores track the gold-tokenized figures closely.
 
-Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.51,
-UAS 82.47, UPOS 86.68. Inference is torch-free, at roughly 20–70 words/second on a plain
-CPU for the shipped quantized **`grc-joint-v3`** bundle (sentence-length dependent). The
-full-precision `grc-joint-v2` reference asset is several times faster where throughput matters
-more than download size. The shipped v3 bundle is about 173 MB (down from the 518 MB fp32
-reference) with **no measured accuracy loss**: the scores above are unchanged from the
-full-precision model. The recipe is
-weight-only int8 (onnxruntime MatMulNBits) plus fp16, keeping activations at full
-precision; it needs **onnxruntime>=1.23** (the `[neural]` floor), and the fp32
-reference stays available at the `grc-joint-v2` release for reproducibility. The
-model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data,
-leakage controls, and the comparison tables are documented in
+Out of domain on UD PROIEL test (never used in training): lemma 90.51, UAS
+82.47, UPOS 86.68. CPU inference runs without PyTorch at roughly
+**20–70 words/s** for the shipped quantized `grc-joint-v3` bundle (depending on
+sentence length); the full-precision `grc-joint-v2` reference asset is faster
+on CPU when download size is less important than throughput. The quantized v3
+archive is ~173 MB (versus 518 MB for fp32) with no measured accuracy drop,
+using weight-only int8 (`onnxruntime` `MatMulNBits`) plus fp16 while keeping
+activations in fp32. It requires **`onnxruntime >= 1.23`** (the `[neural]`
+floor). The bundle is CC BY-SA 4.0, fetched to cache on demand, and never
+bundled; training data, leakage controls, and comparison tables are in
 [Benchmarks](Benchmarks).
 
 ### Confidence, scope, and abstention (opt-in)
 
-Pass `with_confidence=True` to `greek.pipeline()` (or `GreekPipeline.analyze()`)
-to attach calibrated per-token `token_confidence` and `sentence_confidence` values.
-Each typed
-`ConfidenceResult` names its task, model, source path, optional domain, calibration hash,
-sample count, measured ECE/Brier value, and either a value in `[0, 1]` or an explicit
-unavailable reason. Missing confidence is never converted to zero. Stable reasons include
-`missing_calibration`, `unsupported_task`, `unsupported_source`, `unsupported_domain`,
-`no_threshold_for_task`, and `confidence_unavailable`.
+Pass `with_confidence=True` to `greek.pipeline()` or `GreekPipeline.analyze()`
+to populate calibrated `token_confidence` and `sentence_confidence` fields.
+Each `ConfidenceResult` records task, model, source path, optional domain,
+calibration hash, sample count, measured ECE and Brier score, and either a
+probability in `[0, 1]` or an explicit unavailable reason (`missing_calibration`,
+`unsupported_task`, `unsupported_source`, `unsupported_domain`,
+`no_threshold_for_task`, or `confidence_unavailable`). Missing confidence is
+never coerced to zero.
 
-The old `upos_confidence` and `lemma_confidence` floats remain as compatibility fields;
-they do not carry the typed scope and must not be interpreted as source- or domain-specific.
-For a scoped result, call `greek.use_calibration_registry()` with no arguments to load the
-bundled Schema-2 `CalibrationRegistry` (`calibration_registry_v2.json`, covering `literary`
-and `documentary_native` across all six tasks and all four lemma routes), or pass a custom
-registry path (the legacy `use_calibration()` aggregate stays available as an explicitly
-unscoped fallback), and provide `confidence_domain="literary"` or `"documentary_native"`.
-Registry resolution prefers an exact model/task/source/domain entry; an explicitly marked
-broader entry is reported as a fallback. Offline lexicon, rule, seed, and paradigm lemmas do
-not borrow neural confidence. `lemma_source_path` records the composition path
-(`lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or
-`identity_fallback`) so a calibration can describe the final decision rather than a hidden
-intermediate score.
+The legacy `upos_confidence` and `lemma_confidence` floats remain for backward
+compatibility only and carry no source or domain scope. For scoped calibration,
+call `greek.use_calibration_registry()` with no arguments to load the bundled
+Schema-2 `CalibrationRegistry` (`calibration_registry_v2.json`, covering
+`literary` and `documentary_native` across all six tasks and all four lemma
+routes), or pass a custom registry path, then pass
+`confidence_domain="literary"` or `"documentary_native"`. The legacy
+`use_calibration()` aggregate remains available as an explicitly unscoped
+fallback. Lookup prefers exact model/task/source/domain matches and flags any
+broader entry as a fallback. Offline lexicon, rule, seed, and paradigm lemmas
+never borrow neural confidence. `lemma_source_path` records the exact
+composition route (`lookup_form_upos`, `lookup_form`, `edit_script`,
+`lookup_lower_fallback`, or `identity_fallback`).
 
-Development fitting helpers are available as `fit_temperature(logits, correct)` for a
-multiclass top-1 temperature and `fit_logit_affine(probs, correct)` for a monotone
-`sigmoid(slope * logit(p) + intercept)` calibrator. They only fit parameters from the
-caller-provided development pairs; calling either helper does not create evidence for a
-domain, choose a threshold, or validate a released model.
+Development fitting utilities `fit_temperature(logits, correct)` and
+`fit_logit_affine(probs, correct)` fit scalar temperature or monotone
+`sigmoid(slope * logit(p) + intercept)` parameters on caller-supplied dev
+pairs; calling them does not validate a domain or choose an abstention
+threshold.
 
-Abstention is caller policy, not a bundled model claim. Supply an immutable,
-caller-owned `AbstentionPolicy` through `confidence_policy=` with task thresholds you have
-chosen; each decision is `accept`, `review`, or `unavailable` and carries the canonical
-`policy_sha256`. The `greek pipeline` CLI command mirrors these names as
-`--confidence-domain` and `--confidence-policy PATH`. No default abstention threshold or
-automatic out-of-domain warning is bundled; for editorial triage, you can sort a review
-spreadsheet by calibrated risk with `priority="calibrated_risk", budget=N`. For the shipped
-canonical runtime, schema-4 `AnalysisReceipt` output records runtime-variant evidence,
-calibration/policy hashes, and the composed output profile. Schema 3 covers composed output
-without runtime-variant evidence. Schema 2 remains readable for legacy or custom output
-without a composed profile, and schema 1 remains readable for older confidence-free analyses.
+Abstention policies are caller-owned. Pass an immutable `AbstentionPolicy` via
+`confidence_policy=` with per-task thresholds; each decision is `accept`,
+`review`, or `unavailable` and records `policy_sha256`. The CLI exposes
+`--confidence-domain` and `--confidence-policy PATH` on `aegean greek pipeline`.
+No default abstention threshold or automatic OOD detector is bundled; for
+editorial triage, sort review exports with `priority="calibrated_risk",
+budget=N`. Schema-4 `AnalysisReceipt` output binds runtime-variant identity,
+calibration and policy hashes, and the composed output profile; schemas 1–3
+remain readable for older outputs.
 
 ### Opt-in weighted OOV lemma reranking
 
-If your texts include poetic, dialectal, or documentary spellings that the joint model never
-saw in training, you can layer the bundled OOV lemma reranker on top of the neural pipeline:
+For texts containing poetic, dialectal, or documentary spellings unseen during
+training, enable the bundled OOV lemma reranker on top of the neural pipeline:
 
 ```python
 greek.use_neural_pipeline()
@@ -629,134 +603,124 @@ greek.use_oov_lemma_reranker(config="weighted")   # opt-in; zero overhead when i
 greek.disable_oov_lemma_reranker()
 ```
 
-When a word is out of vocabulary, the reranker combines the joint model's top-10 edit-script
-predictions with train-only orthographic, Koine phonetic, and preverb-stripped candidates
-using frozen dev-fitted weights (no external dictionary leakage; +0.69 pp on UD Perseus,
-+0.96 pp on UD PROIEL/NT, +1.50 pp on tragedy, +2.03 pp on regularized papyri, and +3.43 pp
-on diplomatic papyri across the five locked test folds — see [Benchmarks](Benchmarks)).
-Pass `config="unique"` for the conservative unique-match fallback.
+For out-of-vocabulary forms, the reranker combines the joint model's top-10
+edit-script predictions with train-only orthographic, Koine phonetic, and
+preverb-stripped candidates using frozen dev-fitted weights with no external
+dictionary leakage (+0.69 pp on UD Perseus, +0.96 pp on UD PROIEL/NT, +1.50 pp
+on tragedy, +2.03 pp on regularized papyri, and +3.43 pp on diplomatic papyri
+across the five locked test folds; see [Benchmarks](Benchmarks)). Pass
+`config="unique"` for the conservative unique-match fallback.
 
 ### GPU execution and batching
 
-With a GPU build of ONNX Runtime installed, the neural backends use the GPU
-automatically: provider selection prefers CUDA, then DirectML, and always keeps the
-CPU as the fallback. `PYAEGEAN_ORT_PROVIDERS` (comma-separated provider names, e.g.
-`CUDAExecutionProvider,CPUExecutionProvider`) overrides the selection exactly as
-given; an unavailable name is a clean error listing what the install offers.
-`greek.neural_backend_info()` reports the available and active providers.
+When a GPU build of ONNX Runtime is installed, provider selection prefers CUDA,
+then DirectML, keeping CPU as fallback. Set `PYAEGEAN_ORT_PROVIDERS` (e.g.
+`CUDAExecutionProvider,CPUExecutionProvider`) to specify exact providers;
+requesting an unavailable provider raises an error listing installed providers.
+Inspect live providers with `greek.neural_backend_info()`.
 
 ```bash
 pip uninstall onnxruntime && pip install onnxruntime-gpu   # NVIDIA CUDA
-# note: match the wheel to your CUDA version; on CUDA 12 use onnxruntime-gpu==1.25.*
-# (PyPI's current onnxruntime-gpu targets CUDA 13). DirectML: onnxruntime-directml.
+# Match the wheel to your CUDA version: on CUDA 12 use onnxruntime-gpu==1.25.*
+# (current PyPI onnxruntime-gpu targets CUDA 13). DirectML: onnxruntime-directml.
 ```
 
-For a generator, database cursor, or other one-shot sentence source, use the
-bounded iterator rather than collecting every result:
+For streaming over generators, cursors, or large files without materializing
+all results in memory, use `iter_analyze_sentences()`:
 
 ```python
 greek.use_neural_pipeline()
 for analysis in greek.iter_analyze_sentences(sentence_source(), batch_size=32):
-    save(analysis)  # source order; each result keeps its own AnalysisReceipt
+    save(analysis)  # source order; each result carries its own AnalysisReceipt
 ```
 
-Creating the iterator pulls nothing. With no `batch_size`, it pulls, copies,
-analyzes, and yields one pre-tokenized sentence at a time. A positive size holds
-at most one chunk and yields that chunk in source order. The backend, opt-in
-documentary settings, and (when requested) calibration registry are captured at
-construction, so a long stream cannot switch models or evidence halfway through.
-Pausing the consumer pulls nothing further; closing it
-closes a source generator. A source or backend failure is never retried: earlier
-chunks remain usable, while a failed or incomplete chunk yields nothing. The memory
-bound is the batch plus the largest sentence, not a fixed cap on one pathological
-sentence. `GreekPipeline.iter_analyze_sentences()` provides the same contract for
+Constructing the iterator pulls nothing from the source. With `batch_size=None`,
+it pulls, analyzes, and yields one pre-tokenized sentence at a time; with a
+positive `batch_size`, it holds at most one batch and yields results in source
+order. The active backend, documentary post-processors, and calibration
+registry are captured at iterator creation so long streams cannot switch state
+mid-run. Closing the iterator closes a source generator, and errors are never
+retried (earlier chunks remain valid; a failed chunk yields nothing). Memory is
+bounded by the batch plus the largest sentence.
+`GreekPipeline.iter_analyze_sentences()` exposes the same streaming contract on
 an isolated instance.
 
-The per-sentence receipt keeps the immutable neural inference identity. If the
-opt-in documentary reconciliation, lemma-rescue, or OOV reranker layer post-processes that result,
-receipt schema 4 additionally binds the runtime label, registry/evidence digests, composed
-output profile ID and SHA-256, and ordered post-processing identity (including the configured
-lever and resource hashes). Schemas 1 through 3 remain readable for current hosted evidence.
+Each yielded `AnalysisReceipt` preserves the immutable neural inference
+identity. When documentary reconciliation, lemma rescue, or the OOV reranker is
+active, receipt schema 4 additionally binds the runtime variant, registry and
+evidence digests, composed output profile ID and SHA-256, and ordered
+post-processing chain (schemas 1–3 remain readable for prior evidence).
 
-`greek.analyze_sentences(..., length_bucket=False)` still returns the historical complete
-list; it is a collector over that bounded engine, and passing `length_bucket=True` groups
-similar-length sentences inside a batch to reduce padding overhead while preserving exact
-input order. For very large corpora stored in SQLite that need crash-safe pause/resume, use
-`aegean.db.annotate_sqlite_job()` (`aegean db annotate`). Raw-text `greek.pipeline`,
-in-memory `annotate_corpus`, and CoNLL-U serialization/evaluation remain collecting APIs.
+`greek.analyze_sentences(..., length_bucket=False)` collects all results into a
+list; passing `length_bucket=True` groups similar-length sentences inside each
+batch to cut padding overhead while returning results in original input order.
+For crash-safe pause/resume annotation over large SQLite corpora, use
+`aegean.db.annotate_sqlite_job()` (`aegean db annotate`). Raw-text `pipeline()`,
+`annotate_corpus()`, and CoNLL-U serialization remain collecting APIs.
 
-Batched inference runs many sentences per model call. The evaluators accept the
-same `batch_size` (CLI: `aegean greek eval ud --batch-size 32`). Both are verified
-prediction-identical to sequential CPU inference on a fixed verification set
-(`training/results/gpu-verify-2026-07-10.json`): identical predictions from CPU vs
-GPU and batched vs sequential on every token. Throughput on that set: CPU batching
-alone was about 4× over sequential CPU, and a data-center GPU with `batch_size=32`
-about 90×. **Every published benchmark number is measured on the CPU provider,
-sequentially** (the recorded protocol); GPU and batching are throughput conveniences.
+Evaluators accept `batch_size` as well (CLI:
+`aegean greek eval ud --batch-size 32`). Batched and GPU runs were verified
+prediction-identical to sequential CPU inference on the fixed verification set
+(`training/results/gpu-verify-2026-07-10.json`), giving roughly 4× throughput
+from CPU batching and ~90× on a data-center GPU at `batch_size=32`. **Every
+published benchmark number is measured sequentially on CPU** per the canonical
+protocol; GPU and batching are throughput options only.
 
 ### Documentary-register post-processing (opt-in)
 
-Two optional layers reconcile the neural pipeline's output to the **documentary** register
-(papyrus letters and petitions, the PapyGreek fold), where the merged treebanks' annotation
-conventions cost the out-of-domain model the most. Both **post-process the active neural
-pipeline**, so activate it first (`greek.use_neural_pipeline()`); each is **opt-in and off by
-default**, and the pipeline is **byte-identical to the shipped model until you switch a lever
-on** (a fresh session, or `disable_*`, restores exactly the model's own output). If a lever
-remains enabled while the neural pipeline is temporarily disabled, the next
-`use_neural_pipeline()` call restores its wrapper automatically.
+Two optional post-processing layers adjust neural predictions for **documentary
+Koine** (papyrus letters and petitions, as in PapyGreek), where conflicting
+coordinator conventions in the merged training treebanks cause the largest
+out-of-domain drop. Both wrap the active neural pipeline (`use_neural_pipeline()`
+first), are off by default, and leave default output byte-identical until
+activated. If a lever stays enabled while the neural pipeline is temporarily
+disabled, the next `use_neural_pipeline()` call reattaches it automatically.
 
 ```python
 greek.use_neural_pipeline()
 greek.use_documentary_reconciliation()   # Lever A (conservative default)
-greek.use_paradigms()                    # (optional) the UniMorph tables Lever B draws on
+greek.use_paradigms()                    # optional UniMorph tables for Lever B
 greek.use_documentary_lemma_rescue()     # Lever B
 
 greek.documentary_reconciliation_active()   # True
 greek.documentary_lemma_rescue_active()     # True
-greek.rescue_lemma("ἄνθρωπον")              # ('ἄνθρωπος', <LemmaSource.SEED: 'seed'>) — or None on a miss
+greek.rescue_lemma("ἄνθρωπον")              # ('ἄνθρωπος', <LemmaSource.SEED: 'seed'>) or None
 
 greek.disable_documentary_reconciliation()
 greek.disable_documentary_lemma_rescue()
 ```
 
-**Lever A — coordinator reconciliation** (`greek.use_documentary_reconciliation()`).
-The single largest documentary error source is the closed class of coordinating conjunctions
-(καί, δέ, τε, ἀλλά, ἤ, οὐδέ, οὔτε, μηδέ, μήτε): the merged training treebanks tag them under
-three incompatible conventions, so on the documentary register the model drifts to the `X` /
-`b` reading. This layer relabels such a token to `CCONJ` (XPOS pos-code `c`), leaving every
-other field consistent. The **conservative default** fires only on the `X` / `b` reading,
-which is *always* wrong for a coordinator, so it cannot mislabel a correct token. The
-**aggressive** form (`use_documentary_reconciliation(aggressive=True)`) additionally folds in
-the `ADV` / `d` reading, which is a *legitimate* adverbial tag for these forms in the literary
-convention, so it clobbers those correct labels and is **documented against** (measured to
-regress literary text heavily).
+**Lever A: coordinator reconciliation**
+(`greek.use_documentary_reconciliation()`). Coordinating conjunctions (`καί`,
+`δέ`, `τε`, `ἀλλά`, `ἤ`, `οὐδέ`, `οὔτε`, `μηδέ`, `μήτε`) carry three
+incompatible conventions across the merged training treebanks, pushing the
+model toward invalid `X`/`b` tags on papyri. The conservative default relabels
+only those `X`/`b` tokens to `CCONJ` (XPOS pos-code `c`), leaving all other
+fields consistent. The aggressive option (`aggressive=True`) also relabels
+`ADV`/`d`, which overwrites legitimate adverbial tags in literary Greek and is
+recommended against.
 
-**Lever B — lemma OOV rescue** (`greek.use_documentary_lemma_rescue()`). When the model leaves
-a lemma unresolved (the honest identity fall-through), this consults the guarded **offline**
-cascade: the bundled **seed** table, then the opt-in UniMorph **paradigm** table when
-`use_paradigms()` is active (**seed and guarded-paradigm tiers only**). The generalizing
-ending-stripping rules are **deliberately excluded** (on the residue the model already left
-unresolved they fabricate about as often as they fix). So Lever B is at its best paired with
-`use_paradigms()`. A rescue only *replaces* an unresolved lemma (never overrides a resolved
-neural lemma) and carries its **own** evidence class — `LemmaSource.SEED` or
-`LemmaSource.PARADIGM`, the curated offline source that produced it, **never** `NEURAL` — and
-the `SentenceAnalysis.lemma_resolved` flag retains the model's original `False`,
-while the offline source override records who supplied the replacement. A returned
-`TokenRecord` has `lemma_resolved=True` for a seed/paradigm hit and
-`lemma_verified=False`; resolution does not mean verification or credit to the neural
-model. `greek.rescue_lemma(form)` returns the `(lemma, source)` a rescue would use,
-or `None`.
+**Lever B: lemma OOV rescue** (`greek.use_documentary_lemma_rescue()`). When
+the neural pipeline leaves a lemma unresolved (identity fall-through), Lever B
+queries the bundled **seed** table and (when `use_paradigms()` is active) the
+guarded UniMorph **paradigm** table. Generalizing ending-stripping rules are
+excluded because they introduce as many errors as fixes on neural residue.
+Rescues never override resolved neural lemmas and record `LemmaSource.SEED` or
+`LemmaSource.PARADIGM` rather than `NEURAL`. `SentenceAnalysis.lemma_resolved`
+retains the model's original `False`, while `TokenRecord.lemma_resolved`
+becomes `True` with `lemma_verified=False`. Call `greek.rescue_lemma(form)` to
+inspect a single form's rescue candidate `(lemma, source)` or `None`.
 
-From the shell, `aegean greek eval {ud,nt,papygreek} --documentary` scores a run with both
-levers applied (it activates the neural pipeline and the conservative reconciliation, then
-restores a clean session afterward). The measured, opt-in variant rows on the PapyGreek fold
-are in [Benchmarks → Opt-in documentary levers](Benchmarks#opt-in-documentary-levers); the
-published PapyGreek row is unchanged by either lever.
+From the shell, `aegean greek eval {ud,nt,papygreek,verse} --documentary`
+evaluates with both levers active and restores a clean session afterward.
+Measured variant rows appear in
+[Benchmarks → Opt-in documentary levers](Benchmarks#opt-in-documentary-levers);
+the baseline PapyGreek row is unaffected.
 
 ### Annotation and domain profiles
 
-The immutable annotation registry makes the shipped convention explicit without
-confusing it with input inspection or confidence scope:
+The annotation registry documents output conventions independently of text
+inspection and confidence scope:
 
 ```python
 greek.list_annotation_profiles()
@@ -765,31 +729,29 @@ greek.get_annotation_profile("pyaegean-canonical-v1")
 greek.canonical_analysis_profile()
 ```
 
-`AnnotationProfile` describes output labels, relation scheme, normalization,
-segmentation, mappings, reversibility, and evidence. `DomainProfile` is descriptive
-scope and source layer, not a detector. These values are separate from
-`TextProfile`/`profile_text` (observable input features) and from the caller's
-confidence `domain`. The shell equivalent is
-`aegean greek annotation-profiles list|show`; there is deliberately no automatic
-`--output-profile` conversion switch for the currently lossy or contextual source
-conventions.
+`AnnotationProfile` describes output labels, dependency scheme, normalization,
+segmentation, mappings, reversibility, and evidence. `DomainProfile` describes
+corpus scope and source layer (it is metadata, not an automatic domain
+detector), distinct from `TextProfile` / `profile_text` (observable input
+features) and caller confidence domains. The CLI mirrors this via
+`aegean greek annotation-profiles list|show`; there is no automatic
+`--output-profile` converter for lossy cross-treebank mappings.
 
-The registry records Perseus/AGDT and UD-PROIEL differences as diagnostics,
-including POS collapse, token-row differences, feature gaps, and dependency changes
-that are not generally invertible. The separate native-PROIEL XML evaluation
-projection strips `#N` homograph suffixes and omits empty tokens; exact UD-fold
-scoring does not use that cleanup. PapyGreek's `orig`
-profile changes only the diplomatic `FORM` surface while retaining regularized-layer
-gold analyses and documented fallbacks. When a post-processing chain is attached,
-receipt schema 4 binds its runtime variant, composed output profile, and ordered step
-identity. Schemas 1 through 3 remain readable for current hosted evidence.
+Differences between Perseus/AGDT and UD-PROIEL (POS collapse, token-row
+mismatches, feature gaps, dependency shifts) are recorded as diagnostics because
+they are not generally invertible. Native-PROIEL XML evaluation strips `#N`
+homograph suffixes and omits empty tokens, whereas exact UD-fold scoring does
+not. PapyGreek's `orig` profile changes only the diplomatic `FORM` surface
+while retaining regularized-layer gold annotations. Receipt schema 4 binds any
+attached post-processing chain, runtime variant, and composed output profile;
+schemas 1–3 remain readable for prior evidence.
 
 ## Normalization & Beta Code
 
 Beta Code is the ASCII transliteration of polytonic Greek used by the TLG and
-Perseus: it lets you type Greek without a Greek keyboard. Conversion emits
-precomposed NFC. Ordinary spellings round-trip; explicit noncontextual medial
-and final sigma forms are retained with `s1` and `s2` when needed.
+Perseus. Conversion emits precomposed NFC. Standard spellings round-trip;
+explicit medial and final sigma forms are preserved with `s1` and `s2` when
+needed.
 
 ```python
 greek.betacode_to_unicode("mh=nin")      # 'μῆνιν'
@@ -797,11 +759,11 @@ greek.betacode_to_unicode("lo/gos")      # 'λόγος'   (context-sensitive fin
 greek.betacode_to_unicode("tw=|")        # 'τῷ'      (iota subscript)
 greek.unicode_to_betacode("Ἀχιλῆος")     # '*a)xilh=os'
 
-greek.normalize("ό")                     # 'ό'   (NFC by default)
+greek.normalize("ό")                     # 'ό'       (NFC by default)
 greek.strip_diacritics("ἄνθρωπος")       # 'ανθρωπος'
 ```
 
-The same three from the shell:
+From the shell:
 
 ```bash
 aegean greek betacode "mh=nin"               # μῆνιν
@@ -810,8 +772,8 @@ aegean greek strip "ἄνθρωπος"                # ανθρωπος
 aegean greek normalize "ό"                   # ό
 ```
 
-Supported Beta Code: the 24 letters (`*` marks capitals, `s1/s2/s3` sigma
-variants) and the diacritics:
+Supported Beta Code includes all 24 Greek letters (`*` prefixes capitals,
+`s1`/`s2`/`s3` select sigma variants) and diacritics:
 
 | Beta Code mark | Diacritic |
 | --- | --- |
@@ -822,18 +784,17 @@ variants) and the diacritics:
 | `=` | circumflex |
 | `+` | diaeresis |
 | `|` | iota subscript |
-| `*` | (prefix) capital letter |
-| `s1` / `s2` / `s3` | medial σ / final ς / lunate ϲ |
+| `*` | capital prefix |
+| `s1` / `s2` / `s3` | medial `σ` / final `ς` / lunate `ϲ` |
 
-**Lenient mode for OCR'd or messy text.** `normalize(..., lenient=True)` (CLI
-`--lenient`) repairs, and *warns about* (a `NormalizationWarning` per repair
-class; on the CLI the warnings go to stderr), the common artifacts of scanned
-editions and half-converted files, instead of letting them silently break
-tokenization downstream:
+**Lenient normalization for OCR text.** `normalize(..., lenient=True)` (CLI:
+`--lenient`) repairs common OCR and partial-conversion artifacts and emits a
+`NormalizationWarning` (stderr on CLI) per repair class before they break
+downstream tokenization:
 
 ```python
 greek.normalize("λόγoς", lenient=True)    # 'λόγος'  (Latin o inside a Greek word)
-greek.normalize("μη=νιν", lenient=True)   # 'μῆνιν'  (Beta-Code remnant diacritic)
+greek.normalize("μη=νιν", lenient=True)   # 'μῆνιν'  (Beta Code remnant diacritic)
 ```
 
 ```bash
@@ -842,14 +803,13 @@ aegean greek normalize --lenient "λόγoς"
 # λόγος
 ```
 
-Three repair classes: Latin letters embedded in Greek-containing words (only letters
-where the visual lookalike and the Beta-Code letter agree: ambiguous ones like `p`
-are reported but left alone), Beta-Code diacritics still attached to Greek letters
-(converted only where the mark is phonologically possible: breathings on vowels/ρ,
-diaeresis on ι/υ, …), and stray combining marks with no base letter (dropped).
-Pure-Latin words pass through untouched, and the default strict mode is unchanged.
-`normalize`'s `form`/`--form` flag selects the Unicode normal form (`NFC` default,
-or `NFD`/`NFKC`/`NFKD`).
+Three repair classes apply: Latin homoglyphs embedded inside Greek words (only
+where visual shape and Beta Code agree; ambiguous letters such as `p` are
+reported and left untouched), stray Beta Code diacritics attached to Greek
+letters (converted only where phonologically valid), and orphaned combining
+marks (dropped). Pure Latin words remain unchanged, and default strict mode is
+unaffected. Pass `form=` / `--form` to select `NFC` (default), `NFD`, `NFKC`,
+or `NFKD`.
 
 ## Tokenization
 
@@ -862,8 +822,8 @@ greek.sentences("ἐν ἀρχῇ ἦν ὁ λόγος. καὶ θεός ἦν;"
 # ['ἐν ἀρχῇ ἦν ὁ λόγος', 'καὶ θεός ἦν']
 ```
 
-From the shell, one token per line (punctuation included), or `--sentences` to
-split sentences instead:
+From the shell, `tokenize` prints one token per line (punctuation included), or
+splits sentences with `--sentences`:
 
 ```bash
 aegean greek tokenize "ἐν ἀρχῇ ἦν ὁ λόγος, καὶ θεός."
@@ -876,25 +836,25 @@ aegean greek tokenize --sentences "ἐν ἀρχῇ ἦν ὁ λόγος. κα�
 aegean greek tokenize --json "λόγος, καί"     # ["λόγος", ",", "καί"]
 ```
 
-Elision apostrophes are kept inside a single token (`ποικιλόθρον’`).
+Elision apostrophes stay attached to their token (`ποικιλόθρον’`).
 
 ## Syllabification
 
-Rule-based: diphthong nuclei, "muta cum liquida" clusters that stay together,
-doubled-consonant splits, and valid Greek onsets, plus a curated **exception
-lexicon** for lexicalised compounds, which divide at the point of union
-(Smyth §140) where pure phonotactics would missplit.
+Rule-based syllabification handles diphthong nuclei, *muta cum liquida* onsets,
+geminate consonant splits, and legal Greek consonant clusters, supplemented by
+a curated exception lexicon for lexicalized compounds that divide at the
+morpheme boundary (Smyth §140):
 
 ```python
 greek.syllabify("λόγος")        # ['λό', 'γος']
 greek.syllabify("ἄνθρωπος")     # ['ἄν', 'θρω', 'πος']
 greek.syllabify("θάλασσα")      # ['θά', 'λασ', 'σα']
 greek.syllabify("ποικιλόθρον")  # ['ποι', 'κι', 'λό', 'θρον']
-greek.syllabify("εἰσφέρω")      # ['εἰσ', 'φέ', 'ρω']   (compound: εἰσ + φέρω,
-                                #  where the rules alone would give εἰ-σφέ-ρω)
+greek.syllabify("εἰσφέρω")      # ['εἰσ', 'φέ', 'ρω']   (compound εἰσ + φέρω;
+                                #  pure phonotactics would yield εἰ-σφέ-ρω)
 ```
 
-The CLI takes one or more words and shows each split with a hyphen:
+From the shell:
 
 ```bash
 aegean greek syllabify "λόγος" "ἄνθρωπος" "εἰσφέρω"
@@ -903,9 +863,9 @@ aegean greek syllabify "λόγος" "ἄνθρωπος" "εἰσφέρω"
 # εἰσφέρω → εἰσ-φέ-ρω
 ```
 
-The lexicon lists dictionary forms (inflected variants fall back to the rules);
-adding an entry is a welcome one-line contribution: see `CONTRIBUTING.md`, which
-also explains the test that makes every entry prove it differs from the rules.
+The exception lexicon covers citation forms (inflected forms fall back to the
+rules). See `CONTRIBUTING.md` for adding entries; each entry is test-enforced
+to differ from the rule engine.
 
 ## Accent analysis
 
@@ -917,7 +877,7 @@ info.classification       # 'paroxytone'
 info.syllables            # ('λό', 'γος')
 ```
 
-The CLI accepts one or more words and prints a table (`--json` for the records):
+From the shell (`--json` emits structured records):
 
 ```bash
 aegean greek accent "λόγος"
@@ -938,14 +898,13 @@ Classifications:
 
 ## Accent placement
 
-Where `accentuation` *reads* the accent off a word that already carries one,
-`place_accent` *predicts* where the accent belongs, from the Greek accentuation
-laws: the law of limitation (an accent falls no further back than the antepenult,
-and not on the antepenult when the ultima is long), the **recessive** rule for
-finite verbs (the accent retreats as far toward the antepenult as the laws allow),
-the **persistent** rule for nominals (the accent stays on the lemma's syllable
-unless a long ultima forces it forward), and the properispomenon rule (a long
-penult before a short ultima takes the circumflex).
+While `accentuation()` inspects an existing accent, `place_accent()` computes
+accent placement from Greek accentuation rules: the law of limitation (no
+further back than the antepenult, blocked from the antepenult by a long
+ultima), **recessive** accentuation for finite verbs, **persistent**
+accentuation for nominals (holding the lemma's syllable unless a long ultima
+pushes it forward), and the properispomenon rule (long penult before short
+ultima takes a circumflex).
 
 ```python
 greek.place_accent("λυε", recessive=True).form              # 'λύε'   (finite verb: recessive)
@@ -956,30 +915,25 @@ acc.accent_type, acc.position_from_end, acc.classification   # ('acute', 2, 'par
 acc.certain, acc.note                                        # (True, 'persistent')
 ```
 
-`recessive_accent(word, …)` and `persistent_accent(form, lemma, …)` are the two
-rules directly; `place_accent(word, *, recessive, lemma=None, ultima_length=None,
-penult_length=None)` dispatches between them (`recessive=True`, or persistent with
-a `lemma`). Each returns an `AccentPlacement` with `form`, `accent_type`,
-`position_from_end` (1=ultima, 2=penult, 3=antepenult), `classification`,
-`certain`, and `note`.
+`recessive_accent(word, …)` and `persistent_accent(form, lemma, …)` invoke each
+rule directly; `place_accent(word, *, recessive, lemma=None,
+ultima_length=None, penult_length=None)` dispatches between them. Each returns
+an `AccentPlacement` with `form`, `accent_type`, `position_from_end`,
+`classification`, `certain`, and `note`.
 
-**Dichrona are flagged, not guessed.** Whether α, ι, or υ is long or short cannot
-be read off the spelling, and that length is sometimes what decides the accent (a
-circumflex vs an acute on the penult, or whether the antepenult is even allowed).
-When a *dichronon* is the deciding factor the placement is returned with
-`certain=False` and a `note` saying what was undetermined, rather than a silent
-guess. Supplying the missing length via `ultima_length=` / `penult_length=`
-(`"long"` / `"short"`), or a `lemma` whose own accent resolves it, makes the
-answer `certain`:
+**Dichrona are flagged rather than guessed.** Because spelling does not mark
+whether `α`, `ι`, or `υ` is long or short, any case where a *dichronon* decides
+the accent returns `certain=False` with a diagnostic `note`. Pass
+`ultima_length=` or `penult_length=` (`"long"` / `"short"`), or a `lemma` whose
+accent resolves the length, to produce a `certain=True` result:
 
 ```python
-greek.place_accent("λυε", recessive=True).certain                       # False — penult dichronon
-greek.place_accent("λυε", recessive=True, penult_length="short").certain  # True  — length supplied
+greek.place_accent("λυε", recessive=True).certain                       # False (penult dichronon)
+greek.place_accent("λυε", recessive=True, penult_length="short").certain  # True (length supplied)
 ```
 
-The CLI `accentuate` takes one or more words and prints each placement (`--json`
-for the records); `--recessive` / `--persistent` choose the rule and `--lemma`
-supplies the persistent home syllable:
+From the shell (`--recessive` or `--persistent --lemma ...`, `--json` for
+records):
 
 ```bash
 aegean greek accentuate λυε --recessive
@@ -989,58 +943,48 @@ aegean greek accentuate λογος --persistent --lemma λόγος
 # λόγος	paroxytone
 ```
 
-This is a rule engine over the accentuation laws, not a corpus lookup: it predicts
-the regular placement and flags cases the spelling leaves
-undetermined.
+This is a rule engine over regular accent laws, not a dictionary lookup.
 
 ## Resolving crasis, elision, and movable nu
 
-Surface contractions otherwise pass through the pipeline opaquely.
-`resolve_sandhi` expands one token to the underlying word(s), so downstream stages
-(lemmatize, gloss, parse) see real words rather than a clipped or fused form:
+`resolve_sandhi()` expands surface contractions into underlying word forms so
+downstream lemmatization, glossing, and parsing see unclipped tokens:
 
 ```python
 greek.resolve_sandhi("κἀγώ").words      # ('καί', 'ἐγώ')   (crasis)
 greek.resolve_sandhi("τἀμά").words      # ('τὰ', 'ἐμά')    (crasis)
 greek.resolve_sandhi("οὐκ").words       # ('οὐ',)          (movable-nu / οὐκ alternation)
-greek.resolve_sandhi("λόγος").words     # ('λόγος',)       (no sandhi: passes through)
+greek.resolve_sandhi("λόγος").words     # ('λόγος',)       (no sandhi)
 ```
 
-A `ResolvedForm` carries `surface`, `words` (the underlying sequence), `kind`
-(`"crasis"` / `"elision"` / `"movable-nu"` / `None`), `uncertain`, `note`, and
-`alternatives`. `resolve_sentence(text)` maps it over every word of a sentence;
-flatten with `[w for r in result for w in r.words]` to get the expanded word
-stream the rest of the pipeline should index against.
+Each `ResolvedForm` carries `surface`, `words`, `kind` (`"crasis"`,
+`"elision"`, `"movable-nu"`, or `None`), `uncertain`, `note`, and
+`alternatives`. `resolve_sentence(text)` runs over every word in a sentence;
+flatten with `[w for r in result for w in r.words]`.
 
 ```python
 greek.resolve_sandhi("κἀγώ").kind       # 'crasis'
 greek.resolve_sandhi("κἀγώ").note       # 'crasis κἀγώ = καί + ἐγώ'
 ```
 
-The CLI `sandhi` takes one or more words and prints the expansion (`--json` for
-the records):
+From the shell:
 
 ```bash
 aegean greek sandhi κἀγώ
 # καί ἐγώ	crasis
 ```
 
-**Scope and conservatism.** Crasis is expanded only from a curated
-lexicon (see `CONTRIBUTING.md`); a
-coronis form not in it is flagged `uncertain` and left intact. Elision is restored
-only where the elided vowel is unambiguous (a listed proclitic/particle or a clear
-inflectional ending); otherwise the clipped stem is kept and flagged. The
-movable-ν and οὐκ/οὐχ/οὐ rules are purely contextual and need no lexicon. The
-resolver does not over-expand: an ambiguous form comes back unchanged with
-`uncertain=True` and a note.
+Crasis expands only from a curated lexicon (unlisted forms with a coronis come
+back unchanged with `uncertain=True`). Elision restores only unambiguous vowels
+(listed proclitics/particles or clear endings); movable-ν and `οὐ`/`οὐκ`/`οὐχ`
+rules operate contextually without a lexicon.
 
 ## Prosody (syllable quantity)
 
-Classifies each syllable as **heavy** / **light** / **common**: the metrical
-foundation of meter. A syllable is heavy if it's closed (long by position) or has
-a long nucleus (η, ω, a circumflex, an iota-subscript vowel, or a diphthong);
-light if open with a short nucleus (ε, ο); common if open with a *dichronon*
-(α, ι, υ), whose length isn't determinable from spelling.
+Word-level prosody labels each syllable as `heavy`, `light`, or `common`. A
+syllable is heavy when closed (long by position) or carrying a long nucleus
+(`η`, `ω`, circumflex, iota subscript, or diphthong); light when open with `ε`
+or `ο`; and common when open with a *dichronon* (`α`, `ι`, `υ`).
 
 ```python
 greek.syllable_quantities("λόγος")      # ['light', 'heavy']
@@ -1055,36 +999,31 @@ aegean greek quantities "ἄνθρωπος" "μῆνιν"
 # μῆνιν → μῆ:heavy | νιν:heavy
 ```
 
-Baseline scope: these quantities are computed within a single word. To resolve a
-syllable's quantity *in metrical context* (across word boundaries, with the
-caesura and the ambiguities a verse line allows) use the **[metrical
-scansion](#metrical-scansion)** below, which builds on this word-level view.
+These rules operate within a single word. For line-level quantities across word
+boundaries (including *correptio* and *muta cum liquida*), use
+[metrical scansion](#metrical-scansion).
 
 ## Metrical scansion
 
-Scan a line of verse into its feet. It covers **dactylic hexameter** (the metre
-of Homer), **elegiac pentameter** (the second line of an elegiac couplet),
-**iambic trimeter** (the metre of tragic and comic dialogue), and the **aeolic
-lyric** lines. The scanner resolves each syllable's quantity *in context*:
-applying *correptio* (a long vowel shortened before another vowel), treating
-muta-cum-liquida clusters as the ambiguity they are, and counting position across
-word boundaries. The detailed treatment (caesura conventions, resolution, synizesis, the
-full template list) lives on the [Meters](Meters) page.
+The scanner fits verse lines to **dactylic hexameter**, **elegiac pentameter**,
+**iambic trimeter** (with resolution), and seven **aeolic lyric** cola,
+resolving quantities across word boundaries with *correptio epica* and *muta
+cum liquida* ambiguity. For full rules, caesurae, resolution, and synizesis,
+see [Meters](Meters).
 
-The result is glyph notation you'll recognise from any commentary: **—** heavy
-(long), **⏑** light (short), **×** *anceps* (the "either" final syllable).
+Patterns use standard metrical glyphs: `—` heavy (long), `⏑` light (short),
+and `×` *anceps*.
 
 ```python
 sc = greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ")
-sc.pattern        # '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'   (Odyssey 1.1 — five dactyls)
+sc.pattern        # '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'   (Odyssey 1.1)
 sc.meter          # 'hexameter'
 [f.name for f in sc.feet]
 # ['dactyl', 'dactyl', 'dactyl', 'dactyl', 'dactyl', 'final']
-sc.caesura        # 'trochaic'   (the main word-break in the third foot)
+sc.caesura        # 'trochaic'
 ```
 
-The CLI `scan` defaults to hexameter; `--meter` picks any of the metres below.
-It prints the glyph pattern, the feet, and the caesura (`--json` gives the full
+From the shell (`--meter` selects the metre; `--json` emits the full
 `LineScansion`):
 
 ```bash
@@ -1101,27 +1040,25 @@ aegean greek scan --meter pentameter "κείμεθα τοῖς κείνων ῥ�
 # pentameter: dactyl, spondee, longum, dactyl, dactyl, longum; caesura: —
 ```
 
-Iambic trimeter is three metra of `× — ⏑ —`, with **resolution** of a long
-element into two shorts:
+Iambic trimeter permits resolution of resolvable long positions into two shorts:
 
 ```python
 greek.scan_trimeter("Διόνυσον, ὃν τίκτει ποθ' ἡ Κάδμου κόρη").pattern  # Bacchae 2
-# '×⏑⏑⏑—|×—⏑—|×—⏑×'   — the first long is resolved (Διό- = ⏑⏑)
+# '×⏑⏑⏑—|×—⏑—|×—⏑×'   (Διό- resolves to ⏑⏑)
 ```
 
-**Aeolic lyric lines** are matched against fixed quantity templates (the choriambic
-nucleus doesn't resolve), so a line scans-or-declines just like the metres above.
-`greek.AEOLIC_LINES` lists the supported types:
+Aeolic lyric lines match fixed quantity templates without resolution
+(`greek.AEOLIC_LINES`):
 
-| Aeolic line | Example |
+| Aeolic line | Description |
 | --- | --- |
-| `glyconic` | the workhorse aeolic colon |
+| `glyconic` | base aeolic colon |
 | `pherecratean` | catalectic glyconic |
-| `sapphic_hendecasyllable` | Sappho's stanza line |
-| `adonean` | the short close of the Sapphic stanza |
-| `alcaic_hendecasyllable` | Alcaeus's stanza line |
-| `alcaic_enneasyllable` | the 9-syllable Alcaic colon |
-| `alcaic_decasyllable` | the 10-syllable Alcaic colon |
+| `sapphic_hendecasyllable` | Sapphic stanza line |
+| `adonean` | close of the Sapphic stanza |
+| `alcaic_hendecasyllable` | Alcaic stanza opening line |
+| `alcaic_enneasyllable` | 9-syllable Alcaic colon |
+| `alcaic_decasyllable` | 10-syllable Alcaic colon |
 
 ```python
 greek.scan_aeolic("φαίνεταί μοι κῆνος ἴσος θέοισιν", "sapphic_hendecasyllable").pattern
@@ -1130,54 +1067,49 @@ greek.scan_aeolic("ἀσυννέτημμι τὼν ἀνέμων στάσιν", 
 # '×—⏑—×—⏑⏑—⏑×'   (Alcaeus 326.1)
 ```
 
-`scan_line(line, meter)` dispatches by name (`"hexameter"` / `"pentameter"` /
-`"trimeter"` / any aeolic line), and a `LineScansion` carries these fields:
+`scan_line(line, meter)` dispatches by name (`"hexameter"`, `"pentameter"`,
+`"trimeter"`, or any aeolic colon). `LineScansion` exposes:
 
 | Field | Meaning |
 | --- | --- |
-| `.line` | the input line |
-| `.meter` | the metre that matched |
-| `.feet` | a list of `Foot(name, syllables, quantities)` |
-| `.syllables` | every syllable, flat |
-| `.quantities` | the resolved quantity of each syllable |
-| `.caesura` | the caesura name (e.g. `trochaic`, `penthemimeral`) |
-| `.caesura_index` | the syllable index the line breaks before |
-| `.ambiguous` | whether more than one scansion fit |
+| `.line` | input line |
+| `.meter` | matched metre |
+| `.feet` | tuple of `Foot(name, syllables, quantities)` |
+| `.syllables` | flat tuple of syllables |
+| `.quantities` | resolved quantity per syllable |
+| `.caesura` | caesura name (`trochaic`, `penthemimeral`, `hephthemimeral`, or `None`) |
+| `.caesura_index` | syllable index preceded by the caesura |
+| `.ambiguous` | `True` when multiple valid scansions fit |
 
-To inspect the *possible* quantities of each syllable before a metre is imposed
-(useful for seeing where a line is genuinely ambiguous) use `syllable_options`:
+Inspect pre-metrical quantity options with `syllable_options()`:
 
 ```python
 greek.syllable_options("πατρός")
-# [('πα', ['heavy', 'light']), ('τρός', ['light'])]   ← πα is muta-cum-liquida: either
+# [('πα', ['heavy', 'light']), ('τρός', ['light'])]   (πα before muta cum liquida τρ)
 ```
 
-**Synizesis is lexical, never inferred.** When a line only scans if two written
-vowels are read as one syllable (e.g. *Iliad* 1.1, where `Πηληϊάδεω` reads its
-final `-εω` as one syllable), the scanner applies it **only** for words in a
-curated lexicon: each entry test-enforced to be required by a real line that
-otherwise fails:
+**Lexical synizesis.** Two- or three-vowel coalescence (such as `-εω` in
+`Πηληϊάδεω`, *Iliad* 1.1) is applied strictly from a curated, test-enforced
+lexicon and never inferred on unlisted words:
 
 ```python
 greek.scan_hexameter("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος").pattern
-# '—⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×'   — Πηληϊάδεω is in the lexicon, so the line scans
+# '—⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×'
 ```
 
-A line needing synizesis on a word **not** in the lexicon raises `ScansionError`
-(the CLI exits 1 with the reason) rather than guessing. The aeolic lyric lines
-are supported (above); other lyric metres (dactylo-epitrite, free astrophic)
-remain out of scope for now: see [Limitations](Limitations).
+Non-matching lines raise `ScansionError` (CLI exit code 1). Dactylo-epitrite
+and free astrophic lyric are out of scope; see [Limitations](Limitations).
 
 ## Phonology (reconstructed IPA)
 
-Transcribe Greek to IPA for two periods: `"attic"` (Classical, default) and
-`"koine"` (Hellenistic/Imperial).
+`to_ipa()` transcribes Greek into reconstructed IPA for `"attic"` (Classical,
+default) or `"koine"` (Hellenistic/Imperial):
 
 ```python
 greek.to_ipa("θεός")               # 'tʰeos'   (Attic: aspirated θ)
 greek.to_ipa("ὁ")                  # 'ho'      (rough breathing → /h/)
 greek.to_ipa("ἄγγελος")            # 'aŋɡelos' (γγ → velar nasal)
-greek.to_ipa("θεός", "koine")      # 'θeos'    (Koine: θ is a fricative)
+greek.to_ipa("θεός", "koine")      # 'θeos'    (Koine: fricative θ)
 greek.to_ipa("καί", "koine")       # 'ke'      (iotacism: αι → /e/)
 ```
 
@@ -1186,21 +1118,19 @@ aegean greek ipa "θεός"                  # tʰeos
 aegean greek ipa --period koine "θεός"   # θeos
 ```
 
-Attic uses aspirated φ θ χ = /pʰ tʰ kʰ/, voiced stops β γ δ = /b ɡ d/, ζ = /zd/,
-υ = /y/, distinctive vowel length, and rough breathing = /h/. Koine fricativizes
-(φ θ χ = /f θ x/; β γ δ = /v ɣ ð/), is mid-iotacism (η, ει → /i/; αι → /e/; οι → /y/), and
-drops length and the breathings.
-
-**Reconstructed and approximate**: several values (ε/η quality, the long
-diphthongs, the date of iotacism) are scholarly judgement calls; see
-[Limitations](Limitations).
+Attic uses aspirated stops (`φ θ χ` = `/pʰ tʰ kʰ/`), voiced stops (`β γ δ` =
+`/b ɡ d/`), `ζ` = `/zd/`, `υ` = `/y/`, phonemic vowel length, and rough
+breathing `/h/`. Koine fricativizes stops (`φ θ χ` = `/f θ x/`, `β γ δ` =
+`/v ɣ ð/`), applies mid-stage iotacism (`η, ει` → `/i/`, `αι` → `/e/`, `οι` →
+`/y/`), and drops vowel length and `/h/`. Reconstructed values involve scholarly
+judgment calls; see [Limitations](Limitations).
 
 ## POS tagging (baseline)
 
-Coarse part-of-speech tags (Universal Dependencies inventory). Closed classes
-(article, prepositions, conjunctions, particles, pronouns, and the εἰμί copula)
-are tagged reliably from a lexicon; open-class words get a light suffix heuristic
-(a few verb endings, else NOUN).
+Baseline tagging assigns coarse UD part-of-speech tags offline. Closed classes
+(articles, prepositions, conjunctions, particles, pronouns, and `εἰμί`) come
+from a curated lexicon; open classes fall back to a light suffix heuristic
+(selected verb endings, otherwise `NOUN`).
 
 ```python
 greek.pos_tag("ὁ")          # 'DET'
@@ -1213,8 +1143,8 @@ greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος, καὶ θεός.")
 #  ('λόγος','NOUN'), (',','PUNCT'), ('καὶ','CCONJ'), ('θεός','NOUN'), ('.','PUNCT')]
 ```
 
-The CLI tags one token per line (and `--treebank` / `--tagger` / `--neural` turn
-on the backends below for that run; `--json` gives the records):
+From the shell (`--treebank`, `--tagger`, or `--neural` selects a stronger
+backend; `--json` emits structured output):
 
 ```bash
 aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος, καὶ θεός."
@@ -1229,62 +1159,52 @@ aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος, καὶ θεός."
 # .	PUNCT
 ```
 
-Tags emitted: `DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X`
-(treebank mode may also emit `INTJ`).
+Emitted tags: `DET`, `ADP`, `CCONJ`, `SCONJ`, `PART`, `PRON`, `ADV`, `NUM`,
+`NOUN`, `VERB`, `ADJ`, `PUNCT`, `X` (treebank mode may also emit `INTJ`).
 
-**Baseline scope:** closed classes are reliable; open-class precision is limited
-(an open-class verb like ἄειδε falls back to NOUN). To fix this for *attested*
-forms, switch on the [treebank backend](#treebank-backed-mode-opt-in): with
-`greek.use_treebank()` active, `pos_tag`/`pos_tags` return the gold AGDT tag for a
-known form (e.g. ἔφη → VERB) before falling back to the heuristic. The treebank
-only covers attested forms, though: to tag an **unseen** form well, switch on the
-[generalizing tagger](#generalizing-pos-tagger-opt-in) below.
+Open-class precision is limited in baseline mode (verbs such as `ἄειδε` default
+to `NOUN`). Activate the [treebank backend](#treebank-backed-mode-opt-in) for
+attested AGDT forms, or the
+[generalizing POS tagger](#generalizing-pos-tagger-opt-in) /
+[neural pipeline](#the-neural-pipeline-opt-in) for unseen words.
 
 ## Generalizing POS tagger (opt-in)
 
-The baseline heuristic and the treebank lookup both fall down on an *unseen* open-class
-form: the heuristic just guesses NOUN, and the lookup has no entry for it. `use_tagger()`
-switches on a trained **averaged-perceptron** sequence tagger (pure Python, no heavy deps)
-that predicts a tag from suffix/prefix/shape/accent features plus left-to-right sentence
-context, so it **generalizes** to forms it has never seen.
+`use_tagger()` activates a pure-Python **averaged-perceptron** sequence tagger
+using affix, shape, accent, and left-to-right context features to tag unseen
+open-class forms without third-party dependencies:
 
 ```python
-greek.use_tagger()        # one-time fetch of the prebuilt model (or local train as fallback), then cached
-greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος")   # every token tagged, in context
-greek.disable_tagger()    # back to the lookup/heuristic
+greek.use_tagger()        # fetches prebuilt model (~2.2 MB, or trains locally), then cached
+greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος")
+greek.disable_tagger()
 ```
 
 ```bash
-aegean greek tag --tagger "ἐν ἀρχῇ ἦν ὁ λόγος"   # tagged in context
+aegean greek tag --tagger "ἐν ἀρχῇ ἦν ὁ λόγος"
 ```
 
-It composes with the cascade: the closed-class lexicon and (when active) the treebank
-lookup still take precedence per token for the forms they cover; the tagger fills in
-everything else, including words neither has seen.
+It composes with the cascade: closed-class lexicon entries and active treebank
+lookups take precedence on covered forms, and the perceptron tags everything
+else.
 
-**Measured: held-out AGDT, leakage-free.** Trained on a 90% sentence split and scored on
-the disjoint 10% (≈54k tokens, via `greek.evaluate_tagger()`), it reaches **84.4% POS
-overall and 83.6% on unseen forms**: forms absent from the training split. For contrast,
-on the same tokens the lookup scores 0% on unseen (no entry) and the suffix heuristic only
-~50%. The cached model is ~2.2 MB and `import aegean` stays instant: the model arrives on
-first `use_tagger()` (prebuilt fetch, or trained locally as the fallback), never bundled.
+**Measured (held-out 90/10 AGDT split, ≈54k tokens, `greek.evaluate_tagger()`):**
+**84.4% POS overall and 83.6% on unseen forms** (versus 0% unseen for lookup
+and ~50% for the suffix heuristic). The cached model is ~2.2 MB and fetched
+lazily on first use.
 
 ```python
 greek.evaluate_tagger(holdout=0.1)
 # {'pos_all': 0.844, 'pos_unseen': 0.836, 'n_all': 54036, 'n_seen': 45138, 'n_unseen': 8898}
 ```
 
-This is a generalizing tagger with **zero heavy dependencies, an instant import, and a
-~2 MB model**: a deliberate point on the trade-off curve, favouring pure-Python portability
-over the absolute accuracy of a full neural pipeline.
-
 ## Morphological analysis
 
-Given an inflected form, `analyze` returns the morphological readings its ending
-implies: part of speech plus the relevant features (case/number/gender for
-nouns; tense/voice/mood/person/number for verbs), each with a reconstructed
-lemma. Greek inflection is richly ambiguous, so a single form legitimately yields
-several candidate readings; you disambiguate with context.
+`analyze()` returns the candidate morphological readings consistent with a
+word's form and ending: part of speech, grammatical features (case, number,
+gender; tense, voice, mood, person, number), and a lemma. Because Greek
+inflection is heavily ambiguous, one surface form often produces multiple valid
+analyses requiring context to disambiguate.
 
 ```python
 for a in greek.analyze("λόγον"):
@@ -1296,8 +1216,7 @@ for a in greek.analyze("λόγον"):
 # λόγος [NOUN voc sg neut]
 ```
 
-The CLI `morph` takes one word and lists the candidate parses (`--treebank` to
-add the AGDT lexicon; `--json` for the structured readings):
+From the shell (`--treebank` adds the AGDT lexicon; `--json` emits all fields):
 
 ```bash
 aegean greek morph "λόγον"
@@ -1308,173 +1227,149 @@ aegean greek morph "λόγον"
 # λόγος [NOUN voc sg neut]
 ```
 
-Each reading is an `Analysis` with the lemma, the POS, and the individual feature
-fields; `.features()` gives just the ones that apply:
+Each `Analysis` exposes `lemma`, `pos`, feature fields, and `.features()` for
+non-null attributes:
 
 ```python
 a = greek.analyze("λύεις")[0]
 a.lemma, a.pos        # ('λυω', 'VERB')
 a.features()          # {'number': 'sg', 'tense': 'pres', 'voice': 'act', 'mood': 'ind', 'person': '2'}
-a.lemma_certain       # False  ← see "how far to trust the lemma" below
+a.lemma_certain       # False (reconstructed from ending; see below)
 ```
 
-The `--json` output exposes every field of each reading: `lemma`, `pos`, `case`,
-`number`, `gender`, `tense`, `voice`, `mood`, `person`, `degree`, and
-`lemma_certain` (inapplicable fields are `null`).
+`--json` outputs `lemma`, `pos`, `case`, `number`, `gender`, `tense`, `voice`,
+`mood`, `person`, `degree`, and `lemma_certain`.
 
-Closed-class words (the article, prepositions, conjunctions, particles, pronouns)
-come back as a single, confident reading:
+Closed classes (articles, prepositions, conjunctions, particles, pronouns,
+`τις`/`τίς` distinguished by accent, `ὅς`/`ἥ`/`ὅ`, `ἄλλος`/`ἕκαστος`/`πᾶς`,
+low cardinals and ordinals) resolve cleanly offline:
 
 ```python
 greek.analyze("ὁ")       # (Analysis(lemma='ὁ', pos='DET'),)
 greek.analyze("καί")[0]  # καί → CCONJ
-```
-
-The closed-class coverage is wide. The indefinite and interrogative τις / τίς
-(distinguished by the written accent), the relative ὅς / ἥ / ὅ paradigm, the
-determiners ἄλλος / ἕκαστος / πᾶς, the low cardinals and ordinals, and a longer
-particle list now tag and analyse with their case/number/gender (or their part of
-speech), where the bare rule engine previously returned nothing:
-
-```python
 [str(a) for a in greek.analyze("τις")]   # ['τις [PRON nom sg masc]', 'τις [PRON nom sg fem]']
-greek.analyze("τίς")[0]                   # τίς → PRON (interrogative: the acute distinguishes it)
-greek.analyze("ὅς")[0]                    # ὅς  → PRON (relative)
+greek.analyze("τίς")[0]                  # τίς → PRON (interrogative)
+greek.analyze("ὅς")[0]                   # ὅς  → PRON (relative)
 greek.analyze("ἕκαστος")[0]              # ἕκαστος → DET
 ```
 
-Two convenience shortcuts when you don't need the full feature set:
+Convenience shortcuts when full features are unnecessary:
 
 ```python
-greek.lemmas("ἀνθρώπων")   # ['ἄνθρωπος']   (the distinct lemmas a form could belong to)
-greek.best_pos("λύεις")    # 'VERB'         (the single most likely part of speech)
+greek.lemmas("ἀνθρώπων")   # ['ἄνθρωπος']
+greek.best_pos("λύεις")    # 'VERB'
 ```
 
-### How far to trust the lemma
+### Lemma certainty
 
-`Analysis.lemma_certain` tells you how much to trust the lemma. When the bundled
-seed lexicon knows the form, you get the correctly **accented** lemma and
-`lemma_certain=True`. When the form is regular but out-of-vocabulary, the lemma is
-*reconstructed* from the ending: **unaccented** (accent recession can't be
-derived from the ending alone) and flagged `lemma_certain=False`:
+When the bundled seed table (or active treebank) contains the form, `analyze()`
+returns an accented lemma with `lemma_certain=True`. For regular OOV forms, the
+lemma is reconstructed from the ending without accent recession and flagged
+`lemma_certain=False`:
 
 ```python
-[a for a in greek.analyze("ἀνθρώπων") if a.pos == "NOUN"][0].lemma   # 'ἄνθρωπος' (seed, certain)
-[a for a in greek.analyze("ἵππον")   if a.pos == "NOUN"][0].lemma    # 'ιππος'   (reconstructed, uncertain)
+[a for a in greek.analyze("ἀνθρώπων") if a.pos == "NOUN"][0].lemma   # 'ἄνθρωπος' (certain)
+[a for a in greek.analyze("ἵππον")   if a.pos == "NOUN"][0].lemma    # 'ιππος'    (reconstructed)
 ```
 
 ### Scope and caveats
 
-This is a **baseline** engine: high-precision on the *regular* paradigms it
-encodes (the article and pronouns, the first and second declensions and common
-third-declension endings, and **thematic** verbs in the present, imperfect, future
-and sigmatic aorist indicative, plus common infinitives and the mediopassive
-participle). Past tenses are augment-gated, and a dative singular is detected from
-its iota subscript. Athematic, contract, irregular and suppletive forms (`εἶπον` →
-`λέγω`) are beyond a purely rule-based reach; for those, switch on the
-[treebank-derived lexicon](#treebank-backed-mode-opt-in) below. For ambiguous forms the
-feature analyses are **exploratory**: trust the closed classes and the feature
-set; treat a single auto-picked reading with care.
+The offline analyzer covers closed classes, first and second declensions,
+common third-declension endings, and regular thematic verbs (present,
+imperfect, future, sigmatic aorist indicative, common infinitives, and
+mediopassive participles), with augment gating for past tenses and iota
+subscript detection for datives. Athematic, contract, irregular, and suppletive
+forms (`εἶπον` → `λέγω`) require the
+[treebank backend](#treebank-backed-mode-opt-in).
 
 ### Treebank-backed mode (opt-in)
 
-The baseline above is rule-based and fully offline. For *attested* forms you can
-switch on a **treebank-derived lexicon** built from the Perseus Ancient Greek
-Dependency Treebank (AGDT v2.1). It supplies correctly-**accented** lemmas and full
-features: including the irregular, contract, athematic and third-declension forms
-the rule engine can't reach:
+`use_treebank()` enables a lexicon built from the Perseus Ancient Greek
+Dependency Treebank (AGDT v2.1), supplying accented lemmas and full features
+for attested irregular, contract, athematic, and third-declension forms:
 
 ```python
-greek.use_treebank()         # one-time fetch of the ~15 MB prebuilt lexicon, cached; then instant
+greek.use_treebank()         # fetches ~15 MB prebuilt lexicon once, then cached
 
-greek.lemmatize("ἄνδρα")      # 'ἀνήρ'      (3rd declension; the rule engine gives a bare stem)
-greek.lemmatize("ἔφη")        # 'φημί'      (suppletive athematic verb)
+greek.lemmatize("ἄνδρα")      # 'ἀνήρ'
+greek.lemmatize("ἔφη")        # 'φημί'
 greek.lemmatize("γυναικός")   # 'γυνή'
 greek.lemmatize("πόλεως")     # 'πόλις'
 greek.analyze("ἀνθρώπων")[0]  # ἄνθρωπος [NOUN gen pl masc]   (lemma_certain=True)
 ```
 
-Once active, `lemmatize`/`analyze` prefer the treebank for known forms and fall
-back to the rule/seed engine for the rest; `greek.disable_treebank()` restores the
-default. (On the CLI, pass `--treebank` to `tag`, `lemmatize`, `morph`, or
-`pipeline`.) Network is needed only on the first call: it fetches the prebuilt
-AGDT-derived lexicon (part of one shared ~15 MB bundle), falling back to
-downloading the treebank itself (~75 MB) and building locally if the asset is
-unreachable. The data is **CC BY-SA 3.0** (derived from the AGDT), fetched to your
-cache and never bundled: see
+Once enabled, `lemmatize()` and `analyze()` check the treebank first and fall
+back to rules and seeds for unattested words. Call `greek.disable_treebank()`
+to disable it, or pass `--treebank` on the CLI (`tag`, `lemmatize`, `morph`,
+`pipeline`). On first call it fetches the shared ~15 MB AGDT-derived bundle
+(falling back to downloading the ~75 MB AGDT and building locally if needed).
+The data is **CC BY-SA 3.0**, cached locally and never bundled; see
 [Data & Provenance](Data-and-Provenance#the-greek-treebank-lexicon--models-agdt-derived-use_treebank).
 
 ## Inflection synthesis (opt-in)
 
-The inverse of analysis: where `analyze`/`lemmatize` map a *form* to its lemma and
-features, `inflect` maps a **lemma plus a feature spec** back to the attested form(s).
-`use_inflector()` builds (and caches) an inverse index over the same AGDT treebank lexicon
-the analysis stack uses, then `inflect` / `paradigm` resolve against it. Coverage is what
-the corpus attests: every `(lemma, features)` cell seen in the AGDT is generated exactly,
-most-attested first; an unattested lemma or cell comes back empty.
+`inflect()` and `paradigm()` invert morphological analysis by mapping a lemma
+and partial feature specification to attested AGDT forms (ordered most frequent
+first). `use_inflector()` builds and caches the inverse index from the shared
+AGDT lexicon; unattested lemmas or cells return an empty tuple.
 
 ```python
-greek.use_inflector()                          # one-time AGDT lexicon build, then cached
+greek.use_inflector()
 greek.inflect("λόγος", case="gen", number="sg")   # ('λόγου',)
 greek.inflect("λόγος", case="gen", number="pl")   # ('λόγων',)
 greek.inflect("λύω", tense="pres", voice="act", mood="ind", person="1", number="sg")  # ('λύω',)
 ```
 
-`inflect` returns a **tuple** because one cell can have several attested spellings: the AGDT
-records Homeric and dialectal datives such as `λόγοισι(ν)` beside Attic `λόγοις`, and treebank
-annotation noise occasionally leaves a stray form, so treat low-frequency extras as candidates,
-not certainties. A call before `use_inflector()` raises `InflectorNotLoadedError`. `paradigm`
-returns every attested cell of a lemma as `(features, form)` pairs:
+Because one cell may attest multiple dialectal variants (such as Homeric
+`λόγοισι(ν)` beside Attic `λόγοις`) or occasional treebank noise, `inflect()`
+returns a tuple ordered by frequency. Calling before `use_inflector()` raises
+`InflectorNotLoadedError`. `paradigm()` lists all attested `(features, form)`
+pairs for a lemma:
 
 ```python
 cells = greek.paradigm("λόγος")
-[(f, form) for f, form in cells][:3]   # cells are ordered most-attested first
+[(f, form) for f, form in cells][:3]
 # [({'pos': 'NOUN', 'case': 'gen', 'number': 'sg', 'gender': 'masc'}, 'λόγου'),
 #  ({'pos': 'NOUN', 'case': 'nom', 'number': 'sg', 'gender': 'masc'}, 'λόγος'), …]
 ```
 
-The feature keys are the analyzer's short codes: `pos` (NOUN/VERB/ADJ/…), `case`
-(nom/gen/dat/acc/voc/loc), `number` (sg/pl/du), `gender` (masc/fem/neut), `tense`
-(pres/impf/aor/perf/plup/fut/futperf), `voice` (act/mid/pass/mp), `mood`
-(ind/subj/opt/inf/imp/part), `person` (1/2/3), and `degree` (comp/sup). Pass any partial
-subset; the unspecified keys are left free.
+Feature keys match the analyzer's short codes: `pos`, `case`
+(`nom`/`gen`/`dat`/`acc`/`voc`/`loc`), `number` (`sg`/`pl`/`du`), `gender`
+(`masc`/`fem`/`neut`), `tense` (`pres`/`impf`/`aor`/`perf`/`plup`/`fut`/`futperf`),
+`voice` (`act`/`mid`/`pass`/`mp`), `mood` (`ind`/`subj`/`opt`/`inf`/`imp`/`part`),
+`person` (`1`/`2`/`3`), and `degree` (`comp`/`sup`). Unspecified keys remain
+unconstrained.
 
-The CLI `inflect` takes the lemma plus a flag per feature, and `--paradigm` lists the whole
-table (`--json` for the structured cells):
+From the shell:
 
 ```bash
 aegean greek inflect "λόγος" --case gen --number sg     # λόγου
-aegean greek inflect "λόγος" --paradigm                 # every attested cell
+aegean greek inflect "λόγος" --paradigm                 # all attested cells
 ```
 
-Built from the AGDT (CC BY-SA 3.0), fetched to your cache and never bundled (the same
-shared lexicon as the [treebank backend](#treebank-backed-mode-opt-in));
-`greek.disable_inflector()` turns it off.
+Built from AGDT (CC BY-SA 3.0), cached locally, and disabled via
+`greek.disable_inflector()`.
 
 ## Lemmatization (baseline)
 
-Two always-offline tiers, tried in order: a small bundled form→lemma **seed table** (for
-irregular and high-frequency forms), then a **generalizing rule layer** that strips the
-regular second-declension and thematic-verb endings back to the citation form by
-accent-preserving substitution (`-ου/-ῳ/-ον/-οι/-οις → -ος`, the first-declension `-αν → -α`,
-and the thematic active `-εις/-ει/-ομεν/-ετε/-ουσι(ν)` plus the infinitive `-ειν` → `-ω`).
-Conservative guards skip contracted/perispomenon forms (`Ἰησοῦς`, `ζῇ`), common neuter `-ον`
-nouns, and indeclinables; the ambiguous `-η` series is left to the seed table and the backends.
-The rules keep the surface stem intact, so an unseen `νόμου` lemmatizes to `νόμος` without a
-lookup. For attested forms the [treebank backend](#treebank-backed-mode-opt-in) supplies
-real, accented lemmas, and the rule-based [morphological analyzer](#morphological-analysis)
-is documented above.
+Offline lemmatization checks two tiers in order: a bundled form-to-lemma **seed
+table** for irregular and high-frequency forms, followed by an accent-preserving
+**rule layer** for regular second-declension (`-ου/-ῳ/-ον/-οι/-οις → -ος`),
+first-declension (`-αν → -α`), and thematic active verb endings
+(`-εις/-ει/-ομεν/-ετε/-ουσι(ν)`, `-ειν → -ω`). Conservative guards skip
+contracted/perispomenon forms (`Ἰησοῦς`, `ζῇ`), common neuter `-ον` nouns, and
+indeclinables; ambiguous `-η` forms are left to seeds and backends. Unseen
+regular forms such as `νόμου` still resolve to `νόμος` without a lookup.
 
 ```python
 greek.lemmatize("λόγου")             # 'λόγος'   (seed table)
 greek.lemmatize("ἦν")                # 'εἰμί'    (seed table; irregular)
-greek.lemmatize("νόμου")             # 'νόμος'   (rule layer; not in the table)
-greek.lemmatize_verbose("πατρός")    # ('πατρός', False)  ← 3rd-declension, not rule-recoverable
+greek.lemmatize("νόμου")             # 'νόμος'   (rule layer)
+greek.lemmatize_verbose("πατρός")    # ('πατρός', False)  (3rd declension, not rule-recoverable)
 ```
 
-The CLI lemmatizes every word, form→lemma per line (backend flags `--treebank`,
-`--lemmatizer`, `--neural-lemmatizer`, `--neural`; `--json` for records carrying
-`form`/`lemma`/`known`):
+From the shell (`--treebank`, `--lemmatizer`, `--neural-lemmatizer`, `--neural`
+select backends; `--json` outputs `form`/`lemma`/`known`):
 
 ```bash
 aegean greek lemmatize "λόγου ἦν"
@@ -1482,61 +1377,55 @@ aegean greek lemmatize "λόγου ἦν"
 # ἦν	εἰμί
 ```
 
-The rule layer covers the *regular* paradigms only; it cannot restore an accent that recedes
-between the inflected form and the lemma (`κυρίῳ → κύριος`), and third-declension stems,
-indeclinables, and irregular/suppletive forms come back unchanged. For those, switch on the
-[generalizing lemmatizer](#generalizing-lemmatizer-opt-in) below.
+The rule layer handles regular paradigms only: it cannot restore recessive
+accent shifts (`κυρίῳ → κύριος`), and third-declension stems, indeclinables,
+and suppletive forms pass through unchanged. Use the
+[treebank backend](#treebank-backed-mode-opt-in),
+[generalizing lemmatizer](#generalizing-lemmatizer-opt-in), or
+[neural pipeline](#the-neural-pipeline-opt-in) for broader coverage.
 
 ## Generalizing lemmatizer (opt-in)
 
-The seed table and the treebank lookup only lemmatize *attested* forms, and the baseline rule
-layer only the *regular* paradigms; an irregular unseen form comes back unchanged.
-`use_lemmatizer()` switches on a trained lemmatizer that **generalizes** more broadly: from
-each (form, lemma) pair it learns a Chrupała-style **edit tree**: a recursive transform that
-keeps the shared stem and rewrites the differing prefix/suffix, so a rule learned from one
-word (`-ου → -ος`) applies to unseen words (`νόμου → νόμος`), and edit trees capture accent
-shifts and capitalization too. An averaged-perceptron reranker, conditioned on POS, picks the
-right tree for each form.
+`use_lemmatizer()` enables a pure-Python Chrupała-style **edit-tree**
+lemmatizer with an averaged-perceptron reranker conditioned on POS. From each
+training `(form, lemma)` pair it learns recursive prefix/suffix edit rules
+(including accent and case changes) that generalize to unseen words:
 
 ```python
-greek.use_tagger()        # recommended — the lemmatizer conditions on the tagger's POS
-greek.use_lemmatizer()    # one-time fetch of the prebuilt model (or local train as fallback), then cached
-greek.lemmatize("ἀνθρώπων")   # 'ἄνθρωπος', even if the form was never attested
+greek.use_tagger()        # recommended: supplies predicted POS to the reranker
+greek.use_lemmatizer()    # fetches prebuilt model (~7 MB, or trains locally), then cached
+greek.lemmatize("ἀνθρώπων")   # 'ἄνθρωπος'
 greek.disable_lemmatizer()
 ```
 
 ```bash
-aegean greek lemmatize --lemmatizer "ἀνθρώπων νόμου"   # generalizes to unseen forms
+aegean greek lemmatize --lemmatizer "ἀνθρώπων νόμου"
 ```
 
-It slots into the cascade after the treebank lookup: an attested form still gets its gold
-lemma; everything else goes to the model.
+It sits in the cascade after the treebank lookup so attested forms keep their
+gold lemma while unseen forms go to the edit-tree model.
 
-**Measured: held-out AGDT, leakage-free.** Trained on a 90% sentence split and scored on the
-disjoint 10% (via `greek.evaluate_lemmatizer()`, with *predicted* POS), it reaches **84.5%
-overall and 40.3% on unseen forms**, versus the lookup's 0% on unseen. The cached model is
-~7 MB (fetched prebuilt on first use, or trained locally if the asset is unreachable, never
-bundled).
-
-This is real generalization from a zero-dependency model (0% → 40% on unseen, competitive
-on attested forms). Recovering an unseen Greek lemma often means an internal stem/accent
-change rather than a suffix swap, which is where a pure-Python edit-tree reranker reaches
-its limit. For higher unseen accuracy, switch on the
-**[neural backend](#neural-lemmatizer-opt-in)** below, which reaches 76.3% on unseen forms.
+**Measured (held-out 90/10 AGDT split with predicted POS,
+`greek.evaluate_lemmatizer()`):** **84.5% overall and 40.3% on unseen forms**
+(versus 0% unseen for lookup). Cached size is ~7 MB. Because unseen Greek
+lemmas often require stem or accent changes beyond suffix edits, use the
+[neural lemmatizer](#neural-lemmatizer-opt-in) (76.3% on unseen forms) or the
+[neural pipeline](#the-neural-pipeline-opt-in) when higher unseen accuracy is
+needed.
 
 ## Neural lemmatizer (opt-in)
 
-The `[neural]` backend **generates** the lemma with a fine-tuned **GreTa** (Ancient-Greek
-T5) seq2seq, composing novel stem and accent changes rather than classifying a form into a
-known transformation. On unseen forms it reaches **76.3%**.
+The standalone `[neural]` lemmatizer generates lemmas with a fine-tuned
+**GreTa** (Ancient Greek T5) seq2seq model, handling stem alternations and
+accent shifts beyond fixed edit classes and reaching **76.3% on unseen forms**:
 
 ```bash
 pip install "pyaegean[neural]"      # onnxruntime + tokenizers; no torch
 ```
 
 ```python
-greek.use_neural_lemmatizer()       # fetches the model (~232 MB, one-time) to the cache
-greek.lemmatize("θήσονται")         # 'τίθημι'   — generated, never attested in this form
+greek.use_neural_lemmatizer()       # fetches model (~232 MB, one-time) to cache
+greek.lemmatize("θήσονται")         # 'τίθημι'
 greek.lemmatize("λάθωσι")           # 'λανθάνω'
 greek.disable_neural_lemmatizer()
 ```
@@ -1545,25 +1434,23 @@ greek.disable_neural_lemmatizer()
 aegean greek lemmatize --neural-lemmatizer "θήσονται λάθωσι"
 ```
 
-It is a **hybrid**: a bundled gold lookup answers attested (seen) forms exactly, so the model
-only generates for genuinely unseen forms, and it slots into the cascade just after the
-treebank lookup, ahead of the edit-tree reranker. Inference is **torch-free** (a numpy greedy
-decode over the int8 ONNX encoder/decoder via onnxruntime); the model is fetched to the cache,
-never bundled, so `import aegean` stays instant. The weights derive from CC BY-SA treebanks
-(see [Data & Provenance](Data-and-Provenance)); the wheel stays Apache-2.0 because the model is
-fetched, not bundled.
+It operates as a hybrid: an embedded gold lookup answers attested forms directly
+and runs the int8 ONNX encoder/decoder via `onnxruntime` (no PyTorch) only on
+unseen forms. It slots into the cascade after the treebank lookup and ahead of
+the edit-tree reranker. Weights derive from CC BY-SA treebanks and are fetched
+to cache rather than bundled (see [Data & Provenance](Data-and-Provenance)).
 
 ## Dependency parsing (opt-in, baseline)
 
-`use_parser()` activates (on first use it fetches the prebuilt model from the shared
-AGDT-derived bundle; if that's unreachable it downloads the AGDT and trains locally:
-a few minutes) a transition-based **arc-eager** parser with an **averaged-perceptron**
-classifier (pure Python, no heavy deps); then `parse()` turns a sentence into a
-dependency tree with the gold **AGDT/Prague** labels (SBJ, OBJ, ATR, ADV, PRED, Aux*…).
+`use_parser()` activates a pure-Python transition-based **arc-eager** parser
+with an averaged-perceptron classifier (fetched prebuilt from the shared AGDT
+bundle, or trained locally in ~2–3 minutes if unreachable). `parse()` returns a
+`DepTree` using **AGDT/Prague** dependency labels (`SBJ`, `OBJ`, `ATR`, `ADV`,
+`PRED`, `Aux*`):
 
 ```python
-greek.use_treebank()     # optional — improves the POS/lemmas the parser feeds on
-greek.use_parser()       # one-time train (~2–3 min) from the cached AGDT, then cached
+greek.use_treebank()     # optional: improves input POS and lemmas
+greek.use_parser()
 
 tree = greek.parse("ἐν ἀρχῇ ἦν ὁ λόγος")
 print(tree)
@@ -1579,86 +1466,77 @@ tree.root().form                      # 'ἦν'
 
 ```bash
 aegean greek parse --parser "ἐν ἀρχῇ ἦν ὁ λόγος"     # AGDT/Prague labels
-aegean greek parse --neural "ἐν ἀρχῇ ἦν ὁ λόγος"     # UD relations (needs the [neural] extra)
+aegean greek parse --neural "ἐν ἀρχῇ ἦν ὁ λόγος"     # UD relations ([neural] extra)
 ```
 
-A `DepTree` is a tuple of `DepToken(id, form, lemma, upos, head, relation)` with
-`root()`, `head_of(id)`, `children(id)`, and `is_projective()`. You can also read the
-treebank's **gold** trees directly: `from aegean.greek.syntax import load_gold_trees`.
+`DepTree` is a tuple of `DepToken(id, form, lemma, upos, head, relation)` with
+`root()`, `head_of(id)`, `children(id)`, and `is_projective()`. Load gold AGDT
+trees directly with `from aegean.greek.syntax import load_gold_trees`.
 
-**This is an honest baseline.** Ancient Greek is richly **non-projective** (only ~31%
-of AGDT sentences are projective), and arc-eager can build only projective trees, so
-non-projective gold structures are out of reach and are skipped in training (a known
-limitation, not a bug). Measured on held-out AGDT with gold POS:
-**~0.63 UAS / 0.53 LAS on projective sentences, ~0.51 / 0.41 across all text**
-(`greek.evaluate_parser()` reproduces the across-all-text pair: it scores every
-held-out tree, projective or not). It produces clean, correct trees for
-main-clause syntax (as above), but it is not a research-grade parser. For research-grade
-dependency trees, use the [neural pipeline](#the-neural-pipeline-opt-in)'s `--neural`
-parse, which decodes a full (non-projective) UD tree. The baseline model is derived from
-the AGDT (CC BY-SA 3.0), cached locally (~4 MB), never bundled; `greek.disable_parser()`
-turns it off. See [Limitations](Limitations).
+**Baseline limitations.** Ancient Greek is heavily **non-projective** (only
+~31% of AGDT sentences are projective), and arc-eager parsing produces only
+projective trees, skipping non-projective sentences during training. Measured
+on held-out AGDT with gold POS: **~0.63 UAS / 0.53 LAS on projective sentences,
+~0.51 / 0.41 across all sentences** (`greek.evaluate_parser()`). For
+non-projective UD dependency trees, use the
+[neural pipeline](#the-neural-pipeline-opt-in). The baseline model (~4 MB, CC
+BY-SA 3.0) is cached locally and disabled via `greek.disable_parser()`.
 
 ## Lexicon (LSJ glossing, opt-in)
 
-What does a word *mean*? `use_lsj()` switches on the full **Perseus Liddell-Scott-Jones**
-lexicon: it fetches the prebuilt ~15 MB index (one-time; or, if that asset is
-unreachable, downloads the ~270 MB TEI and builds the index locally), then
-`gloss`/`lookup` resolve a Greek word to its dictionary entry. Looking up an inflected
-form works: it tries the form, then lemmatizes (using the [treebank backend](#treebank-backed-mode-opt-in)
-if active) and retries, so it composes with everything above.
+`use_lsj()` activates the Perseus **Liddell-Scott-Jones** lexicon (fetching a
+prebuilt ~15 MB index once, or building from the ~270 MB TEI if unreachable).
+`gloss()` and `lookup()` check the supplied form first and fall back to
+lemmatizing through the active pipeline when an inflected form misses:
 
 ```python
-greek.use_treebank()         # optional, but lets inflected/irregular forms resolve
-greek.use_lsj()              # one-time fetch of the ~15 MB prebuilt index, cached; then instant
+greek.use_treebank()         # optional: improves lemmatization of irregular forms
+greek.use_lsj()              # fetches ~15 MB prebuilt index once, then cached
 
-greek.gloss("ἀνδρός")         # 'ἀνήρ: man, opp. god, …'        (lemmatized ἀνδρός → ἀνήρ)
+greek.gloss("ἀνδρός")         # 'ἀνήρ: man, opp. god, …'   (lemmatized ἀνδρός → ἀνήρ)
 greek.gloss("γυναικός")       # 'γυνή: wife, spouse, …'
 greek.gloss("βάλλω")          # 'βάλλω: Act. , throw:'
 
-entry = greek.lookup("λόγος")  # the full structured entry
+entry = greek.lookup("λόγος")  # full structured entry
 entry.headword               # 'λόγος'
 len(entry.senses)            # 64
 entry.senses[0].marker, entry.senses[0].text[:40]   # ('I', 'computation, reckoning …')
 ```
 
-The CLI `gloss` activates the index automatically (so it triggers the fetch) and
-prints the one-liner; pass a form and it is lemmatized first:
+From the shell (`gloss` loads the index automatically):
 
 ```bash
 aegean greek gloss "λόγου"      # λόγος: computation, reckoning (cf. λέγω (B) II).
 ```
 
-`lookup` returns an `LSJEntry` (`headword`, `senses` of `Sense(marker, level, text)`,
-`lead`, `short`); `gloss` is the concise one-liner (`headword: <first English sense>`).
-Beta Code in the source is converted to Unicode, and citations are compacted into the
-sense text. The short gloss is best-effort: for a few entries (e.g. cross-reference
-headwords) it can still lead with a variant; use `lookup` for the full picture.
-
-The LSJ is **CC BY-SA 4.0** (Perseus Digital Library), fetched to your cache and never
-bundled: see [Data & Provenance](Data-and-Provenance#the-greek-lexicon-lsj-lsj-index-use_lsj).
-`greek.disable_lsj()` turns it back off.
+`lookup()` returns an `LSJEntry` (`headword`, `senses` of
+`Sense(marker, level, text)`, `lead`, `short`); `gloss()` returns the concise
+one-liner. Beta Code inside LSJ senses is converted to Unicode and citations
+are compacted. Short glosses can occasionally lead with a cross-reference
+variant; inspect `lookup()` for the complete entry. LSJ is **CC BY-SA 4.0**
+(Perseus Digital Library), fetched to cache and disabled via
+`greek.disable_lsj()`; see
+[Data & Provenance](Data-and-Provenance#the-greek-lexicon-lsj-lsj-index-use_lsj).
 
 ### More dictionaries: the lexicon registry
 
-`use_lsj` and `use_dodson` are two backends in a small **registry** of dictionaries.
-`greek.lexica()` lists what is available; `greek.use_lexicon(id)` activates a hosted one;
-and `greek.gloss(word, dictionary=id)` / `greek.entry(word, dictionary=id)` resolve a word
-against a chosen dictionary (with no `dictionary=`, the first active one). Inflected forms
-lemmatize on a miss, exactly as with LSJ.
+`greek.lexica()` lists all registered dictionaries (hosted and deep-link);
+`greek.use_lexicon(id)` activates any hosted lexicon, and
+`greek.gloss(word, dictionary=id)` / `greek.entry(word, dictionary=id)` query a
+specific one (defaulting to the first active dictionary). Inflected forms
+lemmatize automatically on a miss.
 
-Ordinary headwords can resolve source keys with editorial entry numbers or a
-leading dagger when the match is unambiguous: for example, LSJ `ἅμα` and Cunliffe
-`εἰμί`. Lookup preserves accents and breathings, so `εἰμί` and `εἶμι` remain
-distinct. A genuinely ambiguous spelling such as `ειμι` returns no entry; an
-exact source key can select a numbered homonym. Returned headwords, definitions,
-and editorial marks retain the dictionary's original wording. Inflected forms
-still use lemmatization when no compatible headword matches directly.
+Headword resolution handles unambiguous editorial entry numbers and leading
+daggers (for instance LSJ `ἅμα` and Cunliffe `εἰμί`) while preserving accents
+and breathings so `εἰμί` and `εἶμι` stay distinct. Ambiguous unaccented queries
+such as `ειμι` return no entry; exact source keys select numbered homonyms.
+Headwords, definitions, and editorial marks keep each dictionary's original
+wording.
 
 ```python
-greek.lexica()                       # every dictionary: id, scope, license, hosted vs link
+greek.lexica()                       # id, scope, license, hosted vs link
 
-greek.use_lexicon("middle-liddell")  # the concise Intermediate Lexicon (classical)
+greek.use_lexicon("middle-liddell")  # Intermediate Greek-English Lexicon (classical)
 greek.gloss("λόγος", dictionary="middle-liddell")
 # 'λόγος: λόγος, ὁ, λέγω (A) the word or that by which the inward thought is expressed, …'
 
@@ -1670,12 +1548,12 @@ greek.use_lexicon("abbott-smith")    # Abbott-Smith, A Manual Greek Lexicon of t
 greek.gloss("πίστις", dictionary="abbott-smith")
 # 'πίστις: faith; belief; trust; confidence; the faith; fidelity; …'
 
-greek.entry("λόγος", dictionary="cunliffe").body   # the full entry text
+greek.entry("λόγος", dictionary="cunliffe").body   # full entry text
 ```
 
-The hosted dictionaries:
+Hosted dictionaries:
 
-| id | dictionary | scope |
+| ID | Dictionary | Scope |
 | --- | --- | --- |
 | `lsj` | Liddell-Scott-Jones | classical (full) |
 | `middle-liddell` | An Intermediate Greek-English Lexicon | classical (concise) |
@@ -1684,263 +1562,250 @@ The hosted dictionaries:
 | `abbott-smith` | A Manual Greek Lexicon of the New Testament | Koine / NT |
 | `dodson` | Dodson Greek Lexicon | Koine / NT (bundled) |
 
-Each (except the bundled Dodson) is fetched to your cache on first use and built into a
-lemma→entry index, never bundled: sources and licenses are in
+Except for the bundled Dodson lexicon, each dictionary is fetched to cache on
+first use; sources and licences are listed in
 [Data & Provenance](Data-and-Provenance).
 
-**Dictionaries pyaegean cannot host** (Slater, Montanari, DGE, Bailly, …) are
-reachable as deep-links. `greek.lexicon_link(word)` builds a
-[Logeion](https://logeion.uchicago.edu/) URL (or Perseus, with `service="perseus"`),
-lemmatizing the word first; Logeion aggregates all of those dictionaries.
+Dictionaries pyaegean cannot host (Slater, Montanari, DGE, Bailly, etc.) are
+reachable via deep links: `greek.lexicon_link(word)` lemmatizes the word and
+builds a [Logeion](https://logeion.uchicago.edu/) URL (or Perseus with
+`service="perseus"`):
 
 ```python
-greek.lexicon_link("λόγος")   # 'https://logeion.uchicago.edu/λόγος'  (percent-encoded for the browser)
+greek.lexicon_link("λόγος")   # 'https://logeion.uchicago.edu/λόγος' (percent-encoded)
 ```
 
-The registry also records the **Suda On Line** (the Byzantine Greek encyclopedic
-lexicon), `id="suda"`, deep-link only. Unlike the Logeion-aggregated dictionaries
-above, the Suda lives at [its own site](http://www.stoa.org/sol/) and is addressed by
-**Adler number** (a letter plus a reference number), so a canonical entry is a URL like
-`http://www.stoa.org/sol-entries/alpha/1`, not a word lookup. pyaegean holds no
-Adler-number index, so `greek.lexica()` lists the Suda and where it lives rather than
-minting an offline word→entry link, and `use_lexicon("suda")` raises the deep-link guard
-(reach it online instead). The ancient Suda text (Adler's 1928–1938 edition) is public
-domain; the Suda On Line's translations and annotations are CC BY-NC-SA. It hosts, and
-links to, nothing.
+The registry also lists the **Suda On Line** (`id="suda"`, deep-link only).
+Because Suda On Line ([stoa.org/sol](http://www.stoa.org/sol/)) is addressed by
+Adler number (`alpha/1`) rather than lemma and pyaegean carries no Adler index,
+`use_lexicon("suda")` raises the deep-link guard. The ancient Suda text
+(Adler 1928–1938) is public domain; Suda On Line translations and notes are CC
+BY-NC-SA.
 
 From the shell:
 
 ```bash
-aegean greek lexica                          # list the dictionaries
-aegean greek gloss μῆνις --dict cunliffe     # gloss from a chosen dictionary
-aegean greek lexicon-link μήνιδος            # a Logeion deep-link to the lemma
+aegean greek lexica                          # list all registered dictionaries
+aegean greek gloss μῆνις --dict cunliffe     # gloss from a specific dictionary
+aegean greek lexicon-link μήνιδος            # Logeion link for the lemma
 ```
 
 ### Dialect and register tags
 
-LSJ marks a word's **dialect** (Doric, Attic, Ionic, Aeolic, Epic, …) and its **register**
-(poetic, medical, comic, tragic, …) with standard abbreviations in the entry text.
-`greek.usage(word)` reads those off the active LSJ entry against a curated abbreviation map
-and returns a `UsageInfo` with `dialects` and `registers` tuples (so it requires
-`greek.use_lsj()`):
+`greek.usage(word)` scans an active LSJ entry against a curated map of LSJ
+dialect (`Doric`, `Attic`, `Ionic`, `Aeolic`, `Epic`, …) and register
+(`poetic`, `medical`, `comic`, `tragic`, …) abbreviations and returns a
+`UsageInfo(dialects, registers)` (requires `greek.use_lsj()`):
 
 ```python
 greek.use_lsj()
 
 u = greek.usage("θάλασσα")
-u.dialects, u.registers       # the dialect/register tags LSJ records for the entry
-bool(greek.usage("xyz"))      # False — empty UsageInfo when there is no entry or no tag
+u.dialects, u.registers
+bool(greek.usage("xyz"))      # False when no entry or no tags match
 ```
 
-A `UsageInfo` is falsy when both tuples are empty, so `if greek.usage(word):` tests whether
-LSJ recorded anything. From the shell:
+From the shell:
 
 ```bash
-aegean greek usage "θάλασσα"        # the dialect/register tags (--json for the record)
+aegean greek usage "θάλασσα"        # dialect and register tags (--json for structured output)
 ```
 
-This is a **heuristic**: it matches the abbreviation tokens in the flattened entry text, so
-it surfaces what LSJ records without resolving every nuance (an abbreviation that doubles as
-a citation marker can occasionally slip through).
+This is a token-matching heuristic over flattened LSJ text; abbreviations that
+overlap with citation markers can occasionally produce false positives.
 
-## The Greek New Testament (Koine)
+## The Greek New Testament and Biblical Greek (`aegean.greek.bible`)
 
-`greek.load_nt` loads the **Nestle 1904** Greek NT as an annotated `Corpus`: the Koine
-counterpart to `load_work`. Every token carries a gold **lemma**, a Robinson **morph**
-parse, a **Strong's** number, a reconciled UD **upos**, the **normalized** form, and a
-**gloss** in `Token.annotations` (so `to_dataframe(level="token")` surfaces them as columns):
+All Biblical and Koine Greek corpus, witness, Strong's, Septuagint, and
+patristic commentary workflows live in `aegean.greek.bible` (CLI:
+`aegean bible …`; full reference: [New Testament](New-Testament)).
+
+`bible.load_nt(book=None, ref=None, *, edition="nestle1904", offline=False,
+force=False)` returns a `Corpus` with one `Document` per chapter. The default
+`nestle1904` edition carries gold `lemma`, Robinson `morph`, `strongs`,
+reconciled UD `upos`, `normalized`, `ref`, and `gloss` annotations on every
+token; eight additional editions (`sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`,
+`byz`, `antoniades`, `tr`) are selectable via `edition=`. John 1 and Philemon 1
+(Nestle 1904) are bundled offline, and all remaining books and editions fetch
+to cache on first use:
 
 ```python
-from aegean import greek
+from aegean.greek import bible
 
-nt = greek.load_nt("John", ref="1.1-1.5")     # a name/abbrev + load_work-style ref
+nt = bible.load_nt("John", ref="1.1-1.5")
 tok = nt.documents[0].tokens[1]
 tok.text, tok.annotations["lemma"], tok.annotations["morph"], tok.annotations["strongs"]
 # ('ἀρχῇ', 'ἀρχή', 'N-DSF', '746')
 
-greek.load_nt("Romans", ref="8")               # a whole chapter; ref="8.28" a verse
-greek.load_nt()                                # the whole 27-book NT
+bible.load_nt("Romans", ref="8")                      # whole chapter; ref="8.28" for one verse
+bible.load_nt("John", ref="1.18", edition="sblgnt")   # compare or load another edition
+bible.compare_editions("John", "1.18")                # word-level variant diff across editions
+bible.load_lxx("Gen", ref="1.1-5", offline=True)      # Swete Septuagint (55 books)
+bible.load_witness("P66", "John", "1.1-5")            # early NT manuscript witness
 ```
 
-`load_nt(book, *, ref=None, force=False)`. `book` accepts names or abbreviations
-(`John`/`Jn`, `1Cor`, `Rev`); `ref` mirrors `load_work` (`"3"` chapter, `"3.16"`
-verse, `"3.16-18"` range). The base text is public domain and the
-morphology/lemmas/Strong's are CC0, so **a sample is bundled** (John 1 and
-Philemon, offline) and the full corpus fetches to cache on demand.
-
-A token-level dataframe puts every annotation in its own column:
+Token-level DataFrames expose each annotation key as a column:
 
 ```python
-nt = greek.load_nt("John", ref="1.1-1.2")
+nt = bible.load_nt("John", ref="1.1-1.2")
 nt.to_dataframe(level="token").columns.tolist()
 # ['doc_id','line_no','position','text','kind','status','site','period',
 #  'lemma','morph','strongs','normalized','upos','ref','gloss']
 ```
 
-The structural columns come first, then one column per annotation the corpus actually
-carries. A tabular export omits the typed token columns that are unused in the corpus
-being exported, so a different corpus yields a different (shorter or longer) column
-list.
+Unused typed token columns are omitted from tabular exports, so other corpora
+produce shorter or longer column lists depending on which fields are populated.
 
-**Koine glossing** comes from the bundled Dodson lexicon (CC0): the Koine
-counterpart to `use_lsj`, and **no download** (it is CC0 and bundled):
+**Strong's lexicon and word studies.** `bible.strongs_entry()`,
+`bible.strongs_roots()`, and `bible.word_study()` work offline immediately
+through the bundled Dodson lexicon (CC0) and upgrade via `bible.use_strongs()`
+to the 11,142-entry Extended Strong's lexicon (NT, LXX, Apocrypha, and
+Apostolic Fathers) with recursive root trees:
 
 ```python
-greek.use_dodson()
-greek.gloss_strongs("3056")   # 'a word, speech, divine utterance, analogy'
-greek.gloss_nt("ἀγάπη")       # 'love'  (lemmatizes + accent-folds on a miss)
+from aegean.greek import bible
 
-entry = greek.lookup_nt("λόγος")
-entry.strongs, entry.lemma, entry.gloss
-# ('3056', 'λόγος', 'a word, speech, divine utterance, analogy')
+entry = bible.strongs_entry("G3056")   # StrongsEntry(strongs='G3056', lemma='λόγος', ...)
+bible.strongs_entry("ἀγάπη").gloss     # 'love'
+study = bible.word_study("G3056")      # gloss, root tree, NT counts, morphology breakdown
 ```
 
-A `DodsonEntry` has four fields: `strongs`, `lemma`, `gloss` (the one-liner), and
-`definition` (the fuller text). From the CLI, use `aegean bible strongs`:
+From the shell:
 
 ```bash
-aegean bible strongs "ἀγάπη"                  # love
-aegean bible strongs G3056                    # a word, speech, divine utterance, analogy
-aegean bible strongs G3056 --roots            # entry + recursive etymological root tree
+aegean bible read John 1:1-5 --interlinear
+aegean bible compare John 1.18
+aegean bible strongs "ἀγάπη"
+aegean bible strongs G3056 --roots
+aegean bible word-study ἀγάπη
 ```
 
-The NT corpus self-glosses from the same lexicon, so each token already carries a
-`gloss` annotation offline.
-
-**Measuring the model on the NT.** `greek.evaluate_on_nt()` (CLI `aegean greek eval nt`)
-scores the neural pipeline against the Nestle 1904 gold (lemma + reconciled UPOS): a
-Nestle-own-gold complement to the PROIEL out-of-AGDT check, and both are genuinely
-out-of-domain (the models train on AGDT + Gorman + Pedalion). The measured numbers and
-the honesty notes (lemma-convention differences; why finer features aren't
-cross-comparable) are in
+**Evaluating on the NT.** `greek.evaluate_on_nt()` (CLI:
+`aegean greek eval nt`) scores the neural pipeline against the full 27-book
+Nestle 1904 gold (lemma and reconciled UPOS) as an out-of-domain Koine check
+complementing PROIEL. Measured figures and convention notes appear in
 [Benchmarks](Benchmarks).
 
 ## Terminology rarity
 
-How unusual is a text's vocabulary, measured against a reference corpus? Rare, technical,
-or documentary terms are where a translator (human or model) is most likely to stumble, so
-`greek.terminology_rarity(text, corpus)` is a cheap, offline, deterministic
-*translation-difficulty* signal: it scores each content word by its lemma's frequency in
-the reference corpus on a log scale, and averages.
-
-Rarity is always **relative to the corpus you pass**. Score against the Greek NT and a
-word's rarity reflects how unusual it is in Koine; score against a tragedy and it reflects
-that register. Pass any `Corpus` (or `QueryResults`); the NT is a natural reference, and its
-gold lemma annotations are used directly:
+`greek.terminology_rarity(text, corpus)` provides a deterministic offline
+vocabulary-difficulty signal by scoring each content word on a log-frequency
+scale against a reference `Corpus` (or `QueryResults`):
 
 ```python
-nt = greek.load_nt()                      # the reference corpus
+from aegean import greek
+from aegean.greek import bible
+
+nt = bible.load_nt()
 r = greek.terminology_rarity("ἐν ἀρχῇ ἦν ὁ λόγος", nt)
 
-r.overall                                 # mean word rarity, 0 (easy) .. 1 (all-rare)
-r.corpus_lemmas, r.corpus_tokens          # the size of the frequency basis
-[(w.word, w.label) for w in r.hardest(3)] # the three rarest words, rarest first
+r.overall                                 # mean word rarity, 0 (common) .. 1 (absent)
+r.corpus_lemmas, r.corpus_tokens          # size of the frequency basis
+[(w.word, w.label) for w in r.hardest(3)] # three rarest words, rarest first
 ```
 
-Each `WordRarity` carries the surface `word`, its `lemma`, the lemma's `count` in the
-reference corpus, a `rarity` (0 = as common as the corpus's most frequent lemma, 1 =
-absent), and a `label` (`absent` / `hapax` / `rare` / `uncommon` / `common`).
-`RarityResult.hardest(n)` returns the `n` rarest words, most rare first, to surface the
-terms worth grounding. From the shell (`--corpus nt` uses the NT, or pass a corpus path):
+Each `WordRarity` carries `word`, `lemma`, `count`, `rarity`, and `label`
+(`absent`, `hapax`, `rare`, `uncommon`, or `common`). From the shell
+(`--corpus nt` uses the NT, or pass any corpus path):
 
 ```bash
 aegean greek rarity "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt --top 3
 ```
 
-This is **exploratory**: a rarity score is a difficulty signal, not a measured accuracy,
-and it only means as much as the corpus you score against is representative.
+Rarity is relative to the reference corpus passed and is an exploratory signal
+rather than an accuracy metric.
 
 ## Loading real works
 
-`greek.load_work` fetches a real Greek work from Perseus (canonical-greekLit /
-First1KGreek), parses the TEI into one document per book/chapter, or, with `ref`,
-just the section you ask for. The full corpus story (refs, editions, sources,
-export) is on [Greek Works and Books](Greek-Works-and-Books); here is the shape:
+`greek.load_work()` fetches classical Greek TEI texts from Perseus
+(`canonical-greekLit`) and `First1KGreek`, parsing each work into one
+`Document` per book or chapter (or the slice specified by `ref`). See
+[Greek Works and Books](Greek-Works-and-Books) for citation schemes, editions,
+databases, and export.
 
 ```python
-# heavy / network on first use — fetches the TEI to the cache (pinned, reproducible)
-work = greek.load_work("tlg0012.tlg001", ref="1.1-1.10")   # Iliad, first ten lines
+work = greek.load_work("tlg0012.tlg001", ref="1.1-1.10")   # Iliad, first ten lines (fetched once, then cached)
 ```
 
 `load_work(work, *, ref=None, source="auto", edition=None, force=False)`:
 
 | Parameter | Meaning |
 | --- | --- |
-| `work` | CTS-style id, e.g. `tlg0012.tlg001` (the Iliad) |
-| `ref` | `"1"` book, `"1.2"` chapter, `"1.1-1.50"` line range |
+| `work` | CTS ID, e.g. `tlg0012.tlg001` (*Iliad*) |
+| `ref` | `"1"` book, `"1.2"` chapter, `"1.1-1.50"` line range, or milestone ref |
 | `source` | `"auto"` (try both), `"perseus"`, or `"first1k"` |
-| `edition` | pick a specific edition file when a work has several |
+| `edition` | pin a specific edition file when several exist |
 | `force` | re-fetch even if cached |
 
-From the shell, `aegean greek work` mirrors it (with `--ref`, `--source`,
-`--edition`, `--output`/`-o`, `--json`):
+From the shell (`--ref`, `--source`, `--edition`, `--output`/`-o`, `--json`):
 
 ```bash
 aegean greek work tlg0012.tlg001 --ref 1.1-1.10
 ```
 
-The texts are **CC BY-SA**, fetched to the cache and never bundled.
+Texts are **CC BY-SA**, fetched to cache on demand and never bundled.
 
 ## Discovering works and books
 
-You don't have to memorise ids. Three helpers list a verified, loadable catalogue:
-fully offline, no network.
+Three bundled offline helpers list loadable literary and biblical catalogues:
 
 ```python
-greek.popular_works()   # list of {'id','author','title'} — 25 well-known works
+from aegean import greek
+from aegean.greek import bible
+
+greek.popular_works()                  # 25 curated works: {'id', 'author', 'title'}
 # [{'id': 'tlg0012.tlg001', 'author': 'Homer', 'title': 'Iliad'}, …]
 
-greek.catalog()         # the FULL discovery index — 1778 works, with Greek titles
+greek.catalog()                        # full 1,778-work index (768 Perseus + 1,010 First1KGreek)
 # [{'id': 'tlg0001.tlg001', 'author': 'Apollonius Rhodius', 'title': 'Argonautica',
 #   'greek_title': 'Argonautica', 'source': 'perseus'}, …]
-len(greek.catalog(author="plato"))     # 39   — filter by author/title/source/free-text
+len(greek.catalog(author="plato"))     # 39
 
-greek.nt_books()        # list of {'name','aliases'} — all 27 NT books
-# [{'name': 'Matt', 'aliases': ['matthew','matt','mt']}, …]
+bible.nt_books()                       # all 27 NT books: {'name', 'aliases'}
+# [{'name': 'Matt', 'aliases': ['matthew', 'matt', 'mt']}, …]
 ```
 
 ```bash
-aegean greek works              # a table of the 25 works + how to load one (--json for the list)
-aegean greek catalog --author plato   # search the full 1778-work index (--json for the list)
-aegean bible books nt           # 27 NT books and accepted names
+aegean greek works                    # 25 curated works (--json for machine-readable output)
+aegean greek catalog --author plato   # search all 1,778 works
+aegean bible books nt                 # 27 NT books and accepted aliases
+aegean bible books lxx                # 55 Swete Septuagint books
 ```
 
-`works` is a curated starting point; `catalog` is the full 1,778-work discovery
-index (768 Perseus + 1,010 First1KGreek). Either way `load_work` /
-`aegean greek work` take **any** Perseus canonical-greekLit / First1KGreek id
-(browse them at scaife.perseus.org). The full work catalogue and every NT book
-alias are tabulated on [Greek Works and Books](Greek-Works-and-Books).
+`load_work` / `aegean greek work` accept any Perseus `canonical-greekLit` or
+`First1KGreek` CTS ID (browsable at [scaife.perseus.org](https://scaife.perseus.org)).
+Full tables appear on [Greek Works and Books](Greek-Works-and-Books) and
+[New Testament](New-Testament).
 
 ## Epigraphic and documentary Greek (inscriptions and papyri)
 
-Beyond the literary canon (`load_work`) and the New Testament, pyaegean hosts six
-openly-licensed corpora of Greek inscriptions and papyri, each fetched on demand
-and returned as an ordinary `Corpus`, so the pipeline, query engine, and
-statistics run on them unchanged: `isicily` (2,855 inscriptions of ancient
-Sicily), `iip` (2,113, Israel/Palestine), `iospe` (1,194, the Northern Black
-Sea), `igcyr` (997, Cyrenaica: archaic Doric and verse, with non-normalized
-epichoric spellings), `edh` (1,286, the Greek subset of the Epigraphic Database
-Heidelberg), and `ddbdp` (the Duke Databank of Documentary Papyri: 57,331 papyri,
-~4.4M tokens).
+Beyond literary texts (`load_work`) and Biblical Greek (`aegean.greek.bible`),
+pyaegean hosts eight openly licensed epigraphic and documentary Greek corpora,
+each fetched on demand as a standard `Corpus`: `isicily` (2,855 inscriptions of
+ancient Sicily), `iip` (2,113 from Israel/Palestine), `iospe` (1,194 from the
+Northern Black Sea), `igcyr` (997 from Cyrenaica: archaic Doric and verse with
+epichoric spellings), `aphrodisias` (1,471 from Aphrodisias in Caria), `crete`
+(600 Cretan institutional inscriptions), `edh` (1,286 pure-Greek inscriptions
+from the Epigraphic Database Heidelberg), and `ddbdp` (Duke Databank of
+Documentary Papyri: 57,331 papyri, ~4.4M tokens).
 
 ```python
 import aegean
 igcyr = aegean.load("igcyr")   # fetched on first use, then offline
 ```
 
-`ddbdp` is far larger than the rest, so it ships as a SQLite database with
-full-text search: prefer `aegean db search ddbdp "βασιλέως"` or
-`aegean.db.stream(ddbdp_db())` over `aegean.load("ddbdp")`, which materialises
-all 57k documents in memory. Note that inscriptions are not normalized literary
-Greek (majuscule text in IIP, epichoric letterforms in IGCyr, heavy onomastics in
-EDH), which the taggers were not trained on. Licenses and sources:
-[Data & Provenance](Data-and-Provenance).
+Because `ddbdp` is much larger than the inscription corpora, it ships as an
+FTS5-indexed SQLite database: prefer `aegean db search ddbdp "βασιλέως"` or
+`aegean.db.stream(ddbdp_db())` over `aegean.load("ddbdp")`, which loads all
+57,331 documents into memory. Inscriptions contain non-normalized orthography
+(majuscule text in IIP, epichoric letterforms in IGCyr, dense onomastics in
+EDH) absent from the treebanks the taggers train on. Sources and licences are
+documented in [Data & Provenance](Data-and-Provenance).
 
 ## The sample corpus
 
-`aegean.load("greek")` loads a handful of public-domain Archaic→Koine passages
-(Homer, Herodotus, Heraclitus, Sappho, John 1:1) to exercise the pipeline: no
-network needed.
+`aegean.load("greek")` loads five bundled public-domain Archaic-to-Koine
+passages (Homer, Herodotus, Heraclitus, Sappho, John 1:1) offline:
 
 ```python
 import aegean
@@ -1949,10 +1814,10 @@ len(g)                                  # 5
 iliad = g.get("iliad-1.1")
 [t.text for t in iliad.words]
 iliad.meta.scribe, iliad.meta.period    # ('Homer', 'Archaic (epic)')
-dict(g.word_frequencies())["λόγος"]     # 2  (John 1:1 sample)
+dict(g.word_frequencies())["λόγος"]     # 2 (John 1:1 sample)
 ```
 
-The Greek `Script` also exposes the pipeline as a capability:
+The Greek `Script` object exposes the same NLP helpers via `.nlp`:
 
 ```python
 script = aegean.get_script("greek")
@@ -1961,21 +1826,20 @@ script.nlp.syllabify("ἄνθρωπος")        # ['ἄν', 'θρω', 'πος']
 
 ## Importing your own text
 
-`load_work` and `load_nt` pull *published* corpora; to run the pipeline over your
-**own** Greek (a passage you typed, a folder of `.txt` files, a CSV of lines)
-turn it into a `Corpus` first with `aegean.io`. The default `token_view="all"`
-retains decoded source content in `Document.source_text` and maps every token
-to an exact character span. For Greek/NT text, Greek words are `WORD`, foreign
-text is `UNKNOWN`, numbers are `NUMERAL`, and punctuation is `PUNCT`.
-`Document.words` and `Corpus.iter_words()` select the lexical word view while
-the other source tokens remain available.
+`greek.load_work()` and `bible.load_nt()` load published collections. To bring
+your own Greek text (strings, `.txt` files, directories, or CSVs) into a
+`Corpus`, use `aegean.io`. The default `token_view="all"` stores decoded source
+text in `Document.source_text` and tracks exact character spans per token
+(classifying Greek words as `WORD`, foreign text as `UNKNOWN`, numbers as
+`NUMERAL`, and punctuation as `PUNCT`). `Document.words` and
+`Corpus.iter_words()` select lexical words while preserving all other tokens.
 
 ```python
 from aegean.io import from_text
 
 corpus = from_text("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος", doc_id="iliad-1.1")
 [t.text for t in corpus.documents[0].words]
-# ['μῆνιν', 'ἄειδε', 'θεὰ', 'Πηληϊάδεω', 'Ἀχιλῆος']  ← ready for the whole pipeline
+# ['μῆνιν', 'ἄειδε', 'θεὰ', 'Πηληϊάδεω', 'Ἀχιλῆος']
 
 doc = from_text("  λόγος,\tθεός.\n", doc_id="example").documents[0]
 doc.source_text                         # '  λόγος,\tθεός.\n'
@@ -1984,37 +1848,31 @@ doc.source_text                         # '  λόγος,\tθεός.\n'
 [t.text for t in doc.words]             # ['λόγος', 'θεός']
 ```
 
-`split` (`"whole"` / `"paragraph"` / `"line"`) controls how a longer text is cut
-into documents. The siblings read from disk: `from_text_file(path, …)`,
-`from_text_dir(path, glob="*.txt", …)`, and `from_csv(path, text_col="text",
-id_col=None, …)`. All are **offline**.
+`split` (`"whole"`, `"paragraph"`, or `"line"`) controls document boundaries.
+File importers (`from_text_file`, `from_text_dir`, `from_csv`) run offline.
+Paragraph and line splitting preserve blank lines and separators so
+concatenating `source_text` reconstructs the decoded file; character spans are
+local to each document. Passing `token_view="words"` selects word-only import
+without source text or spans and records that exclusion in provenance. Leading
+BOM characters are stripped and recorded.
 
-Paragraph/line splitting preserves blank lines and separators in the document
-snapshots; concatenating their `source_text` reconstructs the decoded content.
-Spans are local to each document. `token_view="words"` explicitly opts into the
-former lossy word-only import, without source text or spans; provenance reports
-the exclusions. Leading BOM signatures are removed and reported.
-
-From the shell, `aegean import` does the same and writes a reusable corpus, which
-every other command then accepts:
+From the shell, `aegean import` builds a saved `.json` or `.db` corpus accepted
+by all corpus commands:
 
 ```bash
 aegean import myplato.txt -o myplato.json   # then: aegean stats myplato.json
 aegean import poems/ -o corpus.db --split line
 aegean import rows.csv -o corpus.json --text-col line --id-col id
-aegean import myplato.txt -o words.json --token-view words  # explicit lossy import
+aegean import myplato.txt -o words.json --token-view words
 ```
 
-A `.txt` or `.csv` can't be handed straight to a corpus command: import it first.
-(`aegean stats foo.txt` says exactly that, and names the importer.) Full details
-are on [Greek Works and Books](Greek-Works-and-Books) and [CLI](CLI).
+Raw `.txt` and `.csv` files must be imported before passing to corpus commands.
+See [Greek Works and Books](Greek-Works-and-Books) and [CLI](CLI).
 
 ## Benchmark harness
 
-`aegean.greek.benchmark` scores the pipeline against a small bundled gold set, so
-you can track how its Greek coverage is doing over time. The gold is **hand-authored
-and independent**: correct answers stated from scholarship, never read off any
-engine, which is what makes the comparison below fair.
+`aegean.greek.benchmark` evaluates the offline pipeline against a small
+hand-authored bundled gold set:
 
 ```python
 from aegean.greek import benchmark
@@ -2024,17 +1882,16 @@ for stage, s in benchmark.run_benchmark().items():
 # tokenize:   100% (5/5)
 # syllabify:  100% (6/6)
 # accent:     100% (6/6)
-# lemma:       28% (5/18)    ← seed table only; misses irregular / 3rd-declension forms
-# pos:         50% (10/20)   ← suffix heuristic misses open-class words
+# lemma:       28% (5/18)    (seed table only; misses irregular / 3rd-declension forms)
+# pos:         50% (10/20)   (suffix heuristic misses open-class words)
 # scansion:   100% (5/5)
 # morphology:  73% (8/11)
 ```
 
 ### The treebank backend's lift
 
-`compare_modes()` scores lemma + POS with the
-[treebank backend](#treebank-backed-mode-opt-in) **off vs on** (it activates
-`use_treebank()` for you, fetching the prebuilt lexicon on first use):
+`compare_modes()` compares lemma and POS accuracy with
+[treebank mode](#treebank-backed-mode-opt-in) off versus on:
 
 ```python
 benchmark.compare_modes()
@@ -2042,105 +1899,90 @@ benchmark.compare_modes()
 # treebank : lemma 100% (18/18)  · pos 100% (20/20)
 ```
 
-On this gold set the treebank lifts lemma **28% → 100%** and POS **50% → 100%**
-(morphology recall **73% → 100%**). The set is deliberately weighted toward the
-irregular, third-declension and open-class forms that separate the engines, and
-each item is attested in the AGDT, so it measures the win *where it applies*; on
-genuinely unattested forms the treebank falls back to the baseline.
+On this gold set, activating the treebank raises lemma accuracy from 28% to
+100%, POS from 50% to 100%, and morphology recall from 73% to 100%. Because
+every test item is attested in AGDT, this measures lexical coverage rather than
+unseen generalization.
 
 ### Benchmark your own pipeline
 
-`compare_lemmatizers` and `compare_pos_taggers` take **any** lemma-or-POS callable you supply
-and score it on the same bundled gold set, so you can measure an external pipeline on identical
-items. The gold set is small (18 lemma / 20 POS items) and weighted toward *attested* forms, so
-it measures lexical coverage, **not** generalization to unseen text, for which the held-out
-evaluations below are the relevant measure.
+`compare_lemmatizers` and `compare_pos_taggers` score any user-supplied
+callable on the same bundled items (18 lemma / 20 POS items). To evaluate
+generalization to unseen text, use the held-out and out-of-domain evaluators
+below.
 
 ### Held-out generalization
 
-The [generalizing tagger](#generalizing-pos-tagger-opt-in) is measured on a leakage-free 90/10
-AGDT sentence split, scored *in context* on ≈54k tokens, with the **unseen-form** subset (forms
-absent from training) called out separately:
+The [generalizing tagger](#generalizing-pos-tagger-opt-in) is evaluated in
+context on a leakage-free 90/10 AGDT sentence split (≈54k tokens), separating
+forms absent from training:
 
 | POS: held-out AGDT | overall | unseen forms |
 | --- | --- | --- |
 | pyaegean tagger (pure Python) | 84.4% | 83.6% |
 
-The AGDT is the tagger's own training source, so the **unseen-form** column is the honest
-generalization measure: **83.6%** from a zero-dependency, pure-Python model. A fully neutral
-check, on text pyaegean never trained on, is the
+Because AGDT is the tagger's training source, the **unseen-form** column
+measures generalization (**83.6%** in pure Python). For text from an
+independent annotation project, see
 [out-of-AGDT evaluation](#neutral-evaluation-out-of-agdt) below.
 
-The same evaluation for **lemmatization** (the
-[generalizing lemmatizer](#generalizing-lemmatizer-opt-in), scored with predicted POS):
+The matching held-out AGDT evaluation for lemmatization (with predicted POS):
 
 | lemma: held-out AGDT | overall | unseen forms |
 | --- | --- | --- |
 | pyaegean lemmatizer (pure Python, edit-tree) | 84.5% | 40.3% |
 | **pyaegean `[neural]` (GreTa seq2seq, opt-in)** | **~92%** | **76.3%** |
 
-The pure-Python lemmatizer is solid overall but trails on **unseen** forms, where recovering a
-lemma (often an accent/stem change, not just a suffix swap) is hardest. The opt-in
-**[neural] backend** reaches **76.3% on unseen forms** with a GreTa seq2seq that *generates* the
-lemma, and ships as a hybrid (the gold lookup answers seen forms, the seq2seq the rest), so
-overall lemma accuracy lands around **92%**. It is a fetched-to-cache ONNX model behind the
-`[neural]` extra (onnxruntime, no torch); the pure-Python edit-tree stays the zero-dependency
-default. See [Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) above.
+Because unseen Greek lemmas often involve stem or accent changes beyond a
+suffix rewrite, the standalone `[neural]` GreTa seq2seq lemmatizer reaches
+**76.3% on unseen forms** (~92% overall as a lookup + seq2seq hybrid) using
+int8 ONNX via `onnxruntime` (no PyTorch). See
+[Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in).
 
 ### Neutral evaluation (out-of-AGDT)
 
-> Full detail: the [Evaluation](Evaluation) and [Benchmarks](Benchmarks) pages.
+> Full protocol and results: [Evaluation](Evaluation) and
+> [Benchmarks](Benchmarks).
 
-The held-out numbers above are leakage-free *within* the AGDT, but pyaegean's backends are
-all built from the AGDT, so they don't show how the system fares on text from a different
-source. `greek.evaluate_on_proiel()` (CLI `aegean greek eval proiel`) scores the active
-pipeline (`lemmatize` + `pos_tag`) against the **PROIEL treebank** (the Greek New Testament
-and Herodotus) which none of pyaegean's models have ever seen, so every form is a genuine
-generalization test.
+`greek.evaluate_on_proiel()` (CLI: `aegean greek eval proiel`) scores the
+active pipeline (`lemmatize` and `pos_tag`) against the independently annotated
+**PROIEL treebank** (Greek New Testament and Herodotus), which no pyaegean
+model trains on:
 
 ```python
 from aegean import greek
-greek.use_treebank(); greek.use_neural_lemmatizer()   # measure the full pipeline
-greek.evaluate_on_proiel()        # {'lemma': …, 'pos': …, 'n': …} over the PROIEL gold
+greek.use_treebank(); greek.use_neural_lemmatizer()
+greek.evaluate_on_proiel()        # {'lemma': …, 'pos': …, 'n': …}
 ```
 
-PROIEL is fetched to the cache on first use (CC BY-NC-SA 3.0: **evaluation only, never
-bundled**, like the AGDT). Lemma accuracy is the clean metric (lemmas compared after Unicode
-normalization and dropping PROIEL's `#N` homograph suffix); POS is compared under a reconciled
-tagset (PROIEL's PROPN/SCONJ collapse to pyaegean's NOUN/CCONJ, so the figure reflects real
-errors, not convention gaps). This is a neutral test **for pyaegean specifically**: PROIEL is
-in-training for some other systems, so it is not a level field for cross-tool comparison; it
-answers "how well does pyaegean read Greek it never trained on."
+PROIEL is fetched to cache for evaluation only (CC BY-NC-SA 3.0, never
+bundled). Lemmas are compared after NFC normalization and stripping `#N`
+homograph suffixes; POS is scored under a reconciled tagset (`PROPN` → `NOUN`,
+`SCONJ` → `CCONJ`, `AUX` → `VERB`). Because PROIEL is part of the training
+data for some external tools, this check measures pyaegean's out-of-domain
+performance rather than cross-tool rankings.
 
-**Where the gap comes from.** The model is trained on the AGDT convention, so scoring it on
-the differently-annotated PROIEL conflates real mistakes with convention differences.
-`greek.proiel_drift()` (CLI `aegean greek eval proiel --drift`) re-tags the same gold and
-returns a `DriftReport` that separates the two: the gold→predicted POS confusion matrix
-(most-frequent first), a sample of lemma mismatches, and the scored counts.
+`greek.proiel_drift()` (CLI: `aegean greek eval proiel --drift`) returns a
+`DriftReport` separating systematic annotation-scheme divergence from scattered
+model errors:
 
 ```python
 report = greek.proiel_drift()
-print(report.summary())     # the top POS confusions, gold → predicted, with their share
-report.top_share            # fraction of POS errors in the single most common pair
+print(report.summary())     # top gold → predicted POS confusions and shares
+report.top_share            # fraction of POS errors in the top confusion pair
 ```
 
-`.summary()` prints a short, readable breakdown; a high `top_share` (most POS errors
-concentrated in a few pairs) points to a systematic convention difference rather than
-scattered real error. `evaluate_on_proiel` is unchanged: `proiel_drift` only explains its
-gap.
-
-Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
-scorer: `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
-`compare_pos_taggers`, or `compare_modes`.
+Custom gold files matching `benchmark_gold.json` can also be scored with
+`score_lemmatizer`, `score_pos`, `compare_lemmatizers`, `compare_pos_taggers`,
+and `compare_modes`.
 
 ### Standard-benchmark evaluation (Universal Dependencies)
 
-`greek.evaluate_on_ud(treebank, split)` scores the active pipeline on the **Universal
-Dependencies** Ancient Greek test folds (Perseus / PROIEL) with the **official CoNLL 2018
-evaluator**: the protocol the field's published numbers use. The folds are CC BY-NC-SA,
-fetched to the cache for *evaluation only* (never trained on); `greek.agdt_ud_overlap()`
-builds the manifest of AGDT sentences that appear in the UD folds, which pyaegean's model
-training excludes. The full protocol, leakage controls, and measured numbers live in
+`greek.evaluate_on_ud(treebank, split)` evaluates the active pipeline on UD
+Ancient Greek (`perseus` or `proiel`, `dev` or `test`) with the pinned official
+CoNLL 2018 scorer. Gold folds are fetched for evaluation only (CC BY-NC-SA);
+`greek.agdt_ud_overlap()` builds the audited sentence exclusion manifest used
+during neural training. Full protocols, leakage controls, and scores appear in
 [Benchmarks](Benchmarks).
 
 ```python
@@ -2150,60 +1992,54 @@ greek.evaluate_on_ud("proiel", "test")   # {'upos': …, 'lemma': …, 'uas': �
 
 ### Evaluation receipts
 
-A score is only reproducible if you know what produced it. `greek.eval_receipt`
-wraps a scores dict in a **content-addressed, tamper-evident** record that ties the
-result to its inputs: the package version, the data manifest, the active model id,
-the treebank, the split, and the protocol. The `id` is a short sha256 over the
-canonical JSON of every field, so identical inputs always give the identical id and
-changing any field changes it.
+`greek.eval_receipt()` wraps any scores dict in a frozen, content-addressed
+`EvalReceipt` binding scores to package version, data manifest, active model
+ID, treebank, split, and protocol via a truncated SHA-256 over canonical JSON:
 
 ```python
-scores = greek.evaluate_on_ud("perseus", "test")   # or any metric → value mapping
+scores = greek.evaluate_on_ud("perseus", "test")
 r = greek.eval_receipt(scores, treebank="perseus", split="test", protocol="conll18")
 
-r.id                       # e.g. 'a15940ec010157d0' — the content hash of the whole record
-r.verify()                 # True — re-hashes the stored fields and confirms they still produce r.id
-r.package_version, r.model_id   # resolved automatically from the environment
+r.id                            # e.g. 'a15940ec010157d0'
+r.verify()                      # True
+r.package_version, r.model_id   # resolved automatically from environment
 ```
 
-An `EvalReceipt` is frozen and serializes both ways: `r.as_dict()` / `r.as_json()`
-write the full record (id included), and `EvalReceipt.from_dict(data)` reads it
-back. `r.verify(other)` confirms two receipts describe the byte-identical
-evaluation (same content-addressed id), so a number quoted in a paper can be
-checked against the receipt that produced it. Pass `package_version=` /
-`manifest=` / `model_id=` to override the resolved environment for a fully
-deterministic, offline receipt; `extra=` carries any further reproducibility
-metadata (a seed, the evaluator sha, a fold manifest).
+Serialize with `as_dict()` / `as_json()` and reload via
+`EvalReceipt.from_dict(data)`. `r.verify(other)` checks whether two receipts
+share an identical content hash. Override `package_version=`, `manifest=`, and
+`model_id=` for offline deterministic receipts, and attach extra metadata via
+`extra=`.
 
 ### Reproduce the numbers from the shell
 
-`aegean greek eval TARGET` reproduces any of the measured figures with the official
-evaluators and the fetched gold data. The targets:
+`aegean greek eval TARGET` runs the official evaluators against fetched gold
+datasets:
 
 | `eval` target | What it measures |
 | --- | --- |
-| `ud` | active pipeline on a UD fold (CoNLL 2018 evaluator); `--fold` takes `perseus` or `proiel`, `--split` takes `dev` or `test` |
-| `proiel` | the neutral out-of-AGDT check (lemma + POS); `--drift` for the convention-vs-error breakdown |
-| `nt` | the neural pipeline against the Nestle 1904 gold |
-| `papygreek` | the documentary PapyGreek fold; `--layer` takes `reg` (regularized) or `orig` (diplomatic), and `--drift` gives the convention decomposition |
-| `dbbe` | the DBBE Byzantine book-epigram fold (tagging only, no parse) |
-| `verse` | the verse fold; `--track` takes `tragedy` or `all`, small-sample with wide CIs |
-| `tagger` | the held-out AGDT POS evaluation |
-| `lemmatizer` | the held-out AGDT lemma evaluation |
-| `parser` | the held-out AGDT dependency evaluation |
+| `ud` | Active pipeline on a UD fold (CoNLL 2018 scorer); `--fold perseus\|proiel`, `--split dev\|test` |
+| `proiel` | Out-of-AGDT lemma and reconciled POS check; `--drift` for error breakdown |
+| `nt` | Neural pipeline against full 27-book Nestle 1904 gold |
+| `papygreek` | Documentary PapyGreek fold; `--layer reg\|orig`, `--drift` for convention decomposition |
+| `dbbe` | DBBE Byzantine book-epigram fold (tagging only) |
+| `verse` | Small-sample tragedy fold (`--track tragedy\|all`) with wide CIs |
+| `tagger` | Held-out 90/10 AGDT POS evaluation |
+| `lemmatizer` | Held-out 90/10 AGDT lemma evaluation |
+| `parser` | Held-out 90/10 AGDT dependency evaluation |
 
-The backend flags (`--neural`, `--tagger`, `--lemmatizer`, `--neural-lemmatizer`)
-choose which pipeline is scored. These are **heavy** (they fetch gold data and may
-train), so run them only when you want to reproduce a number.
+Select the stack with `--neural`, `--tagger`, `--lemmatizer`, or
+`--neural-lemmatizer`. These commands fetch gold folds and may train pure-Python
+baseline models locally.
 
 ## Limitations & notes
 
-The honest scope: the rule-based morphology is a high-precision baseline over the
-*regular* paradigms (athematic/contract/irregular forms need the treebank); the
-arc-eager parser is projective-only (Greek is ~31% projective; use the neural
-parse for research); the IPA is a reconstruction with judgement calls; scansion
-covers dactylic/elegiac/iambic and the aeolic lyric lines but not dactylo-epitrite
-or free astrophic lyric, and synizesis is lexical, never guessed. The full list,
-with the reasoning, is on [Limitations](Limitations). For the data licences and
-provenance of every fetched backend, see
-[Data & Provenance](Data-and-Provenance).
+Scope summary: rule-based morphology covers regular paradigms (athematic,
+contract, and irregular forms require the treebank or neural backend); the
+pure-Python arc-eager parser is projective-only (~31% of AGDT sentences are
+projective; use `--neural` for research parsing); reconstructed IPA reflects
+scholarly conventions; scansion covers hexameter, pentameter, iambic trimeter,
+and seven aeolic cola (not dactylo-epitrite or free astrophic lyric), with
+strictly lexical synizesis. See [Limitations](Limitations) for complete scope
+notes and [Data & Provenance](Data-and-Provenance) for dataset licences and
+provenance.

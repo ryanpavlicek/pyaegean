@@ -1,68 +1,68 @@
 # Benchmarks
 
-This page collects pyaegean's own measured Greek NLP results, the evaluation
-protocol that produces them, and the field's published numbers side by side, with
-citations. The opt-in **[neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)**
-(`greek.use_neural_pipeline()`, the `[neural]` extra) is measured end-to-end on
-the UD Ancient Greek (Perseus) benchmark through the shipped package with the
+This page collects pyaegean's measured Greek NLP results, the evaluation protocol
+that produced them, and cited comparison numbers from the literature. The opt-in
+**[neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)**
+(`greek.use_neural_pipeline()`, the `[neural]` extra) is evaluated end-to-end on
+the UD Ancient Greek (Perseus) benchmark through the shipped package using the
 official CoNLL 2018 evaluator.
 
-Every number here comes from the recorded protocol and matches the canonical
-source in the repository,
-`docs/benchmarks.md`,
-which is registry-pinned: each published figure lives in
-`training/results/published-claims.json`, a per-commit test asserts the docs carry
-exactly those values, and the offline-stack rows are re-measured against the
-registry. See [Reproduce the numbers](#reproduce-the-numbers) below to run any of
-them yourself, and [Where this lives](#where-this-lives-canonical-source) for how a
-number is allowed to change.
+Every figure on this page follows the recorded protocol and matches the canonical
+record in `docs/benchmarks.md`. Published numbers live in
+`training/results/published-claims.json`; per-commit tests verify that the
+documentation matches the registry exactly, and the offline-stack rows are
+re-measured against it. See [Reproduce the numbers](#reproduce-the-numbers) to
+run any evaluation locally, and
+[Where this lives](#where-this-lives-canonical-source) for how published figures
+are updated.
 
 ## What the metrics mean
 
-All are percentages against the human-annotated gold: higher is better.
+All metrics are percentages against human-annotated gold (higher is better):
 
-- **UPOS**: Universal Part Of Speech, the basic word class (noun, verb, adjective,
-  preposition, ...) from UD's 17-tag set.
-- **XPOS**: the language-specific part-of-speech tag, the treebank's own finer-grained
-  tagset. Not comparable across treebanks with different tagsets, so it is sometimes
-  marked n/a.
-- **UFeats**: Universal Features, the full morphology (case, number, gender, tense,
-  mood, voice, person). A word counts only if *every* feature is right, so this is the
+- **UPOS**: Universal Part of Speech from UD's 17-tag inventory (noun, verb,
+  adjective, preposition, etc.).
+- **XPOS**: Language-specific part-of-speech tag from each treebank's own
+  fine-grained tagset. Marked `n/a` where tagsets are not cross-comparable.
+- **UFeats**: Universal Features (case, number, gender, tense, mood, voice,
+  person). Scored exact-match across all features on a token, making it the
   strictest word-level tag.
-- **Lemma**: the dictionary/citation form (`λέγει` → `λέγω`, `ἀνθρώπους` → `ἄνθρωπος`).
-- **UAS**: Unlabeled Attachment Score, the fraction of words hooked to the correct
-  syntactic parent.
-- **LAS**: Labeled Attachment Score, UAS where the link must *also* carry the right
-  relation label. The usual headline number for parsing quality.
+- **Lemma**: Dictionary citation form (`λέγει` → `λέγω`, `ἀνθρώπους` → `ἄνθρωπος`).
+- **UAS**: Unlabeled Attachment Score — fraction of tokens attached to the
+  correct syntactic head.
+- **LAS**: Labeled Attachment Score — fraction of tokens with both the correct
+  head and the correct dependency relation.
 
 ## The neural pipeline (shipped)
 
-The shipped joint model (`grc-joint-v3`) is one GreBerta-encoder checkpoint serving
-UPOS, XPOS, UD FEATS, dependency trees (single-root Chu-Liu/Edmonds MST decoding, so
-non-projectivity is handled natively), and lemmas from a single forward pass. It is
-trained leakage-clean on the audited AGDT + Gorman + Pedalion corpus (1.41 M tokens).
-Measured through the package's own inference code, gold-tokenized, official CoNLL
-2018 evaluator:
+The shipped joint model (`grc-joint-v3`) is a single GreBerta-encoder checkpoint
+predicting UPOS, XPOS, UD FEATS, dependency trees (decoded by single-root
+Chu-Liu/Edmonds MST, supporting non-projective trees natively), and lemmas in
+one forward pass. It is trained leakage-clean on the audited AGDT + Gorman +
+Pedalion corpus (1.41 M tokens). Measured through pyaegean's own inference code
+with gold tokenization and the official CoNLL 2018 evaluator:
 
 | Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
 | --- | --- | --- | --- | --- | --- | --- |
 | UD Perseus | **94.27** | **90.24** | **85.65** | 97.02 | 96.03 | 93.47 |
 | UD PROIEL | 90.51 | 82.47 | 63.50 | 86.68 | 59.43 | n/a |
 
-UD PROIEL is a genuine **out-of-domain** fold: no pyaegean model ever trains on it
-(see [Leakage controls](#leakage-controls)). Its lower LAS and UFeats are largely
-deprel- and feature-convention divergence between the two treebanks' UD conversions
-(PROIEL annotates five feature types the Perseus scheme lacks, and PROIEL XPOS is a
-different tagset entirely), not raw error.
+UD PROIEL is an **out-of-domain** fold that no pyaegean model trains on (see
+[Leakage controls](#leakage-controls)). Its lower LAS and UFeats scores reflect
+annotation convention differences between the two UD conversions (PROIEL marks
+five feature types absent from Perseus and uses a different XPOS tagset) in
+addition to domain shift.
 
-**Historical seed replication.** Five decoder-v1 runs of this training recipe averaged
-**LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12, UPOS 97.00 ± 0.06, UFeats 96.06 ± 0.04,
-lemma 94.30 ± 0.02, XPOS 93.52 ± 0.05 (PROIEL LAS 63.50 ± 0.04). This remains
-training-stability evidence, but it is not decoder-v2 replication; the current checkpoint
-numbers and confidence intervals below use decoder v2.
+**Historical seed replication.** Five decoder-v1 training runs of this recipe
+averaged **LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12, UPOS 97.00 ± 0.06, UFeats
+96.06 ± 0.04, lemma 94.30 ± 0.02, and XPOS 93.52 ± 0.05 (PROIEL LAS
+63.50 ± 0.04). These runs document training stability across seeds under decoder
+v1; the current checkpoint scores and confidence intervals below were measured
+with decoder v2.
 
-The table places pyaegean's UD Perseus scores and confidence intervals beside the
-cited published comparison rows. The margin column is the arithmetic difference:
+The table below lists pyaegean's UD Perseus scores and 95% confidence intervals
+beside cited published results. The margin column shows the arithmetic
+difference:
 
 | Metric | pyaegean | 95% CI | cited comparison | margin |
 | --- | --- | --- | --- | --- |
@@ -73,40 +73,42 @@ cited published comparison rows. The margin column is the arithmetic difference:
 | UAS | 90.24 | [89.62, 90.80] | 88.20 (2023) | +2.04 |
 | LAS | 85.65 | [84.94, 86.29] | 83.98 (2023) | +1.67 |
 
-CIs are percentile bootstrap over the fold's sentences, 999 resamples
-(`greek.bootstrap_ud`'s default, so the reproduction command matches). The lower
-bounds (LAS 84.94, UAS 89.62) exceed the cited 83.98 / 88.20 rows. The cross-tool
-sources for the comparison column are cited in
+Confidence intervals are sentence-level percentile bootstraps with 999 resamples
+(the default of `greek.bootstrap_ud()`). The lower bounds (LAS 84.94, UAS 89.62)
+remain above the cited 83.98 / 88.20 numbers. Full citations appear in
 [Cross-tool comparison](#cross-tool-comparison-with-citations).
 
 ## Legacy aggregate calibration
 
-The published schema-1 calibration remains available through `use_calibration()` and the
-legacy flat confidence fields. It is temperature-scaled, never raw softmax, and is an
-aggregate UPOS/composed-lemma proxy for `grc-joint-v3`, not source-, domain-, or
-task-complete evidence. One temperature per head was fitted on the UD Perseus **dev** fold:
+Schema-1 aggregate calibration remains available via `use_calibration()` and the
+legacy flat confidence fields. It applies temperature scaling fitted on the UD
+Perseus **dev** fold (one scalar temperature per head) as an unscoped UPOS and
+composed-lemma proxy for `grc-joint-v3`:
 
 | Head | Temperature | Dev ECE (raw → calibrated) | Test ECE (calibrated) |
 | --- | --- | --- | --- |
 | UPOS | 1.34 | 0.94% → 0.19% | 1.11% (raw was 1.95%) |
 | Lemma | 0.66 | 8.77% → 5.39% | 6.29% |
 
-The lemma figure calibrates the edit-script head against composed-lemma-vs-gold correctness
-(a documented proxy); offline lexicon, rule, seed, and paradigm outputs carry no neural
-confidence. These are literary-prose measurements for this artifact, not an OOD detector.
-Full protocol is in canonical `docs/benchmarks.md`; evidence is in
+The lemma row calibrates the edit-script head against composed-lemma accuracy.
+Offline lexicon, rule, seed, and paradigm outputs carry no neural confidence.
+These figures measure literary-prose calibration for `grc-joint-v3` and do not
+function as an out-of-domain detector. Full protocol details are in
+`docs/benchmarks.md`; evidence is stored in
 `training/results/calibration-2026-07-11.json`.
 
-The additive typed API (`token_confidence`, `sentence_confidence`) carries task/source/domain
-scope and explicit unavailable reasons. A locked-test-qualified **Schema-2 calibration
-registry** (`calibration_registry_v2.json`, loaded via `greek.use_calibration_registry()`)
-is now bundled for `grc-joint-v3`. Its logit-affine parameters were fitted strictly on
-development folds (`literary` on UD Perseus dev and `documentary_native` on PapyGreek dev)
-across all six tasks (`upos`, `xpos`, `feats`, `lemma`, `head`, `relation`) and all four
-lemma routes, then evaluated once on the five locked test folds
-(`training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`). No default
-abstention threshold is bundled; callers choose thresholds via `AbstentionPolicy` or
-rank review sheets with `priority="calibrated_risk", budget=N`.
+The typed confidence API (`token_confidence`, `sentence_confidence`) attaches
+task, source, and domain scope together with explicit unavailability reasons. A
+locked-test-qualified **Schema-2 calibration registry**
+(`calibration_registry_v2.json`, loaded via `greek.use_calibration_registry()`)
+is bundled for `grc-joint-v3`. Its logit-affine parameters were fitted strictly
+on development folds (`literary` on UD Perseus dev and `documentary_native` on
+PapyGreek dev) across all six tasks (`upos`, `xpos`, `feats`, `lemma`, `head`,
+`relation`) and all four lemma routes, then evaluated once on the five locked
+test folds (`training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`).
+No default abstention threshold is bundled; callers set thresholds via
+`AbstentionPolicy` or rank review sheets with
+`priority="calibrated_risk", budget=N`.
 
 | Locked test fold (`confidence_domain`) | Lemma ECE15 (raw → calibrated) | Brier (raw → calibrated) |
 | --- | --- | --- |
@@ -118,13 +120,14 @@ rank review sheets with `priority="calibrated_risk", budget=N`.
 
 ## Opt-in weighted OOV lemma reranker
 
-`greek.use_oov_lemma_reranker(config="weighted")` activates a bundled, opt-in post-processor
-(`oov_lemma_reranker_v1.json`) that leaves the `grc-joint-v3` weights unchanged and adds zero
-overhead when inactive. For words not seen during training, it combines the joint model's
-top-10 edit-script predictions with train-only orthographic, Koine phonetic, and
-preverb-stripped candidates using frozen dev-fitted weights (no external dictionary leakage).
-Across all 79,462 tokens of the five locked test folds it fixed 1,645 lemmas while harming 145
-(a net +1,500 tokens, >11:1 win/loss ratio; evidence in
+`greek.use_oov_lemma_reranker(config="weighted")` enables a bundled opt-in
+post-processor (`oov_lemma_reranker_v1.json`) that leaves `grc-joint-v3` weights
+untouched and incurs zero overhead when inactive. For out-of-vocabulary words,
+it combines the joint model's top-10 edit-script predictions with train-only
+orthographic, Koine phonetic, and preverb-stripped candidates using frozen
+dev-fitted weights with no external dictionary leakage. Across all 79,462 tokens
+of the five locked test folds, it corrected 1,645 lemmas while regressing 145
+(net +1,500 tokens, >11:1 win/loss ratio; evidence in
 `training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`):
 
 | Locked test fold | `grc-joint-v3` default Lemma | + weighted OOV reranker | Gain (pp) |
@@ -137,86 +140,88 @@ Across all 79,462 tokens of the five locked test folds it fixed 1,645 lemmas whi
 
 ## Out of domain: Koine / New Testament
 
-`greek.evaluate_on_nt()` scores the same shipped pipeline against the **Nestle 1904**
-New Testament's own gold lemmas and morphology. This is genuinely out of domain: the
-model trains on AGDT + Gorman + Pedalion, never on the NT. It complements the UD
-PROIEL row (a different project's NT annotation).
+`greek.evaluate_on_nt()` scores the shipped neural pipeline against the
+**Nestle 1904** New Testament's own gold lemmas and morphology. Because the
+model trains on AGDT, Gorman, and Pedalion and never on the NT, this provides an
+out-of-domain Koine check independent of PROIEL's NT annotation.
 
 | Test set | Lemma | UPOS (reconciled) | scored tokens |
 | --- | --- | --- | --- |
 | Nestle 1904 NT (whole) | 87.96 | 86.75 | 137,303 |
 
-Lemma is the clean metric; it sits a few points under the PROIEL-NT lemma (90.51)
-largely because Nestle 1904's lemma conventions differ from the AGDT the model
-learned (principal-part choice, proper-noun citation form, movable-nu). UPOS is
-compared under a reconciled tagset (PROPN→NOUN, SCONJ→CCONJ, AUX→VERB), so it
-measures real disagreement rather than a Robinson-vs-UD convention gap. Finer UD
-features and UAS/LAS are not reported here: the Robinson morph tagset does not align
-feature-for-feature with UD FEATS, and the Nestle 1904 word list carries no
-dependency trees, so those numbers would be convention artefacts rather than
-accuracy. For an NT *dependency* measurement, the UD PROIEL row above is exactly
-that: PROIEL's test fold is mostly New Testament, so its out-of-domain UAS 82.47
-is the closest measured Koine parsing figure this document has.
+Nestle 1904 lemma accuracy sits below the PROIEL-NT row (90.51) mainly because
+Nestle 1904 lemma conventions differ from AGDT (principal-part choices,
+proper-noun citation forms, movable-nu). UPOS is reconciled (`PROPN` → `NOUN`,
+`SCONJ` → `CCONJ`, `AUX` → `VERB`) to isolate genuine POS errors from
+Robinson-versus-UD tagset differences. UFeats, UAS, and LAS are omitted because
+Robinson morphology does not map one-to-one onto UD FEATS and Nestle 1904 has no
+dependency trees. For out-of-domain Koine parsing, the UD PROIEL test fold
+above (mostly New Testament text, UAS 82.47) is the closest measured figure.
 
 ## Documentary Koine: the PapyGreek fold
 
-The documentary-Greek parsing evaluation uses 1,551 sentences / 22,227
-tokens of papyrus letters and petitions from the PapyGreek Treebanks (CC BY-SA),
-converted through the same AGDT scheme the model trains under.
+Documentary Greek parsing is measured on 1,551 sentences (22,227 tokens) of
+papyrus letters and petitions from the PapyGreek Treebanks (CC BY-SA), converted
+to the same AGDT scheme used in training.
 
-Scoring is on PapyGreek's **regularized** (`reg`) layer, the reading whose spelling
-the editors normalized toward standard Koine. The number is a regularized-text
-figure; the raw diplomatic (`orig`) orthography, with its phonetic spellings and
-itacism, is meaningfully harder. That harder input now has its own fold, the
-diplomatic `orig` surface layer (`evaluate_on_papygreek(layer="orig")`, the same
-sentences and gold with the raw diplomatic form); its row appears below.
+The primary row scores PapyGreek's **regularized** (`reg`) layer, where editors
+normalized spelling toward standard Koine. The raw diplomatic (`orig`) layer,
+retaining phonetic spellings and itacism, is evaluated on its own fold via
+`evaluate_on_papygreek(layer="orig")` over the same sentences and gold
+annotations (reported in the next section).
 
-The fold keeps 1,551 of the 4,557 annotated source sentences. Excluded: 1,793 that
-carry an artificial (elliptic or inserted) node gold tokenization cannot score, 678
-not fully annotated, 354 sentence-form leakage overlaps, 145 more belonging to a
-PapyGreek Trismegistos work identity found in Pedalion training, and 36 that do not
-reduce to a clean reading. The current fold excludes whole training-overlapping works
-before applying the full and punctuation-stripped NFC sentence-form guards. The prior
-24,105-token row missed 145 sentences from 29 overlapping works and is historical.
-Dropping elliptic sentences biases the fold toward complete syntax. Full accounting:
+Of 4,557 annotated source sentences, 1,551 remain after filtering: 1,793 are
+excluded for artificial elliptic or inserted nodes that gold tokenization cannot
+score, 678 for incomplete annotations, 354 for sentence-form overlap with
+training data, 145 for belonging to Trismegistos works present in Pedalion
+training, and 36 that fail to yield a clean reading. Work-level exclusions are
+applied before exact and punctuation-stripped NFC sentence-form guards. The
+earlier 24,105-token row (which retained 145 sentences from 29 overlapping
+works) is historical. Excluding elliptic sentences skews the fold toward
+complete clauses. Full accounting is in
 `training/results/papygreek-fold-manifest.json`.
 
 | Test set | UPOS | XPOS | UFeats | Lemma | UAS | LAS | CLAS |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 89.63 | 85.51 | 79.57 | 75.41 |
 
-Scheme-matched out-of-domain parsing differs from the convention-capped PROIEL
-row by about +16 LAS points. Reproduce: `aegean greek eval papygreek`. The current
-protocol is CPU-sequential (`batch_size=None`) with complete-word windows for inputs
-beyond the model's single-pass budget; partial placeholder tails are never scored.
+Scheme-matched out-of-domain parsing scores about +16 LAS points higher than the
+convention-divergent PROIEL row. Reproduce with `aegean greek eval papygreek`.
+Evaluation runs CPU-sequential (`batch_size=None`) with whole-word windowing for
+sentences exceeding the single-pass token limit; partial placeholder tails are
+never scored.
 
-The row's two weakest cells are largely convention, not model quality, and
-`aegean greek eval papygreek --drift` measures it: 4.98 of the 8.47 UPOS gap
-points (58.79% of all UPOS errors) sit on the coordinator class alone (καί, δέ,
-τε: tagged under three incompatible conventions in the merged training
-treebanks), and 13.31 of the 22.81 XPOS gap points are convention or encoding
-(the coordinator pos-code, the model's common-gender `c`, and a gold `_`-slot
-artifact); forgiving those three, XPOS would read 90.50%. A measurement
-decomposition only, mirroring the PROIEL one; the published row is unchanged.
+The two weakest cells in the row are heavily shaped by annotation conventions,
+quantified by `aegean greek eval papygreek --drift`: 4.98 of the 8.47 UPOS gap
+points (58.79% of all UPOS errors) fall on coordinating conjunctions alone
+(`καί`, `δέ`, `τε`, which carry three incompatible tags across the merged
+training treebanks), and 13.31 of the 22.81 XPOS gap points come from convention
+or encoding mismatches (coordinator pos-code, common gender `c`, and a gold
+`_`-slot artifact). Forgiving those three buckets brings XPOS to 90.50%. This
+breakdown is diagnostic only and leaves the published row unchanged.
 
 ### Opt-in documentary levers
 
-Two **opt-in, default-off** post-processing layers reconcile the neural pipeline's
-output to the documentary register, byte-identical to the shipped model until switched
-on. Each is a composition layer (like `use_paradigms`) with its **own** registry variant
-row, so the published PapyGreek row is unchanged. **Lever A**
-(`greek.use_documentary_reconciliation()`) relabels only the closed coordinator set
-(καί, δέ, τε …) when the model emits the always-wrong `X`/`b` reading. On the corrected
-fold it changes exactly 775 UPOS and 783 XPOS cells, improving UPOS by 3.13 points and
-XPOS by 3.18 while every other field remains byte-identical. Earlier dev-selection
-deltas predated the work-level correction and are historical, not current
-leakage-clean claims; the aggressive `ADV`/`d` variant remains recommended against.
-**Lever B**
-(`greek.use_documentary_lemma_rescue()`) rescues an unresolved neural lemma from the
-guarded **seed + paradigm** tiers only (ending rules excluded: break-even documentary,
-net-negative literary), under its own `SEED`/`PARADIGM` evidence class, never `NEURAL`.
-It makes no additional prediction on the corrected fold, so no current lemma lift is
-claimed. Each variant is measured once, full-coverage and sequentially, on the pinned fold:
+Two opt-in, default-off post-processing layers adjust neural output for
+documentary Greek while keeping default output byte-identical to `grc-joint-v3`.
+Each carries its own registry variant row so the baseline PapyGreek row remains
+untouched.
+
+- **Lever A** (`greek.use_documentary_reconciliation()`) relabels the closed
+  coordinator class (`καί`, `δέ`, `τε`, …) only when the model outputs the
+  invalid `X`/`b` tag. On the corrected fold, it modifies 775 UPOS and 783 XPOS
+  cells (+3.13 UPOS, +3.18 XPOS) while leaving all other fields identical.
+  Earlier dev-selection deltas predated the work-level fold correction and are
+  historical. The aggressive `ADV`/`d` option regresses literary text and is
+  recommended against.
+- **Lever B** (`greek.use_documentary_lemma_rescue()`) looks up unresolved
+  neural lemmas in the guarded seed and paradigm tables only (ending-stripping
+  rules are excluded because they break even on documentary text and regress
+  literary text), recording the result under `SEED` or `PARADIGM` rather than
+  `NEURAL`. It makes no additional changes on the corrected fold, so no lemma
+  gain is claimed.
+
+Both variants were measured sequentially with full coverage on the pinned fold:
 
 | Variant on the PapyGreek fold | UPOS / XPOS / UFeats / Lemma / UAS / LAS / CLAS |
 | --- | --- |
@@ -225,60 +230,60 @@ claimed. Each variant is measured once, full-coverage and sequentially, on the p
 
 ## Diplomatic orthography and Byzantine verse
 
-The orig-layer PapyGreek fold (same sentences and gold, 1,453 FORM differences)
-measures the cost of documentary orthography directly: UPOS 90.57 / XPOS 74.64 /
-UFeats 86.15 / lemma 85.62 / UAS 84.32 / LAS 77.57 / CLAS 72.97 vs the
-regularized row's 91.53 / 77.19 / 88.73 / 89.63 / 85.51 / 79.57 / 75.41.
-Lemma composition takes the biggest hit (which the opt-in weighted OOV reranker above
-recovers by +3.43 pp to 89.06). And the DBBE Byzantine book-epigram gold
-(tagging only, unedited medieval
-verse) scores UPOS 86.75 / XPOS 79.23 / UFeats 81.91 / lemma 76.69 over 9,191 tokens. Reproduce:
+The diplomatic (`orig`) PapyGreek fold (identical sentences and gold, 1,453
+surface form differences) measures the effect of unregularized documentary
+spelling: UPOS 90.57 / XPOS 74.64 / UFeats 86.15 / lemma 85.62 / UAS 84.32 /
+LAS 77.57 / CLAS 72.97, compared with 91.53 / 77.19 / 88.73 / 89.63 / 85.51 /
+79.57 / 75.41 on `reg`. Lemmatization shows the sharpest drop (which the opt-in
+weighted OOV reranker above recovers by +3.43 pp to 89.06).
+
+On the DBBE Byzantine book-epigram fold (9,191 tokens of unedited medieval
+verse, tagging only), the neural pipeline scores UPOS 86.75 / XPOS 79.23 /
+UFeats 81.91 / lemma 76.69. Reproduce with
 `aegean greek eval papygreek --layer orig` and `aegean greek eval dbbe`.
 
 ## Verse, out of domain: tragedy
 
-The verse fold (gold manual annotation from the UNESP Trees project, CC BY-SA
-4.0; Euripides *Bacchae* 1-169, leakage-checked against training) is a
-leakage-clean tragedy evaluation; no prior one is known to us. A small-sample datapoint with
-wide CIs, never a headline: tragedy UPOS 90.88 / UFeats 88.16 / lemma 87.89 / UAS 79.73 /
-LAS 73.33 over 735 tokens (LAS 95% CI [69.75, 78.28]). Tragedy parses ~6 LAS
-points below the documentary fold: poetic word order is materially harder.
-Reproduce: `aegean greek eval verse --track tragedy`.
+The verse fold (manual gold from UNESP Trees, CC BY-SA 4.0; Euripides *Bacchae*
+1–169, leakage-checked against training) is a leakage-clean tragedy evaluation;
+no prior one is known to us. Because the sample is small (735 tokens), it
+carries wide confidence intervals and is reported with its sample size and CI
+rather than as a headline: UPOS 90.88 / UFeats 88.16 / lemma 87.89 / UAS 79.73 /
+LAS 73.33 (LAS 95% CI [69.75, 78.28]). Tragedy parses roughly 6 LAS points below
+the documentary fold, reflecting the difficulty of poetic word order. Reproduce
+with `aegean greek eval verse --track tragedy`.
 
 ## Pure-Python offline baseline
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +
-use_parser()`) is the offline, no-heavy-deps path. It is a baseline, and reads like
-one:
+use_parser()`) runs without optional neural dependencies:
 
 | Fold | UPOS | Lemma | UAS |
 | --- | --- | --- | --- |
 | Perseus test ⚠ | 86.73 | 97.65 ⚠ | 37.43 |
 | PROIEL test | 78.84 | 85.63 (90.38 with the neural lemmatizer) | 35.44 |
 
-The ⚠ cells are an **in-training upper bound**: the baseline's tagger, edit-tree
-lemmatizer, arc-eager parser, and treebank lookup are built from the *full* AGDT,
-which contains the UD-Perseus test sentences, so the 97.65 Perseus lemma is the
-lookup memorizing the fold. The PROIEL fold is their honest number. LAS is not
-comparable here (the arc-eager parser emits Prague labels, not UD relations). The
-baseline exists for the zero-install path; the neural pipeline carries the accuracy
-claims. (Perseus: 1,306 sentences / 20,959 words; PROIEL: 1,047 / 13,314.)
+Cells marked ⚠ are **in-training upper bounds**: the baseline lookup, tagger,
+edit-tree lemmatizer, and arc-eager parser are built from the full AGDT, which
+includes the UD-Perseus test sentences (97.65 Perseus lemma reflects lookup
+memorization). The PROIEL fold gives the leakage-free baseline. LAS is omitted
+because the arc-eager parser emits Prague labels rather than UD relations.
+(Perseus: 1,306 sentences / 20,959 words; PROIEL: 1,047 sentences / 13,314
+words.)
 
-On the **full New Testament**, the fully offline lemmatizer (no backends active,
-`greek.lemmatize` per token) scores **66.98%** over 137,303 tokens (**71.21%**
-with the opt-in fetched paradigm backend, `greek.use_paradigms()`, under its
-honesty guards: a form matching more than one paradigm lemma, or a capitalized
-surface, falls through as an honest miss rather than an arbitrary grounded pick).
-This is the "~67% on the full NT" figure quoted on [Limitations](Limitations); it
-is re-measured by the offline-stack guard because it moves with the code.
+On the **full New Testament** (137,303 tokens), the bare offline lemmatizer
+(`greek.lemmatize` with no backends active) scores **66.98%** (**71.21%** with
+the opt-in `greek.use_paradigms()` backend, whose ambiguity guards leave
+capitalized surfaces and multi-lemma forms unresolved instead of picking
+arbitrarily). This is the "~67% on the full NT" figure cited in
+[Limitations](Limitations); the offline-stack guard re-measures it when code
+changes.
 
 ## Held-out generalization (pure-Python backends)
 
-The opt-in pure-Python tagger and lemmatizer are measured on a leakage-free 90/10
-AGDT sentence split, scored *in context*, with the **unseen-form** subset (forms
-absent from the training split) called out separately. Since the AGDT is these
-models' own training source, the unseen-form column is the honest generalization
-measure.
+The opt-in pure-Python tagger and lemmatizer are evaluated in context on a
+leakage-free 90/10 AGDT sentence split, reporting the **unseen-form** subset
+(forms absent from the training split) separately:
 
 | POS: held-out AGDT (≈54k tokens) | overall | unseen forms |
 | --- | --- | --- |
@@ -289,73 +294,67 @@ measure.
 | pyaegean lemmatizer (pure Python, edit-tree) | 84.5% | 40.3% |
 | pyaegean `[neural]` lemmatizer (GreTa seq2seq, opt-in) | ~92% | **76.3%** |
 
-For contrast, on the same tokens a bare treebank lookup scores 0% on unseen forms
-(no entry). Reproduce with `greek.evaluate_tagger(holdout=0.1)` and
-`greek.evaluate_lemmatizer()`. Recovering an unseen Greek lemma often means an
-internal stem or accent change rather than a suffix swap, which is where the
-pure-Python edit-tree reaches its limit and the seq2seq `[neural]` backend pulls
-ahead (0% → 76.3% on unseen). Full method descriptions are on
+A bare treebank lookup scores 0% on unseen forms. Reproduce with
+`greek.evaluate_tagger(holdout=0.1)` and `greek.evaluate_lemmatizer()`. Because
+unseen Greek lemmas frequently involve stem or accent changes beyond suffix
+rewrites, the seq2seq `[neural]` lemmatizer improves unseen accuracy from 40.3%
+to 76.3%. Method details are in
 [Greek NLP](Greek-NLP#generalizing-pos-tagger-opt-in).
 
 ## Evaluation protocol
 
-- **Test sets.** The Universal Dependencies Ancient Greek test folds,
-  `UD_Ancient_Greek-Perseus` (commit `331ddef`, CC BY-NC-SA 2.5) and
-  `UD_Ancient_Greek-PROIEL` (commit `a4ab8d4`, CC BY-NC-SA 3.0), fetched to the cache
-  for **evaluation only**, never bundled and never trained on.
-- **Scorer.** The official CoNLL 2018 shared-task evaluator (`conll18_ud_eval.py`,
-  MPL 2.0), fetched sha256-pinned
-  (`1072e02af00b1a56205b5e8216d51dee9b8944a104d80744afaccc78859fcb16`). Reported
-  figures are the evaluator's F1 per metric.
-- **Gold tokenization.** pyaegean runs over each fold's gold FORM column, so its
-  scores measure tagging, lemma, and parsing quality, not tokenizer agreement. The
-  neural pipeline is *also* measured end-to-end from raw text through pyaegean's own
-  tokenizer (tokens F1 99.97), and the scores track the gold-tokenization figures
-  closely, so tokenization is not a bottleneck on this fold.
-- **No tagset reconciliation.** UPOS and lemmas are scored exactly as emitted.
-  Convention gaps count against pyaegean here, unlike `greek.evaluate_on_proiel`,
-  which reconciles tagsets to isolate real errors.
-- **Train / dev / test discipline.** Training is the AGDT (plus Gorman and Pedalion)
-  minus the UD exclusion manifest. The dev fold drives early stopping, checkpoint
-  selection, light schedule tuning, and the quantization gate; the test folds are
-  scored once on the finished model and never used for any selection. Full protocol
-  in [`training/README.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/training/README.md).
-- **Lemma scoring.** On the UD folds, lemmas use the evaluator's exact string match
-  with no added normalization (the UD gold is already NFC and carries no homograph
-  digits), so convention differences count as errors rather than being normalized
-  away. The native-corpus checks `evaluate_on_nt` / `evaluate_on_proiel` apply a
-  light NFC-plus-homograph-digit clean-up, since those golds are not pre-normalized.
-- **Bootstrap CIs.** `greek.bootstrap_ud()` gives a percentile confidence interval
-  over a fold's sentences (999 resamples by default): a narrow interval means the
-  number is stable, not a lucky fold.
+- **Test sets.** `UD_Ancient_Greek-Perseus` (commit `331ddef`, CC BY-NC-SA 2.5)
+  and `UD_Ancient_Greek-PROIEL` (commit `a4ab8d4`, CC BY-NC-SA 3.0), fetched to
+  the local cache for evaluation only, never bundled or trained on.
+- **Scorer.** Official CoNLL 2018 shared-task evaluator (`conll18_ud_eval.py`,
+  MPL 2.0), fetched and verified against SHA-256
+  `1072e02af00b1a56205b5e8216d51dee9b8944a104d80744afaccc78859fcb16`. Reported
+  figures are CoNLL F1 percentages.
+- **Gold tokenization.** Primary scores run on each fold's gold `FORM` column to
+  separate tagging, lemmatization, and parsing from tokenization. End-to-end
+  evaluation from raw text through pyaegean's tokenizer achieves tokens F1 99.97
+  on Perseus, tracking gold-tokenization accuracy closely.
+- **No tagset reconciliation.** UPOS and lemmas on UD folds are scored verbatim.
+  Convention differences count as errors here (unlike `greek.evaluate_on_proiel`,
+  which reconciles tagsets).
+- **Train / dev / test separation.** Training uses AGDT, Gorman, and Pedalion
+  minus the UD exclusion manifest. Development folds control early stopping,
+  checkpoint selection, schedule tuning, and quantization gates; test folds are
+  scored once on the finished checkpoint. Full training protocol is in
+  [`training/README.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/training/README.md).
+- **Lemma scoring.** UD folds use exact string match with no post-normalization
+  (UD gold is NFC without homograph digits). Native checks (`evaluate_on_nt`,
+  `evaluate_on_proiel`) apply NFC normalization and strip `#N` homograph digits
+  because those native files are not pre-normalized.
+- **Bootstrap CIs.** `greek.bootstrap_ud()` computes sentence-level percentile
+  intervals over 999 resamples by default.
 
 ### Leakage controls
 
-UD Perseus is converted from the AGDT, the treebank pyaegean's Greek backends are
-built from, so a naive evaluation would leak the test set into training. Two controls
-keep the neural pipeline's numbers honest:
+Because UD Perseus is derived from AGDT, naive training on AGDT leaks the test
+set. Two controls prevent leakage in the neural pipeline:
 
-- **The UD-Perseus exclusion manifest.** `greek.agdt_ud_overlap()` resolves every
-  UD-Perseus dev+test sentence to its AGDT source and verifies it by NFC form-sequence
-  comparison: **2,443 sentences across 5 AGDT files, all form-identical**. The neural
-  model's training split excludes all of them.
-- **PROIEL is held out entirely.** No pyaegean model trains on PROIEL, so it is a
-  genuine out-of-domain fold. The combined-corpus model adds the Gorman and Pedalion
-  treebanks (both CC BY-SA 4.0); the overlap audit excluded 1,591 Gorman + 155
-  Pedalion sentences matching either evaluation fold, and Gorman's Herodotus files
-  (the same work as PROIEL's `hdt.xml`) are excluded at source.
+- **UD-Perseus exclusion manifest.** `greek.agdt_ud_overlap()` maps every
+  UD-Perseus `dev` and `test` sentence to its AGDT source and verifies identity
+  by NFC form-sequence match: **2,443 sentences across 5 AGDT files, all
+  form-identical**. All of them are removed before training.
+- **PROIEL held out completely.** No pyaegean model trains on PROIEL. For the
+  combined training set (AGDT + Gorman + Pedalion, CC BY-SA 4.0), the overlap
+  audit removed 1,591 Gorman and 155 Pedalion sentences matching either
+  evaluation fold, and excluded Gorman's Herodotus files (shared with PROIEL's
+  `hdt.xml`) at source.
 
-One caveat applies only to the pure-Python baseline, not the neural pipeline: its
-lookup and models are built from the *full* AGDT, which contains the UD-Perseus test
-sentences, so its Perseus-fold scores are an in-training upper bound (marked ⚠ above).
+This leakage exclusion applies to the neural pipeline; the legacy pure-Python
+baseline trains on the full AGDT and its Perseus-fold scores are marked ⚠ as an
+in-training upper bound.
 
 ## Cross-tool comparison (with citations)
 
-From Kostkan, Kardos, Mortensen & Nielbo, *"OdyCy: A general-purpose NLP pipeline for
-Ancient Greek"*, LaTeCH-CLfL 2023
-([PDF](https://aclanthology.org/2023.latechclfl-1.14.pdf)), Tables 1–2: each pipeline
-tokenizes its own text and is scored with spaCy evaluation scripts. Best per metric in
-**bold**.
+From Kostkan, Kardos, Mortensen & Nielbo, *"OdyCy: A general-purpose NLP
+pipeline for Ancient Greek"*, LaTeCH-CLfL 2023
+([PDF](https://aclanthology.org/2023.latechclfl-1.14.pdf)), Tables 1–2. Each
+pipeline runs its own tokenizer and is scored with spaCy evaluation scripts.
+Best per metric in **bold**.
 
 **UD Perseus test fold:**
 
@@ -378,83 +377,79 @@ tokenizes its own text and is scored with spaCy evaluation scripts. Best per met
 | CLTK | 96.95 | 90.76 | 96.50 | 57.61 | 54.57 |
 | UDPipe (proiel) | 95.97 | 88.62 | 93.17 | 72.40 | 67.48 |
 
-The same paper shows substantial cross-treebank degradation (for example,
-Stanza-perseus scores 59.00 UAS on PROIEL), which is why pyaegean reports
-out-of-domain and unseen-form metrics alongside in-domain scores.
+The same paper documents steep cross-treebank drops (for example, Stanza-perseus
+scores 59.00 UAS on PROIEL), motivating out-of-domain and unseen-form reporting
+alongside in-domain results.
 
-Riemenschneider & Frank's 2023 paper,
-*"Exploring Large Language Models for Classical Philology"*
-([ACL](https://aclanthology.org/2023.acl-long.846/)), reports on the UD Perseus
-test fold (models trained on the UD train fold, UD 2.10; gold tokenization; the
-official CoNLL evaluator; mean of three seeds): GreBERTa **UAS 88.20 / LAS 83.98**,
-UPOS 95.83, XPOS 91.09, and a GreTa seq2seq lemmatizer at **91.14** (the
-published UD-Perseus lemma comparison used below). Separately, Celano 2025,
-*"A State-of-the-Art Morphosyntactic Parser and Lemmatizer for Ancient Greek"* (LM4DH 2025,
-[arXiv:2410.12055](https://arxiv.org/abs/2410.12055)), fine-tunes Trankit and GreTa
-on AGDT + Gorman + Pedalion (~1.26 M tokens, normalized to the AGDT scheme) and
-reports on his own folds (Trankit UAS 82.28 / LAS 76.67; GreTa lemma 91.17),
-reprinting the Riemenschneider & Frank UD rows for loose comparison only (the
-schemes differ). That AGDT + Gorman + Pedalion combination is the same license-clean
-data lever (Gorman and Pedalion, both CC BY-SA 4.0) the pyaegean joint model uses.
-The Riemenschneider & Frank results are the "2023" entries in the CI/margin table
-above.
+Riemenschneider & Frank (2023), *"Exploring Large Language Models for Classical
+Philology"* ([ACL](https://aclanthology.org/2023.acl-long.846/)), report UD
+Perseus test scores (trained on UD 2.10 train, gold tokenization, official CoNLL
+evaluator, mean of three seeds): GreBERTa **UAS 88.20 / LAS 83.98**, UPOS 95.83,
+XPOS 91.09, and GreTa seq2seq lemma **91.14**. Those are the "2023" comparison
+entries in the CI table above.
 
-Two more reference points, each reported under its *own* evaluation, so points of
-reference rather than rows in the single-protocol table above:
+Celano (2025), *"A State-of-the-Art Morphosyntactic Parser and Lemmatizer for
+Ancient Greek"* (LM4DH 2025,
+[arXiv:2410.12055](https://arxiv.org/abs/2410.12055)), fine-tunes Trankit and
+GreTa on AGDT + Gorman + Pedalion (~1.26 M tokens normalized to the AGDT scheme)
+and evaluates on his own splits (Trankit UAS 82.28 / LAS 76.67; GreTa lemma
+91.17), reproducing Riemenschneider & Frank's UD rows only as a loose reference
+across different schemes. pyaegean's joint model uses the same CC BY-SA 4.0
+AGDT + Gorman + Pedalion training sources.
 
-- **Stanza's published model-performance numbers**
-  ([performance page](https://stanfordnlp.github.io/stanza/performance.html)), under
-  Stanza's own tokenization, give **grc_perseus** UPOS 92.41 / UFeats 91.11 / lemma
-  87.86 / UAS 79.46 / LAS 73.97, and **grc_proiel** (in-domain for that model) UPOS
-  97.42 / lemma 97.18 / LAS 79.02. Its self-reported Perseus lemma (87.86) is 0.28
-  above the 87.58 measured in the OdyCy table. Pyaegean's row is 94.27: arithmetic differences
-  of +6.4 from Stanza and +3.1 from the GreTa 91.14 comparison row.
-- **DILEMMA** ([repository](https://github.com/ciscoriordan/dilemma)) is an
-  *architectural* peer: a Greek tagger/lemmatizer on the same torch-free ONNX inference
-  path pyaegean uses. It is lemmatizer-first and publishes accuracy only on its own
-  multi-period benchmarks (93.7% equiv-adjusted on its DiGreC treebank, 99.7% on
-  Classical Greek), not UD Ancient Greek Perseus UAS/LAS, so there is no same-fold
-  parsing number to compare. It is a design peer here, not a measured row.
+Two additional reference points, each measured under its own protocol and listed
+for context rather than direct table comparison:
 
-**Like-for-like out-of-domain comparison.** The in-domain published systems train on
-the PROIEL fold itself; pyaegean never does. Against a *Perseus-trained* published
-system, the PROIEL rows are 82.47 for pyaegean and 59.00 for Stanza, an arithmetic
-difference of ~23 UAS.
+- **Stanza published scores**
+  ([performance page](https://stanfordnlp.github.io/stanza/performance.html)),
+  under Stanza's own tokenization: **grc_perseus** UPOS 92.41 / UFeats 91.11 /
+  lemma 87.86 / UAS 79.46 / LAS 73.97, and **grc_proiel** (in-domain) UPOS
+  97.42 / lemma 97.18 / LAS 79.02. Stanza's self-reported Perseus lemma (87.86)
+  sits 0.28 above the 87.58 in the OdyCy table; pyaegean's 94.27 is +6.4 above
+  Stanza and +3.1 above the GreTa 91.14 comparison row.
+- **DILEMMA** ([repository](https://github.com/ciscoriordan/dilemma)) uses a
+  similar torch-free ONNX inference path for Greek tagging and lemmatization. It
+  publishes accuracy on its own multi-period datasets (93.7% equiv-adjusted on
+  DiGreC, 99.7% on Classical Greek) without UD Perseus UAS/LAS scores, so it is
+  listed as an architectural reference rather than a same-fold comparison.
+
+**Out-of-domain comparison.** Published PROIEL-trained models train on PROIEL
+itself, whereas pyaegean never does. Comparing Perseus-trained systems on the
+PROIEL test fold gives 82.47 UAS for pyaegean versus 59.00 UAS for
+Stanza-perseus (an arithmetic difference of ~23 UAS).
 
 ## Model size and throughput
 
-The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed
-`model.onnx`), about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB
-uncompressed). In the recorded decoder-v1 quantization comparison, UD Perseus test
-scores were unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS
-90.2 / LAS 85.7). The recipe
-is weight-only int8 (onnxruntime MatMulNBits, block 128, symmetric) plus fp16 on
-everything else, keeping activations at fp32. Full int8 (quantized
-activations) collapses the GreBerta encoder (its activation outliers do not survive
-8-bit quantization, dropping UPOS from 97 to 16–32 and LAS from 86 to 1–13), so the
-weight-only recipe is the one that ships the size win at no accuracy cost. It requires
-**onnxruntime ≥ 1.23** (the `[neural]` floor); the fp32 model stays available at the
-`grc-joint-v2` release for reproducibility.
+The shipped checkpoint is quantized to about **173 MB** (`tar.gz`; **182 MB**
+uncompressed `model.onnx`), roughly 3× smaller than the fp32 reference
+(**518 MB** `tar.gz` / **556 MB** uncompressed). In the recorded decoder-v1
+quantization check, UD Perseus test scores remained within ±0.02 (UPOS 97.0 /
+UFeats 96.0 / lemma 94.3 / UAS 90.2 / LAS 85.7). Quantization applies
+weight-only int8 (`onnxruntime` `MatMulNBits`, block size 128, symmetric) plus
+fp16 on remaining tensors while keeping activations in fp32. Full int8
+activation quantization breaks the GreBerta encoder due to activation outliers
+(dropping UPOS to 16–32 and LAS to 1–13). The shipped bundle requires
+**`onnxruntime >= 1.23`** (the `[neural]` floor); the fp32 artifact remains
+hosted at the `grc-joint-v2` release for reproducibility.
 
-The trade-off is **CPU throughput**: the int8 kernels run several times slower than
-fp32 on this workload, roughly **20–70 words/s** quantized versus roughly **300
-words/s** fp32 on the development machine (sentence-length dependent). Unlike the
-accuracy figures, throughput is **hardware-dependent and illustrative, not a pinned
-benchmark**: it scales with the CPU, core count, and workload, so read it as an
-order-of-magnitude guide. It is re-measured only when the model or the `onnxruntime`
-floor changes, not automatically per release.
+On CPU, weight-only int8 kernels run slower than fp32: roughly **20–70 words/s**
+quantized versus roughly **300 words/s** fp32 on the development machine,
+depending on sentence length. Throughput depends on CPU architecture, core
+count, and input length, and is reported as an order-of-magnitude estimate
+rather than a pinned benchmark; it is re-measured when the model or
+`onnxruntime` floor changes.
 
 ## Reproduce the numbers
 
-The shipped neural pipeline, gold-tokenized, on both UD test folds:
+Score the shipped neural pipeline with gold tokenization on the UD and NT folds:
 
 ```python
 from aegean import greek
 greek.use_neural_pipeline()
 greek.evaluate_on_ud("perseus", "test")   # {'upos': …, 'ufeats': …, 'lemma': …, 'uas': …, 'las': …, 'xpos': …}
 greek.evaluate_on_ud("proiel", "test")    # out of domain
-greek.evaluate_on_nt()                     # whole Nestle 1904 NT (≈1 h on plain CPU)
-greek.bootstrap_ud("perseus", "test")      # percentile CIs, 999 resamples
+greek.evaluate_on_nt()                    # whole Nestle 1904 NT (≈1 h on plain CPU)
+greek.bootstrap_ud("perseus", "test")     # percentile CIs, 999 resamples
 ```
 
 From the shell (`pip install "pyaegean[cli,neural]"`):
@@ -465,39 +460,35 @@ aegean greek eval ud --fold proiel --split test --neural
 aegean greek eval nt --neural
 ```
 
-The offline-baseline rows and the held-out generalization numbers reproduce with the
-pure-Python backends and `greek.evaluate_tagger()` / `greek.evaluate_lemmatizer()` /
-`greek.evaluate_parser()`. The full `aegean greek eval` target table and the
-evaluation functions are documented on
-[Greek NLP](Greek-NLP#standard-benchmark-evaluation-universal-dependencies). These
-targets are heavy: they fetch gold data and may train, so run them only to reproduce
-a number.
+Offline-baseline and held-out AGDT numbers reproduce with the pure-Python
+backends and `greek.evaluate_tagger()`, `greek.evaluate_lemmatizer()`, and
+`greek.evaluate_parser()`. See
+[Greek NLP](Greek-NLP#standard-benchmark-evaluation-universal-dependencies) and
+[Evaluation](Evaluation) for all `aegean greek eval` targets. These commands
+fetch gold data and may train baseline models locally, so run them only when
+reproducing benchmarks.
 
 ## A note on the Aegean scripts
 
-The accuracy tables on this page are Greek NLP metrics. The Aegean syllabic scripts
-are scored differently: Linear B and Cypriot carry Greek-reading bridges, but **Linear
-A and Cypro-Minoan are undeciphered**, so there is no gold reading to score a
-"translation" against and pyaegean never presents one as fact. Their tooling is
-measured by corpus-fidelity and round-trip invariants (documented on
-[Linear A](Linear-A), [Cypriot](Cypriot), and [Limitations](Limitations)), not by an
-accuracy percentage.
+The accuracy tables above cover Ancient Greek NLP. Linear B and Cypriot include
+Greek-reading bridges, while **Linear A and Cypro-Minoan are undeciphered**, so
+there is no gold reading to score translations against and pyaegean never
+presents exploratory analyses as ground truth. Aegean-script tooling is verified
+by corpus-fidelity and round-trip invariants (see [Linear A](Linear-A),
+[Cypriot](Cypriot), and [Limitations](Limitations)).
 
 ## Where this lives (canonical source)
 
-`docs/benchmarks.md` in the repository is the canonical, registry-pinned source
-for every number on this page. Each published figure is stored in `training/results/published-claims.json`;
-`tests/test_benchmark_claims.py` asserts the docs (and their README and wiki echoes)
-carry exactly those values per commit and offline, so a documented number cannot drift
-without the registry, and `scripts/check_benchmarks.py --measure` re-runs the
-offline-stack rows against it. A legitimate re-measure updates the registry, the docs,
-and the evidence file in a single commit.
+`docs/benchmarks.md` in the repository is the canonical, registry-pinned record
+for every number on this page. Published values are stored in
+`training/results/published-claims.json`; `tests/test_benchmark_claims.py`
+verifies on every commit that the docs, README, and wiki match the registry
+exactly, and `scripts/check_benchmarks.py --measure` re-runs the offline-stack
+rows against it. Any re-measurement updates the registry, evidence file, and
+documentation in a single commit.
 
-For the surrounding detail, see the
-[Methodology](Methodology)
-notes, the evaluation tooling and reproduction targets on
-[Greek NLP](Greek-NLP#reproduce-the-numbers-from-the-shell), the reproducibility and
-"reproduce or challenge the number" stance on [For Specialists](For-Specialists), the
-data licences and provenance of every fetched fold and model on
-[Data and Provenance](Data-and-Provenance), and the honest scope of each component on
+Related pages: [Methodology](Methodology),
+[Greek NLP](Greek-NLP#reproduce-the-numbers-from-the-shell),
+[For Specialists](For-Specialists),
+[Data and Provenance](Data-and-Provenance), and
 [Limitations](Limitations).

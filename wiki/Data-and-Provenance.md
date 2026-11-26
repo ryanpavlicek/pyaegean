@@ -1,37 +1,37 @@
 # Data & Provenance
 
-This page documents where every dataset comes from: what ships inside the wheel,
-what downloads on demand, the license and size of each asset, how the local store
-works, and how to pin an exact data snapshot for reproducible papers.
+This page documents dataset origins, wheel contents versus on-demand downloads,
+asset sizes and licenses, local store behavior, and snapshot pinning for
+reproducible research.
 
-Code and compact text JSON are bundled and work offline; large or license-restricted
-assets download on demand into a permanent local store (`PYAEGEAN_CACHE`), sha256-verified.
+Code and compact JSON ship in the wheel and work offline. Larger or
+license-restricted assets download on demand into a permanent local store
+(`PYAEGEAN_CACHE`) with SHA-256 verification.
 
-> **Managing downloads:** Use the unified Library Manager across all surfaces —
-> `aegean library` on the command line (e.g. `aegean library status`,
-> `aegean library install biblical`, `aegean library search Plato`,
-> `aegean library remove damos`), `aegean.library` in Python, or press `l` inside
-> `aegean tui`. Missing Biblical texts and uninstalled corpora also offer inline
-> one-click downloads directly inside the TUI screens (`b` and `c`).
+> **Managing downloads:** Manage packs, corpora, works, and models with
+> `aegean library` (`aegean library status`, `aegean library install biblical`,
+> `aegean library search Plato`, `aegean library remove damos`),
+> `aegean.library` in Python, or press `l` in `aegean tui`. Missing Biblical
+> texts and uninstalled corpora also provide one-click downloads in the TUI
+> screens (`b` and `c`).
 
 ---
 
 ## Bundled vs fetched
 
-Compact text data ships **inside the wheel** and works offline with zero
-third-party dependencies:
+Compact JSON data ships inside the wheel and runs offline with zero third-party
+dependencies:
 
 - **Linear A**: `inscriptions.json`, `signs.json`, `phonetic_map.json`, `manifest.json`
 - **Linear B**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json` (Unicode UCD)
-- **Cypriot**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json`, `ig_inscriptions.json` (the bundled 178-inscription IG XV 1 corpus, CC BY 4.0)
-- **Cypro-Minoan**: `signs.json`, `sample_inscriptions.json` (undeciphered: no phonetic map or lexicon)
-- **Greek**: `sample_texts.json`, `lemmata.json`, `idioms.json` (the bundled idiom/MWE gloss lexicon), `benchmark_gold.json`, `nt_sample.json` (two NT sample chapters: John 1 + Philemon 1), `dodson.json` (Koine lexicon), `works_catalogue.json` (the offline `greek.catalog` discovery index: metadata only, no texts), `calibration.json` (legacy Schema-1 scalar temperature), `calibration_registry_v2.json` (bundled Schema-2 logit-affine calibration registry), `oov_lemma_reranker_v1.json` (bundled opt-in weighted OOV lemma reranker weights), `neural-runtime-variants.json` (stable runtime-variant registry)
-- **Geo**: `site_coordinates.json` (approximate find-site lat/long)
+- **Cypriot**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json`, `ig_inscriptions.json` (178-inscription IG XV 1 corpus, CC BY 4.0)
+- **Cypro-Minoan**: `signs.json`, `sample_inscriptions.json` (undeciphered; no phonetic map or lexicon)
+- **Greek**: `sample_texts.json`, `lemmata.json`, `idioms.json` (idiom/MWE gloss lexicon), `benchmark_gold.json`, `nt_sample.json` (John 1 + Philemon 1 sample), `dodson.json` (Koine lexicon), `works_catalogue.json` (offline `greek.catalog` metadata index), `calibration.json` (legacy Schema-1 scalar temperature), `calibration_registry_v2.json` (Schema-2 logit-affine calibration registry), `oov_lemma_reranker_v1.json` (opt-in OOV lemma reranker weights), `neural-runtime-variants.json` (runtime-variant registry)
+- **Geo**: `site_coordinates.json` (approximate find-site coordinates)
 
-Large or license-restricted assets are **never bundled**: they are fetched on
-demand into a user cache. The wheel ships only code + tiny JSON (CI's
-`scripts/check_footprint.py` enforces that, plus an instant, heavy-dep-free
-import).
+Large and license-restricted assets stay outside the wheel and download on demand
+to the user cache. CI enforces a code-and-JSON-only wheel and fast core import
+via `scripts/check_footprint.py`.
 
 ```python
 from aegean.data import load_bundled_json
@@ -42,8 +42,8 @@ len(signs)
 
 ### Every bundled JSON file (verified)
 
-This is exactly what `aegean.data.versions()` reports as `bundled`: each file
-hashed straight out of the installed wheel. Sizes are bytes.
+`aegean.data.versions()` hashes these files directly from the installed wheel
+under its `bundled` key (sizes in bytes):
 
 | File | Bytes | Source |
 |---|---|---|
@@ -54,7 +54,7 @@ hashed straight out of the installed wheel. Sizes are bytes.
 | `cypriot/signs.json` | 6,975 | Unicode UCD (Cypriot Syllabary) |
 | `cyprominoan/sample_inscriptions.json` | 385 | scholarly excerpts (Ferrara) |
 | `cyprominoan/signs.json` | 12,580 | Unicode UCD (Cypro-Minoan block) |
-| `geo/site_coordinates.json` | 10,746 | GORILA / Younger / public gazetteers |
+| `geo/site_coordinates.json` | 10,748 | GORILA / Younger / public gazetteers |
 | `greek/benchmark_gold.json` | 6,451 | gold benchmark fixtures |
 | `greek/calibration.json` | 694 | legacy Schema-1 dev-fitted scalar temperature (`grc-joint-v3`) |
 | `greek/calibration_registry_v2.json` | 9,846 | locked-test-qualified Schema-2 calibration registry (`grc-joint-v3`) |
@@ -62,13 +62,13 @@ hashed straight out of the installed wheel. Sizes are bytes.
 | `greek/idioms.json` | 6,445 | bundled idiom / MWE gloss lexicon |
 | `greek/lemmata.json` | 1,494 | bundled gold lemma seed |
 | `greek/neural-runtime-variants.json` | 1,330 | stable neural runtime-variant registry |
-| `greek/nt_sample.json` | 132,814 | Nestle 1904: two sample chapters, John 1 + Philemon 1 (CC0) |
+| `greek/nt_sample.json` | 132,814 | Nestle 1904: John 1 + Philemon 1 sample (CC0) |
 | `greek/oov_lemma_reranker_v1.json` | 824 | frozen dev-fitted weights for opt-in OOV lemma reranker (`grc-joint-v3`) |
 | `greek/sample_texts.json` | 1,017 | public-domain Greek snippets |
 | `greek/works_catalogue.json` | 281,097 | Perseus + First1KGreek work index (metadata only; built by `scripts/build_greek_catalogue.py`) |
 | `lineara/inscriptions.json` | 720,766 | GORILA via mwenge/lineara.xyz |
 | `lineara/manifest.json` | 434 | corpus manifest |
-| `lineara/phonetic_map.json` | 597 | Linear A sound values |
+| `lineara/phonetic_map.json` | 621 | Linear A sound values |
 | `lineara/signs.json` | 63,272 | Linear A sign inventory |
 | `linearb/lexicon.json` | 11,473 | Unicode UCD + Wiktionary/kaikki excerpts |
 | `linearb/phonetic_map.json` | 910 | Unicode UCD |
@@ -79,138 +79,128 @@ hashed straight out of the installed wheel. Sizes are bytes.
 
 ## Download-to-cache: `fetch()`
 
-`fetch(name)` downloads a registered remote dataset into the cache and returns
-its path. Downloads are **sha256-verified** (when a checksum is pinned),
-**atomic** (written to a `.part` file then renamed), **idempotent** (a
-present, valid cache entry is a no-op), and **resumable**: an interrupted
-download keeps its `.part` file, and the next attempt continues from where it
-stopped with an HTTP `Range` request instead of restarting a multi-hundred-MB
-asset from zero (a republished asset is detected and restarted cleanly).
-Archive datasets (`extract=True`, e.g. `lineara-images`) are **unpacked** into
-a cache directory, safely (members that escape the directory are rejected),
-and `fetch()` returns that directory.
+`fetch(name)` downloads a registered remote asset into the local store and
+returns its path. Downloads are SHA-256-verified (when a checksum is pinned),
+atomic (written to `.part` then renamed), idempotent (a valid cached entry is a
+no-op), and resumable (interrupted downloads keep `.part` and resume via HTTP
+`Range`; republished upstream assets restart cleanly). Archive datasets
+(`extract=True`, such as `lineara-images`) unpack safely into a cache directory
+with path-traversal rejection, and `fetch()` returns that directory.
 
-> **A fetched dataset is permanent until you delete it.** The "cache" is a
-> permanent local store, not an evicting one: `fetch()` performs a complete
-> one-time download for a valid entry, with no automatic eviction or expiry.
-> A cached entry that fails the current integrity checks is fetched again.
-> An entry stays on disk until you remove it (`aegean data remove
-> NAME`, or `aegean data remove --all` to clear every downloaded dataset) or
-> replace it with `fetch(name, force=True)`.
+> **Permanent local store:** Fetched datasets remain on disk with no automatic
+> eviction or expiry. A cached copy that fails integrity verification is
+> re-fetched; otherwise it stays until removed via `aegean data remove NAME` (or
+> `aegean data remove --all`) or replaced with `fetch(name, force=True)`.
 
 ```python
 from aegean import data
 
-data.cache_dir()                 # where datasets are cached (override: PYAEGEAN_CACHE)
-path = data.fetch("nt-corpus")   # returns the cached file path; no-op if already valid
+data.cache_dir()                 # local store directory (override: PYAEGEAN_CACHE)
+path = data.fetch("nt-corpus")   # returns cached path; no-op once valid
 path.exists(), path.is_file()
 # (True, True)
 ```
 
-Errors are explicit and never block `import`:
+Errors are raised lazily on fetch and never block `import aegean`:
 
-| Situation | Raised | Message detail |
+| Condition | Exception | Message detail |
 |---|---|---|
 | unknown dataset | `DataNotAvailableError` | `unknown dataset 'nope'; known: [...]` |
-| no pinned URL | `DataNotAvailableError` | names the `PYAEGEAN_<NAME>_URL` to set |
-| checksum mismatch | `DataNotAvailableError` | expected vs got; the bad download is removed |
+| no pinned URL | `DataNotAvailableError` | names the `PYAEGEAN_<NAME>_URL` variable to set |
+| checksum mismatch | `DataNotAvailableError` | expected vs actual digest; corrupted download removed |
 | unsafe archive member | `DataNotAvailableError` | `unsafe path in archive: ...` |
 | network failure | `DataNotAvailableError` | `could not fetch '<name>' from <url>: ...` |
 
 ```python
 from aegean import data
 try:
-    data.fetch("linearb-corpus")             # has no default URL
+    data.fetch("linearb-corpus")             # bring-your-own slot; no default URL
 except data.DataNotAvailableError as e:
     print(str(e)[:70])
 # dataset 'linearb-corpus' has no pinned download URL yet (Your own licen...
 ```
 
-`fetch(name, force=True)` re-downloads even when a valid copy is cached.
+Pass `fetch(name, force=True)` to re-download over an existing valid cache entry.
 
 ---
 
-## The fetchable datasets — every one, with license, provenance, size
+## The fetchable datasets
 
-These are the registered remote datasets (`aegean data list`). Every one is
-**fetched to the user cache on demand and never bundled** in the Apache-2.0
-wheel. Each URL and sha256 is pinned in the code; an env override
-(`PYAEGEAN_<NAME>_URL`, see below) points any of them at your own licensed copy.
+Registered remote datasets (`aegean data list`, 39 entries). All are fetched to
+the user store on demand and never bundled in the Apache-2.0 wheel. Each pinned
+URL and SHA-256 lives in `aegean.data._REMOTE`; set `PYAEGEAN_<NAME>_URL` to
+point any dataset at a custom mirror or local licensed copy.
 
-| Dataset (`name`) | What it is | Size | License | Provenance |
+| Dataset (`name`) | Contents | Size | License | Provenance |
 |---|---|---|---|---|
-| `lineara-images` | 3,368 facsimile/photo files (archive) | ~116 MB tar.gz, ~119 MB unpacked | © École Française d'Athènes + other rightsholders: academic reference only | Fetched from the `ryanpavlicek/linearaworkbench` release; never re-hosted |
-| `agdt-derived` | Prebuilt AGDT lexicon + tagger/lemmatizer/parser models | ~15 MB | CC BY-SA 3.0 (derived from Perseus AGDT) | Project-hosted derivative of the AGDT |
-| `lsj-index` | Prebuilt LSJ lemma→entry index | ~15 MB | CC BY-SA 4.0 (Perseus Digital Library) | Project-hosted derivative of the Perseus LSJ |
+| `lineara-images` | 3,368 facsimile/photo files (archive) | ~116 MB tar.gz, ~119 MB unpacked | © École Française d'Athènes + other rightsholders: academic reference only | Fetched from `ryanpavlicek/linearaworkbench`; never re-hosted |
+| `agdt-derived` | Prebuilt AGDT lexicon + tagger/lemmatizer/parser models | ~15 MB | CC BY-SA 3.0 (derived from Perseus AGDT) | Project-hosted derivative of AGDT |
+| `lsj-index` | Prebuilt LSJ lemma→entry index | ~15 MB | CC BY-SA 4.0 (Perseus Digital Library) | Project-hosted derivative of Perseus LSJ |
 | `middle-liddell-index` | Prebuilt Middle Liddell lemma→entry index | ~2.3 MB | public domain (1889); Perseus / Scaife digitization | Project-hosted; `use_lexicon("middle-liddell")` |
 | `cunliffe-index` | Prebuilt Cunliffe (Homeric) lemma→entry index | ~1.3 MB | public domain (1924); Scaife data MIT | Project-hosted; `use_lexicon("cunliffe")` |
 | `abbott-smith-index` | Prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) | Project-hosted; `use_lexicon("abbott-smith")` |
 | `autenrieth-index` | Prebuilt Autenrieth (Homeric) lemma→entry index | ~0.6 MB | public domain (1891); Perseus digitization CC BY-SA | Project-hosted; `use_lexicon("autenrieth")` |
-| `papygreek-fold` | Work-disjoint documentary-Koine dependency eval fold (1,551 sentences / 22,227 tokens) | ~306 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Project-hosted derivative; evaluation only; whole-document Trismegistos training-work exclusion plus sentence-form guards; rebuild: `scripts/build_papygreek_fold.py` |
-| `papygreek-fold-orig` | ORIG diplomatic surface layer of `papygreek-fold` (same 1,551 sentences and gold; the scribes' raw spellings, 1,453 forms differ) | ~309 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_papygreek_fold.py --layer orig` |
-| `verse-fold` | Ancient Greek verse dependency eval fold, tragedy-only (36 sentences / 735 tokens: Euripides *Bacchae* 1-169); small-sample, never a headline number | ~12 KB | CC BY-SA 4.0 (unesp-trees, Perseids/Arethusa, UNESP) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_verse_fold.py` |
+| `papygreek-fold` | Work-disjoint documentary-Koine dependency eval fold (1,551 sentences / 22,227 tokens) | ~306 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Project-hosted derivative; evaluation only; Trismegistos work exclusion + sentence-form guards; rebuild: `scripts/build_papygreek_fold.py` |
+| `papygreek-fold-orig` | ORIG diplomatic surface layer of `papygreek-fold` (same 1,551 sentences and gold; raw scribal spellings, 1,453 forms differ) | ~309 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_papygreek_fold.py --layer orig` |
+| `verse-fold` | Ancient Greek verse dependency eval fold, tragedy-only (36 sentences / 735 tokens: Euripides *Bacchae* 1–169); small-sample, never a headline figure | ~12 KB | CC BY-SA 4.0 (unesp-trees, Perseids/Arethusa, UNESP) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_verse_fold.py` |
 | `dbbe-lingann-fold` | Byzantine book-epigram tagging fold (825 sentences / 9,191 tokens, gold POS + lemma, no trees; scribal orthography) | ~120 KB | CC BY 4.0 (DBBE gold standard, Ghent) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_dbbe_fold.py` |
-| `papygreek-dev-tagging` | Work-disjoint documentary-Koine DEV tagging track (323 sentences / 6,319 tokens), document-disjoint from the eval fold | ~92 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Experiment data only, never a published number; rebuild: `scripts/build_papygreek_dev.py` |
-| `papygreek-dev-parse` | Work-disjoint documentary-Koine DEV parse track (125 sentences / 1,262 tokens, directional only) | ~17 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Experiment data only, never a published number; rebuild: `scripts/build_papygreek_dev.py` |
-| `grc-paradigms` | Nominal paradigm table (form→lemma+features), the offline `use_paradigms()` backend | ~233 KB | CC BY-SA 3.0 (derived from UniMorph grc) | Project-hosted derivative; rebuild: `scripts/build_paradigm_table.py` |
+| `papygreek-dev-tagging` | Work-disjoint documentary-Koine DEV tagging track (323 sentences / 6,319 tokens), document-disjoint from `papygreek-fold` | ~92 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Development only; never a published headline figure; rebuild: `scripts/build_papygreek_dev.py` |
+| `papygreek-dev-parse` | Work-disjoint documentary-Koine DEV parse track (125 sentences / 1,262 tokens, directional only) | ~17 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Development only; never a published headline figure; rebuild: `scripts/build_papygreek_dev.py` |
+| `grc-paradigms` | Nominal paradigm table (form→lemma+features) for `use_paradigms()` | ~233 KB | CC BY-SA 3.0 (derived from UniMorph grc) | Project-hosted derivative; rebuild: `scripts/build_paradigm_table.py` |
 | `ddbdp-uris` | DDbDP document-identifier map (file stem→ddb-hybrid) for papyri.info URIs in RDF export | ~337 KB | CC BY 3.0 (derived from papyri.info idp.data) | Project-hosted derivative; rebuild: `scripts/build_ddbdp_uri_map.py` |
-| `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from bowphs/GreTa (Apache-2.0 base) |
+| `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from `bowphs/GreTa` (Apache-2.0 base) |
 | `grc-joint` | Joint tagger-parser-lemmatizer (quantized ONNX + tokenizer + label maps + lemma scripts/lookup) | ~173 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Gorman (4.0) + Pedalion (4.0) | `[neural]` extra; GreBerta-based (Apache-2.0 base), eval folds excluded |
-| `sigla-corpus` | SigLA-derived Linear A dataset v4: 802 docs, 1,895 word-division groups (SigLA's own division; these plus standalone single signs load as 1,895 WORD tokens) + commodity ideograms | ~1.3 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
-| `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
-| `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
+| `sigla-corpus` | SigLA Linear A dataset v4: 802 docs, 1,895 word-division groups (plus standalone single signs as `WORD` tokens) + commodity ideograms | ~1.3 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from SigLA web-app payload; drawings remain at sigla.phis.me |
+| `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from DAMOS public API; no imagery |
+| `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From `biblicalhumanities/Nestle1904`; redistributable (CC0) |
 | `strongs-greek` | Extended Strong's Greek Lexicon: 11,142 Strong's & STEPBible extended entries with definitions, derivations, Hebrew equivalents, KJV usage, and root links | ~1.5 MB JSON.gz | CC BY 4.0 (STEPBible TBESG) + Public Domain (OpenScriptures Strong's) | Project-hosted derivative; rebuild: `scripts/build_strongs_greek.py` |
 | `nt-editions` | Eight Greek New Testament critical & traditional editions (`sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`; 27 books each) for word-level variant collation | ~3.3 MB JSON.gz | CC BY-SA 3.0 / CC BY 4.0 / Public Domain (SBLGNT/MorphGNT; CNTR SR, BHP & KJTR; Tischendorf 8th, Westcott–Hort, Robinson–Pierpont BYZ, Antoniades 1904) | Project-hosted derivative; rebuild: `scripts/build_nt_editions.py` |
-| `nt-witnesses` | Thirteen 2nd–5th century CE Greek NT manuscript transcriptions (`01`/ℵ, `02`/A, `03`/B, `04`/C, `05`/D, `032`/W, `P45`–`P75`) with original/corrector hands | ~1.5 MB JSON.gz | CC BY-SA 4.0 (Center for New Testament Restoration Class 1 transcriptions) | Project-hosted derivative; rebuild: `scripts/build_nt_witnesses.py` |
-| `lxx-corpus` | Swete Septuagint (LXX): all 55 Greek Old Testament & Deuterocanonical books (`tlg0527.*`, 29,248 verses) for fast offline-cached reading and concordance search | ~1.7 MB JSON.gz | CC BY-SA 4.0 (OpenGreekAndLatin / First1KGreek; Swete 1887–1894 Public Domain base text) | Project-hosted derivative; rebuild: `scripts/build_lxx_corpus.py` |
+| `nt-witnesses` | Thirteen 2nd–5th c. CE Greek NT manuscript transcriptions (`01`/ℵ, `02`/A, `03`/B, `04`/C, `05`/D, `032`/W, `P45`–`P75`) with original and corrector hands | ~1.5 MB JSON.gz | CC BY-SA 4.0 (Center for New Testament Restoration Class 1 transcriptions) | Project-hosted derivative; rebuild: `scripts/build_nt_witnesses.py` |
+| `lxx-corpus` | Swete Septuagint (LXX): all 55 Greek Old Testament & Deuterocanonical books (`tlg0527.*`, 29,248 verses) | ~1.7 MB JSON.gz | CC BY-SA 4.0 (OpenGreekAndLatin / First1KGreek; Swete 1887–1894 Public Domain base text) | Project-hosted derivative; rebuild: `scripts/build_lxx_corpus.py` |
 | `patrologia-graeca-corpus` | Calfa–GREgORI Patrologia Graeca: 33 digitized Migne PG volumes (6.79M Greek words, OCR of 19th-century prints), including 9 biblical commentary volumes (Cyril of Alexandria, Procopius of Gaza, Photius, Oecumenius, Theophylact of Bulgaria) | ~23.5 MB JSON.gz | CC BY 4.0 (CGPG — UCLouvain GREgORI & Calfa, Vidal-Gorène & Kindt, LREC 2026) | Project-hosted derivative; `aegean.load("patrologia")` or `aegean.greek.bible.load_commentary()`; rebuild: `scripts/build_patrologia_graeca_corpus.py` |
-| `apostolic-fathers-corpus` | Open Apostolic Fathers: all 15 twice-hand-corrected Greek works (64,944 tokens: 1–2 Clement, Ignatius's 7 epistles, Polycarp, Didache, Barnabas, Hermas, Martyrdom of Polycarp, Diognetus) | ~1.0 MB JSON.gz | CC BY-SA 4.0 (Open Apostolic Fathers — James Tauber & Seumas Macdonald, Zenodo 10.5281/zenodo.2555673) | Project-hosted derivative; `aegean.load("apostolic-fathers")`; rebuild: `scripts/build_apostolic_fathers_corpus.py` |
+| `apostolic-fathers-corpus` | Open Apostolic Fathers: 15 twice-hand-corrected Greek works (64,944 tokens: 1–2 Clement, Ignatius's 7 epistles, Polycarp, Didache, Barnabas, Hermas, Martyrdom of Polycarp, Diognetus) | ~1.0 MB JSON.gz | CC BY-SA 4.0 (Open Apostolic Fathers — James Tauber & Seumas Macdonald, Zenodo 10.5281/zenodo.2555673) | Project-hosted derivative; `aegean.load("apostolic-fathers")`; rebuild: `scripts/build_apostolic_fathers_corpus.py` |
 | `pseudepigrapha-corpus` | Online Critical Pseudepigrapha (Greek): 44 Second Temple & Old Testament Pseudepigrapha works (171,306 tokens: 1 Enoch, Psalms of Solomon, Testaments of the 12 Patriarchs, Testament of Job/Solomon/Abraham, Aristeas, Joseph & Aseneth, Sibylline Oracles, etc.) | ~2.7 MB JSON.gz | CC BY 4.0 (Online Critical Pseudepigrapha — Ken M. Penner et al., pseudepigrapha.org) | Project-hosted derivative; `aegean.load("pseudepigrapha")`; rebuild: `scripts/build_pseudepigrapha_corpus.py` |
-| `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with find-place, date, coordinates | ~7 MB JSON | CC BY 4.0 (I.Sicily: J. Prag et al., Oxford) | From the ISicily/ISicily EpiDoc corpus; **may be redistributed** (CC BY), attribution required |
-| `iip-corpus` | IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine with find-place, coordinates | ~4 MB JSON | CC BY-NC 4.0 (IIP: M. L. Satlow, Brown) | From Brown-University-Library/iip-texts; **may be redistributed** (CC BY-NC), attribution + NonCommercial |
-| `iospe-corpus` | IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea (Tyras, Olbia, Chersonesos, Byzantine) with find-place, date | ~4 MB JSON | CC BY (IOSPE, King's College London; repo code MIT) | From kingsdigitallab/iospe; **may be redistributed** (CC BY), attribution required |
-| `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (archaic Doric + verse) with title, find-place, date | ~3 MB JSON | CC BY-NC-SA 4.0 (IGCyr2/GVCyr2, Dobias-Lalou et al., Bologna) | From AMS Acta 7796; **may be redistributed** (CC BY-NC-SA), attribution + NonCommercial + ShareAlike; epichoric (non-normalized) Greek |
-| `aphrodisias-corpus` | Inscriptions of Aphrodisias (IAph2007): 1,471 Greek EpiDoc inscriptions (38,556 tokens) from Aphrodisias in Caria (Western Asia Minor, 2nd c. BCE–Byzantine) | ~0.5 MB JSON.gz | CC BY 2.5 (Reynolds, Roueché & Bodard, King's College London, http://insaph.kcl.ac.uk/) | Project-hosted EpiDoc extraction; `aegean.load("aphrodisias")`; rebuild: `scripts/build_aphrodisias_corpus.py` |
+| `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with find-place, date, coordinates | ~7 MB JSON | CC BY 4.0 (I.Sicily: J. Prag et al., Oxford) | From `ISicily/ISicily` EpiDoc corpus; redistributable (CC BY) with attribution |
+| `iip-corpus` | IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine with find-place, coordinates | ~4 MB JSON | CC BY-NC 4.0 (IIP: M. L. Satlow, Brown) | From `Brown-University-Library/iip-texts`; attribution + NonCommercial |
+| `iospe-corpus` | IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea (Tyras, Olbia, Chersonesos, Byzantine) with find-place, date | ~4 MB JSON | CC BY (IOSPE, King's College London; repo code MIT) | From `kingsdigitallab/iospe`; attribution required |
+| `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (archaic Doric + verse) with title, find-place, date | ~3 MB JSON | CC BY-NC-SA 4.0 (IGCyr2/GVCyr2, Dobias-Lalou et al., Bologna) | From AMS Acta 7796; attribution + NonCommercial + ShareAlike; epichoric (non-normalized) Greek |
+| `aphrodisias-corpus` | Inscriptions of Aphrodisias (IAph2007): 1,471 Greek EpiDoc inscriptions (38,556 tokens) from Aphrodisias in Caria (2nd c. BCE–Byzantine) | ~0.5 MB JSON.gz | CC BY 2.5 (Reynolds, Roueché & Bodard, King's College London, http://insaph.kcl.ac.uk/) | Project-hosted EpiDoc extraction; `aegean.load("aphrodisias")`; rebuild: `scripts/build_aphrodisias_corpus.py` |
 | `crete-corpus` | Cretan Institutional Inscriptions: 600 Archaic–Hellenistic Greek EpiDoc inscriptions from Crete (50,995 tokens, 7th–1st c. BCE) | ~0.6 MB JSON.gz | CC BY-NC-SA 4.0 (Irene Vagionakis, Università Ca' Foscari Venezia, 2016–2019) | Project-hosted EpiDoc extraction; `aegean.load("crete")`; NonCommercial + ShareAlike pass to user; rebuild: `scripts/build_crete_corpus.py` |
-| `edh-corpus` | EDH Greek inscriptions: 1,286 pure-Greek texts (Imperial Koine, largely onomastic) with ancient place, date, find-place, Trismegistos id | ~6 MB JSON | CC BY-SA 4.0 (EDH, Heidelberg Academy of Sciences and Humanities) | Pure-`grc` subset of the frozen (2021) EDH dump; **may be redistributed** (CC BY-SA), attribution + ShareAlike |
-| `ddbdp-corpus` | DDbDP documentary papyri: 57,331 Greek texts / ~4.4M tokens as a **SQLite database + FTS** (citation, date, place, TM/HGV ids) | ~219 MB tar.gz, ~757 MB unpacked | CC BY 3.0 (DDbDP / papyri.info) | From papyri/idp.data; **may be redistributed** (CC BY), attribution. `aegean.load("ddbdp")` materialises it (heavy, ~GB RAM); `aegean db search ddbdp` / `aegean.db.stream(ddbdp_db())` are the memory-friendly path |
-| `byzantine-corpus` | Byzantine & Early Modern Vernacular Greek: 12 literary texts (189,375 tokens, 12th–17th c.: *Digenes Akritas*, *Chronicle of Moreas*, *Ptochoprodromika*, *Poulologos*, *Apokopos*, *Erotokritos*) | ~2.5 MB JSON.gz | Public Domain / CC BY-SA 3.0 (Wikisource & Kalonaros 1940; open-greek/byzantine-early-modern-corpus) | Project-hosted derivative; `aegean.load("byzantine")`; rebuild: `scripts/build_byzantine_corpus.py` |
+| `edh-corpus` | EDH Greek inscriptions: 1,286 pure-Greek texts (Imperial Koine, largely onomastic) with ancient place, date, find-place, Trismegistos id | ~6 MB JSON | CC BY-SA 4.0 (EDH, Heidelberg Academy of Sciences and Humanities) | Pure-`grc` subset of frozen 2021 EDH dump; attribution + ShareAlike |
+| `ddbdp-corpus` | DDbDP documentary papyri: 57,331 Greek texts / ~4.4M tokens as a SQLite database with FTS (citation, date, place, TM/HGV ids) | ~219 MB tar.gz, ~757 MB unpacked | CC BY 3.0 (DDbDP / papyri.info) | From `papyri/idp.data`; attribution required. Use `aegean db search ddbdp` or `aegean.db.stream(ddbdp_db())` instead of materializing all 4.4M tokens via `aegean.load("ddbdp")` |
+| `byzantine-corpus` | Byzantine & Early Modern Vernacular Greek: 12 literary texts (189,375 tokens, 12th–17th c.: *Digenes Akritas*, *Chronicle of Moreas*, *Ptochoprodromika*, *Poulologos*, *Apokopos*, *Erotokritos*) | ~2.5 MB JSON.gz | Public Domain / CC BY-SA 3.0 (Wikisource & Kalonaros 1940; `open-greek/byzantine-early-modern-corpus`) | Project-hosted derivative; `aegean.load("byzantine")`; rebuild: `scripts/build_byzantine_corpus.py` |
 | `homer-scholia-corpus` | Homer Multitext Project (`hmt-2026a`): normalized Venetus A *Iliad* (24 books) and Homeric *scholia* (Venetus A, Venetus B, Escorial Upsilon 1.1; 54 documents, 331,365 tokens) | ~5.5 MB JSON.gz | CC BY-NC 4.0 (Homer Multitext Project, Center for Hellenic Studies) | Project-hosted CEX extraction; `aegean.load("homer-scholia")`; NonCommercial passes to user; rebuild: `scripts/build_homer_scholia_corpus.py` |
-| `workbench-app` | Prebuilt Linear A Research Workbench static web app (archive) | ~3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Served locally by `aegean workbench` |
-| `linearb-corpus` | Slot for your OWN licensed Linear B export (no default source) | — | bring-your-own; for a ready corpus fetch DAMOS, LiBER is browse-only | For a ready corpus: `aegean data fetch damos`. LiBER (liber.cnr.it) has no public download/API — browse-only. Import your own: `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
+| `workbench-app` | Prebuilt Linear A Research Workbench `v2.1.0` static web app (archive, multi-script Aegean fonts) | ~3.3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Pinned to `workbench-app-v2.1.0`; served locally by `aegean workbench` |
+| `linearb-corpus` | Slot for a user-supplied licensed Linear B export (no default source) | — | bring-your-own; fetch DAMOS for an open corpus (LiBER is browse-only) | Fetch DAMOS via `aegean data fetch damos`. LiBER (liber.cnr.it) offers no public download or API. Import local EpiDoc via `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
 
-> **License propagation.** Project-hosted derivatives are republished under the
-> same ShareAlike terms as their source and kept out of the Apache-2.0 wheel.
-> NonCommercial obligations (DAMOS, SigLA, PROIEL, IIP, IGCyr/GVCyr, Crete,
-> Homer Multitext) pass through to the user. CC0 assets (the NT corpus, the
-> Dodson lexicon) carry no attribution or ShareAlike obligation, which allows
-> two NT sample chapters to ship inside the wheel.
+> **License propagation:** Project-hosted derivatives keep their upstream
+> ShareAlike license and stay outside the Apache-2.0 wheel. NonCommercial terms
+> (DAMOS, SigLA, PROIEL, IIP, IGCyr/GVCyr, Crete, Homer Multitext) apply to end
+> users. CC0 assets (Nestle 1904 NT annotations and Dodson) carry no attribution
+> or ShareAlike requirement, permitting two NT sample chapters and Dodson to
+> ship inside the wheel.
 
 ### Per-dataset notes
 
 #### The Linear A imagery (`lineara-images`)
 
-The facsimile/photo set (3,368 files, ~116 MB download, ~119 MB unpacked) is
-**fetched (never re-hosted)** from a release on the `ryanpavlicek/linearaworkbench`
-repo. `fetch` downloads the `tar.gz` and unpacks it into a cache directory of
-images. Its copyright is a patchwork: most images are **© École Française
-d'Athènes** (the
-[GORILA volumes](https://cefael.efa.gr/result.php?serie_title_operator=con&volume_number_operator=%3D&issue_year_operator=%3D&section_title=Recueil+des+inscriptions+en+lin%C3%A9aire+A&section_title_operator=con&author_lastname_operator=con&publisher_name_operator=con&site_id=1&actionID=advanced&operator=AND),
-digitized in the École's CEFAEL library at that link), others are held by named
-scholars, publications, and photographers (see the corpus's per-image
-`imageRights`); that attribution is unaffected by fetching, and pyaegean does not
-redistribute the images itself.
+The facsimile/photo archive (3,368 files, ~116 MB compressed, ~119 MB unpacked)
+is fetched from a release on `ryanpavlicek/linearaworkbench` and never re-hosted
+by pyaegean. `fetch()` downloads and extracts the archive into a local image
+directory. Rights vary per file: most images are © École Française d'Athènes
+([GORILA volumes](https://cefael.efa.gr/result.php?serie_title_operator=con&volume_number_operator=%3D&issue_year_operator=%3D&section_title=Recueil+des+inscriptions+en+lin%C3%A9aire+A&section_title_operator=con&author_lastname_operator=con&publisher_name_operator=con&site_id=1&actionID=advanced&operator=AND)
+in CEFAEL), and others are held by named scholars, publications, and
+photographers (recorded in each document's `imageRights`).
 
-The release asset's URL and sha256 are **pinned** (and verified), so a plain call
-just works and is integrity-checked:
+The release URL and SHA-256 are pinned:
 
 ```python
 from aegean import data
-data.fetch("lineara-images")     # downloads the pinned asset, sha256-verified, unpacks, caches → a directory
+data.fetch("lineara-images")     # downloads, verifies SHA-256, unpacks, returns directory
 ```
 
-To fetch from your own mirror instead, set an env override (the pinned sha256 is
-not enforced against an override):
+Override with a local mirror via environment variable (checksum verification is
+skipped for override URLs):
 
 ```bash
 export PYAEGEAN_LINEARA_IMAGES_URL="https://example.org/lineara-images.tar.gz"
@@ -218,149 +208,124 @@ export PYAEGEAN_LINEARA_IMAGES_URL="https://example.org/lineara-images.tar.gz"
 
 #### The Greek treebank lexicon & models (`agdt-derived`, `use_treebank`)
 
-`aegean.greek.use_treebank()` activates the lexicon derived from the Perseus
-**Ancient Greek Dependency Treebank** (AGDT v2.1, Greek); `use_parser()` /
-`use_tagger()` / `use_lemmatizer()` activate the models trained from the same
-files. On first use each fetches the small **prebuilt** artifact from the
-project-hosted `agdt-derived` release asset (one ~15 MB bundle: the
-form→lemma/morphology lexicon `agdt-greek-lexicon.json` plus the three trained
-models; sha256-pinned). If that asset is ever unreachable, the original path
-still works: download the AGDT itself (33 `.tb.xml` files, ~75 MB, pinned to a
-fixed commit) and build/train locally. The treebank is **CC BY-SA 3.0**: the
-source treebank is never re-hosted, the derived artifacts are published under the
-same ShareAlike terms (clearly labeled), and everything is fetched to the cache:
-never bundled in the Apache-2.0 wheel. Cite the AGDT in work that relies on it.
-Network is needed only on the first call. See
-[Greek NLP → Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in).
+`aegean.greek.use_treebank()` activates the lexicon derived from Perseus Ancient
+Greek Dependency Treebank (AGDT v2.1); `use_parser()`, `use_tagger()`, and
+`use_lemmatizer()` load the statistical models built from the same source. On
+first call, they fetch the prebuilt `agdt-derived` bundle (~15 MB,
+`agdt-greek-lexicon.json` plus the three models, SHA-256-pinned). If the hosted
+bundle is unreachable, pyaegean falls back to downloading the 33 AGDT `.tb.xml`
+files (~75 MB, commit-pinned) and building locally. AGDT is CC BY-SA 3.0; derived
+artifacts carry the same ShareAlike license, stay out of the Apache-2.0 wheel,
+and require attribution to Perseus AGDT. Network access is needed only on first
+use. See [Greek NLP → Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in).
 
 #### The Greek lexicon (LSJ, `lsj-index`, `use_lsj`)
 
-`aegean.greek.use_lsj()` activates a lemma→entry index derived from the **Perseus
-Liddell-Scott-Jones** lexicon. On first use it fetches the **prebuilt** index
-(`lsj-perseus-index.json.gz`, ~15 MB, sha256-pinned) from the project-hosted
-`lsj-index` release asset; if that is unreachable it falls back to the original
-path: downloading the TEI *A Greek-English Lexicon* itself (27 files, ~270 MB,
-pinned to a fixed commit) and building the index locally. The LSJ is **CC BY-SA
-4.0** (Perseus Digital Library, with NEH funding): the source TEI is never
-re-hosted, the derived index is published under the same ShareAlike terms (clearly
-labeled), and both are fetched to the cache: never bundled in the Apache-2.0
-wheel. Attribute Perseus per the statement in `NOTICE`. Network is needed only on
-the first call. See [Greek NLP → Lexicon (LSJ)](Greek-NLP#lexicon-lsj-glossing-opt-in).
+`aegean.greek.use_lsj()` activates a lemma-to-entry index derived from Perseus
+Liddell-Scott-Jones. On first use it fetches the prebuilt
+`lsj-perseus-index.json.gz` (~15 MB, SHA-256-pinned) from `lsj-index`; if
+unreachable, it falls back to downloading the 27 TEI files (~270 MB,
+commit-pinned) and building the index locally. LSJ is CC BY-SA 4.0 (Perseus
+Digital Library, NEH-funded); the derived index carries the same ShareAlike
+terms and stays outside the wheel. Attribute Perseus per `NOTICE`. See
+[Greek NLP → Lexicon (LSJ)](Greek-NLP#lexicon-lsj-glossing-opt-in).
 
 #### More dictionaries (the lexicon registry)
 
-Beyond LSJ and the bundled Dodson, `greek.use_lexicon(id)` activates four more
-dictionaries. Each fetches a small prebuilt lemma→entry index (the `middle-liddell-index` /
-`cunliffe-index` / `autenrieth-index` / `abbott-smith-index` assets above) to the cache
-on first use. Middle Liddell, Cunliffe, and Abbott-Smith can also build from the
-upstream source if the prebuilt asset is unreachable; Autenrieth uses its prebuilt
-index. None is bundled:
+Beyond LSJ and bundled Dodson, `greek.use_lexicon(id)` activates four hosted
+dictionaries (`middle-liddell-index`, `cunliffe-index`, `autenrieth-index`,
+`abbott-smith-index`), each fetching a prebuilt lemma index on first use. Middle
+Liddell, Cunliffe, and Abbott-Smith fall back to building from commit-pinned
+upstream sources if the prebuilt index is unreachable; Autenrieth uses its
+prebuilt index. None is bundled in the wheel:
 
-- **Middle Liddell** (*An Intermediate Greek-English Lexicon*) and **Cunliffe** (*A Lexicon
-  of the Homeric Dialect*) are built from the structured JSONL in
-  `scaife-viewer/atlas-data-prep` (pinned to a commit; the repository is MIT-licensed). The
-  underlying lexica are public domain (1889 / 1924), digitized by Perseus and the Scaife
-  Viewer; attribute both.
-- **Abbott-Smith** (*A Manual Greek Lexicon of the New Testament*, 1922) is built from the TEI
-  in `translatable-exegetical-tools/Abbott-Smith` (pinned to a commit); text and markup are
-  public domain.
-- **Autenrieth** (*A Homeric Dictionary*, 1891) is public domain, with Perseus
-  digitization under CC BY-SA. Its hosted index supplies Homeric entries.
+- **Middle Liddell** (*An Intermediate Greek-English Lexicon*, 1889) and
+  **Cunliffe** (*A Lexicon of the Homeric Dialect*, 1924): built from
+  `scaife-viewer/atlas-data-prep` (commit-pinned, MIT). Underlying texts are
+  public domain, digitized by Perseus and Scaife Viewer; attribute both.
+- **Abbott-Smith** (*A Manual Greek Lexicon of the New Testament*, 1922): built
+  from TEI in `translatable-exegetical-tools/Abbott-Smith` (commit-pinned,
+  public domain).
+- **Autenrieth** (*A Homeric Dictionary*, 1891): public-domain text with Perseus
+  CC BY-SA digitization.
 
-Dictionaries that are not openly redistributable (Slater, Montanari, DGE, Bailly)
-are not hosted; `greek.lexicon_link(word)` builds a Logeion deep-link to them instead. None of
-these is bundled in the Apache-2.0 wheel. See [Greek NLP → the lexicon registry](Greek-NLP#more-dictionaries-the-lexicon-registry).
+Non-redistributable dictionaries (Slater, Montanari, DGE, Bailly) are never
+hosted; `greek.lexicon_link(word)` generates Logeion deep-links instead. See
+[Greek NLP → the lexicon registry](Greek-NLP#more-dictionaries-the-lexicon-registry).
 
-The registry also records the **Suda On Line** (`id="suda"`), the Byzantine Greek
-encyclopedic lexicon, as deep-link only. It is addressed by **Adler number** at its own
-site (a canonical entry is `http://www.stoa.org/sol-entries/alpha/1`), not by a running
-word, so `greek.lexica()` records where it lives rather than minting an offline word→entry
-link. The ancient Suda text (Adler's 1928–1938 edition) is public domain; the Suda On
-Line's translations and annotations are **CC BY-NC-SA** (per the SOL rights statement).
-The registry only records the deep link; it hosts nothing.
+The registry also records **Suda On Line** (`id="suda"`) as a deep-link-only
+entry addressed by Adler number (for example,
+`http://www.stoa.org/sol-entries/alpha/1`). Adler's 1928–1938 Greek text is
+public domain; Suda On Line translations and commentary are CC BY-NC-SA.
 
 #### The Greek neural lemmatizer model (`grc-lemma-neural`, `use_neural_lemmatizer`, `[neural]`)
 
-`aegean.greek.use_neural_lemmatizer()` activates a seq2seq lemmatizer that
-generates the lemma for a form, reaching 76.3% on unseen forms. It pairs a
-model-bundle gold lemma lookup (which answers attested forms) with the neural model
-(which handles the rest); the model is fetched to the cache (~232 MB), never
-bundled, and runs torch-free on numpy + onnxruntime, loaded only on activation.
+`aegean.greek.use_neural_lemmatizer()` activates a seq2seq lemmatizer reaching
+76.3% on unseen forms. It pairs a model-bundle gold lemma lookup for attested
+forms with an int8 ONNX encoder/decoder (~232 MB tar.gz, fetched to cache)
+running torch-free on numpy and onnxruntime.
 
-Model card: the base model is **bowphs/GreTa**, an Ancient-Greek T5 released under
-**Apache-2.0**. pyaegean fine-tunes it into a form→lemma seq2seq on the **AGDT**
-(CC BY-SA 3.0), **Pedalion** (CC BY-SA 4.0), and **Gorman** (CC BY-SA 4.0)
-treebanks, then exports the result to int8 ONNX. The released model is **CC BY-SA
-4.0**, fetched to the user cache and never bundled, so the wheel stays Apache-2.0.
-See [Greek NLP → Neural lemmatizer](Greek-NLP#neural-lemmatizer-opt-in).
+Base model: `bowphs/GreTa` (Ancient Greek T5, Apache-2.0), fine-tuned on AGDT
+(CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), and Gorman (CC BY-SA 4.0). The exported
+model carries CC BY-SA 4.0 and stays outside the Apache-2.0 wheel. See
+[Greek NLP → Neural lemmatizer](Greek-NLP#neural-lemmatizer-opt-in).
 
 #### The Greek neural joint pipeline model (`grc-joint`, `use_neural_pipeline`, `[neural]`)
 
-`aegean.greek.use_neural_pipeline()` activates one jointly-trained model serving
-POS, full morphology (UD FEATS), UD dependency trees, and lemmas from a single
-forward pass, measured on the UD Ancient Greek (Perseus) benchmark (see
-[Greek NLP → The neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) for the
-numbers and protocol). The model bundle (quantized ONNX + tokenizer + label maps + lemma
-scripts/lookup, ~173 MB tar.gz, sha256-pinned) is fetched to the cache, never bundled,
-and runs torch-free on numpy + onnxruntime, loaded only on activation. The released
-model uses weight-only int8 on the MatMul weights plus fp16 elsewhere, with
-activations kept fp32. Its measured UD Ancient Greek scores remain within ±0.02
-of the full-precision model; it needs `onnxruntime>=1.23` for the 8-bit kernel. The
-full-precision (fp32) model stays available at the `grc-joint-v2` release for
+`aegean.greek.use_neural_pipeline()` loads one joint model predicting UPOS, full
+morphology (UD FEATS), UD dependency trees, and lemmas in a single forward pass
+(see [Greek NLP → The neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) and
+[Benchmarks](Benchmarks)). The ~173 MB SHA-256-pinned tar.gz contains the
+quantized ONNX graph, tokenizer, label maps, and lemma scripts/lookup, running
+torch-free on numpy and `onnxruntime>=1.23`. Weights use int8 weight-only MatMul
+and fp16 elsewhere with fp32 activations, scoring within ±0.02 of fp32 on UD
+Ancient Greek. The fp32 build remains hosted under `grc-joint-v2` for
 reproducibility.
 
-The packaged runtime registry identifies the exact release asset and bundle manifest under the
-stable `default` label; it does not bundle model weights. `fast`, `compact`, and `balanced` are
-reserved records with no artifact identity until a qualified successor earns the corresponding
-operational award. Any future available non-default record must bind:
+The bundled `neural-runtime-variants.json` registry maps the stable `default`
+label to the pinned release asset and manifest without bundling weights. `fast`,
+`compact`, and `balanced` are reserved labels with no artifact identity until a
+qualified successor earns the corresponding operational award. Any future
+non-default label must bind:
 
-- a distinct cache key, when its bytes differ;
+- a distinct cache key when bytes differ;
 - the release-asset SHA-256;
 - the bundle-manifest SHA-256;
 - artifact qualification;
 - a runtime-variant award.
 
-The label registry and public award summaries contain no private development task scores
-or raw timing series.
+The public registry and award summaries exclude private development scores and
+raw timing traces.
 
-Model card: the base encoder is **bowphs/GreBerta** (Riemenschneider & Frank,
-Apache-2.0). pyaegean fine-tunes it: tagging heads, a biaffine dependency parser,
-and an edit-script lemma head: on the **AGDT** (CC BY-SA 3.0), **Gorman**
-(CC BY-SA 4.0), and **Pedalion** (CC BY-SA 4.0) treebanks, with every sentence of
-the UD-Perseus dev/test folds and all PROIEL evaluation texts **excluded from
-training** (the leakage manifest is built by `agdt_ud_overlap()`; the protocol is
-documented in
-[Benchmarks](Benchmarks)).
-The released bundle is **CC BY-SA 4.0**, fetched to the user cache and never
-bundled, so the wheel stays Apache-2.0.
+Base encoder: `bowphs/GreBerta` (Riemenschneider & Frank, Apache-2.0), fine-tuned
+with tagging heads, a biaffine dependency parser, and an edit-script lemma head
+on AGDT (CC BY-SA 3.0), Gorman (CC BY-SA 4.0), and Pedalion (CC BY-SA 4.0).
+Every UD-Perseus dev/test sentence and all PROIEL evaluation texts are excluded
+from training (`agdt_ud_overlap()`; protocol in [Benchmarks](Benchmarks)). The
+released bundle is CC BY-SA 4.0 and stays outside the wheel.
 
 #### The PROIEL evaluation set (`evaluate_on_proiel`)
 
-`aegean.greek.evaluate_on_proiel()` scores the Greek lemmatizer/tagger against the
-**PROIEL treebank** (Greek New Testament + Herodotus): a source none of pyaegean's
-models trained on: for a neutral, out-of-AGDT generalization number. PROIEL is
-**CC BY-NC-SA 3.0**; it is fetched to the cache for **evaluation only**, read
-locally, and never bundled or re-hosted (NonCommercial + ShareAlike). Cite Haug &
-Jøhndal (2008). See [Greek NLP → Neutral evaluation](Greek-NLP#neutral-evaluation-out-of-agdt).
+`aegean.greek.evaluate_on_proiel()` scores lemmatization and tagging against the
+PROIEL treebank (Greek New Testament and Herodotus), which none of pyaegean's
+models train on. PROIEL is CC BY-NC-SA 3.0; it is fetched to cache strictly for
+local evaluation and never bundled or re-hosted. Cite Haug & Jøhndal (2008). See
+[Greek NLP → Neutral evaluation](Greek-NLP#neutral-evaluation-out-of-agdt).
 
-> The Universal Dependencies Ancient Greek treebanks (Perseus, CC BY-NC-SA 2.5;
-> PROIEL, CC BY-NC-SA 3.0) and the CoNLL-2018 evaluator (MPL-2.0) are likewise fetched
-> for `evaluate_on_ud()` only, never bundled, never trained on. See `NOTICE`.
+> Universal Dependencies Ancient Greek treebanks (UD-Perseus, CC BY-NC-SA 2.5;
+> UD-PROIEL, CC BY-NC-SA 3.0) and the CoNLL-2018 evaluator (MPL-2.0) are also
+> fetched solely for `evaluate_on_ud()`, never bundled or trained on. See `NOTICE`.
 
 #### The SigLA corpus (`sigla-corpus`, `aegean.load("sigla")`)
 
-The **SigLA** paleographical database (Salgarella & Castellan,
-https://sigla.phis.me) publishes its dataset and drawings under
-**CC BY-NC-SA 4.0**, and its paper invites use "outside the interface" and notes
-copies can be hosted. pyaegean hosts the decoded dataset (the JSON form the paper
-describes, reconstructed from the published web-app payload by
-`scripts/build_sigla_corpus.py`) as the sha256-pinned `sigla-corpus` release
-asset: **802 documents** with SigLA's own word division (1,895 words) and
-commodity ideograms (~1.3 MB), fetched on demand, **never bundled** (NonCommercial
-data stays out of the Apache-2.0 wheel; the NC + ShareAlike obligations pass
-through to you). Attribution, citation, source sha256, and generation date are
-inside the file's `_meta`; drawings are **not** included and remain at
-sigla.phis.me. Cite SigLA in academic work.
+SigLA (Salgarella & Castellan, https://sigla.phis.me) publishes its Linear A
+paleographical database under CC BY-NC-SA 4.0. pyaegean hosts the decoded JSON
+dataset (reconstructed from the public web-app payload via
+`scripts/build_sigla_corpus.py`) as the SHA-256-pinned `sigla-corpus` asset: 802
+documents, 1,895 word-division groups, and commodity ideograms (~1.3 MB), fetched
+on demand and never bundled. NonCommercial and ShareAlike obligations pass to the
+user; attribution, source SHA-256, and build date live in `_meta`. Drawings
+remain at sigla.phis.me.
 
 ```python
 import aegean
@@ -371,17 +336,13 @@ s.provenance.license         # 'CC BY-NC-SA 4.0 (as published by SigLA; ...)'
 
 #### The DAMOS Linear B corpus (`damos-corpus`, `aegean.load("damos")`)
 
-**DAMOS**: the Database of Mycenaean at Oslo (F. Aurora, https://damos.hf.uio.no),
-the most complete edition of the Mycenaean (Linear B) corpus, published under
-**CC BY-NC-SA 4.0**. pyaegean hosts the transliterations and core metadata (site,
-series, chronology, Trismegistos id, scribal hands, find context, object class)
-for **~5,900 tablets**, decoded from the DAMOS public web API into compact JSON
-(`scripts/build_damos_corpus.py`) as the sha256-pinned `damos-corpus` release
-asset: fetched on demand, **never bundled** (NonCommercial data stays out of the
-Apache-2.0 wheel; the NC + ShareAlike obligations pass through to you).
-Attribution, citation, source URL, and generation date are inside the file's
-`_meta`; no imagery is included. This is the openly-licensed full corpus the
-bundled Linear B sample stands in for. Cite DAMOS (Aurora 2015) in academic work.
+DAMOS (Database of Mycenaean at Oslo, F. Aurora, https://damos.hf.uio.no) is
+published under CC BY-NC-SA 4.0. pyaegean hosts transliterations and metadata
+(site, series, chronology, Trismegistos id, scribal hands, find context, object
+class) for ~5,900 tablets built via `scripts/build_damos_corpus.py` as the
+SHA-256-pinned `damos-corpus` asset (~3 MB), fetched on demand and never bundled.
+NonCommercial and ShareAlike terms pass to the user; no imagery is included. Cite
+Aurora (2015).
 
 ```python
 import aegean
@@ -392,82 +353,80 @@ d.provenance.source          # 'DAMOS — Database of Mycenaean at Oslo (F. Auro
 
 #### Reading status on the epigraphy and papyri corpora
 
-The six inscription and papyrus corpora below (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `ddbdp`)
-carry each editor's apparatus through to every token: a `Token.status` of `CERTAIN`, `UNCLEAR`,
-`RESTORED`, or `LOST`, and an `edition_fidelity` flag in the corpus provenance
-(`apparatus-preserved,normalized`, or `apparatus-preserved,epichoric` for IGCyr's archaic Cyrenaean
-spelling). Restored or damaged readings are never presented as if securely on the object. See
-[Using Critical Editions](Using-Critical-Editions) for the full model and worked examples.
+Six fetched inscription and papyrus corpora (`isicily`, `iip`, `iospe`, `igcyr`,
+`edh`, `ddbdp`) preserve editorial apparatus on every token as `Token.status`
+(`CERTAIN`, `UNCLEAR`, `RESTORED`, or `LOST`) and stamp `edition_fidelity` in
+corpus provenance (`apparatus-preserved,normalized`, or
+`apparatus-preserved,epichoric` for IGCyr's archaic Cyrenaean orthography). See
+[Using Critical Editions](Using-Critical-Editions).
 
 #### The I.Sicily Greek inscriptions (`isicily-corpus`, `aegean.load("isicily")`)
 
-**I.Sicily** (https://github.com/ISicily/ISicily, https://sicily.classics.ox.ac.uk) is an EpiDoc
-corpus of ~5,120 inscriptions of ancient Sicily, published under **CC BY 4.0**. pyaegean hosts the
-**2,855 primary-Greek texts**, their running Greek reading extracted from each inscription's primary
-edition (line breaks resolved, abbreviations expanded, restored and uncertain letters kept, lost
-gaps and editorial symbols dropped) with the ancient find-place (`meta.site`), the date
-(`meta.period`), and the coordinates (`meta.findspot`), decoded into a compact JSON `Corpus` by
-`scripts/build_isicily_corpus.py` (from the pinned source commit) as the sha256-pinned
-`isicily-corpus` release asset: fetched on demand, **never bundled**. CC BY permits the
-redistribution, and this corpus is project-hosted; attribution to I.Sicily travels in
-the corpus provenance (and `NOTICE`). This adds **epigraphic** Greek (real inscriptions on stone)
-alongside pyaegean's literary (Perseus) and New Testament Greek. Cite I.Sicily (Prag et al.) in
-academic work.
+I.Sicily (https://github.com/ISicily/ISicily, https://sicily.classics.ox.ac.uk)
+publishes ~5,120 Sicilian EpiDoc inscriptions under CC BY 4.0. pyaegean hosts
+the 2,855 primary-Greek texts extracted by `scripts/build_isicily_corpus.py`
+(line breaks resolved, abbreviations expanded, restored/uncertain letters marked,
+lost gaps and editorial symbols stripped) with ancient find-place (`meta.site`),
+date (`meta.period`), and coordinates (`meta.findspot`), fetched on demand as
+`isicily-corpus`. Attribution travels in provenance and `NOTICE`. Cite Prag et
+al.
 
 ```python
 import aegean
 s = aegean.load("isicily")
 len(s)                       # 2855 documents
-s.documents[0].meta.site     # e.g. 'Syracusae' — the ancient find-place
+s.documents[0].meta.site     # e.g. 'Syracusae'
 ```
 
 #### The DDbDP documentary papyri (`ddbdp-corpus`, `aegean.load("ddbdp")`)
 
-**DDbDP**: the Duke Databank of Documentary Papyri (papyri.info, **CC BY 3.0**), hosted as a
-**SQLite database with full-text search**: 57,331 Greek documentary papyri / ~4.4M tokens with
-citation, date, place, and TM/HGV ids (~219 MB download, ~757 MB unpacked). `aegean.load("ddbdp")`
-materialises the whole corpus in memory (heavy: over a minute and more than a gigabyte of RAM); the
-memory-friendly paths are `aegean db search ddbdp "..."` (instant FTS) and
-`aegean.db.stream(ddbdp_db())`, which yields one document at a time
-(`from aegean.scripts.greek import ddbdp_db`). Attribution to the DDbDP travels in the database
-provenance and `NOTICE`.
+The Duke Databank of Documentary Papyri (papyri.info, CC BY 3.0) ships as a
+SQLite database with FTS5: 57,331 Greek papyri (~4.4M tokens) with citation,
+date, place, and TM/HGV ids (~219 MB download, ~757 MB unpacked).
+`aegean.load("ddbdp")` materializes all tokens into RAM (over a minute and >1 GB
+memory); prefer `aegean db search ddbdp "..."` or `aegean.db.stream(ddbdp_db())`
+(`from aegean.scripts.greek import ddbdp_db`) for streaming access.
 
-#### The Greek New Testament + Dodson lexicon (`nt-corpus`, `greek.load_nt`, `use_dodson`)
+#### The Greek New Testament + Dodson lexicon (`nt-corpus`, `bible.load_nt`, `use_lexicon("dodson")`)
 
-The **Nestle 1904** Greek NT base text is public domain; its per-token morphology,
-lemmas, and Strong's numbers (from biblicalhumanities/Nestle1904) are dedicated to
-the public domain under **CC0**. Because CC0 imposes no restriction, **two sample chapters are
-bundled** in the wheel (`greek/nt_sample.json`, ~130 KB: John 1 + Philemon 1) as an offline sample, and
-the full **27-book corpus** (260 chapters / ~137,800 tokens) is hosted as the
-`nt-corpus` release asset, fetched on demand by `greek.load_nt` /
-`aegean.load("nt")`. Koine glossing uses the **Dodson Greek Lexicon** (J. J.
-Dodson; **CC0**), which is small enough to bundle in the wheel (~712 KB,
-`greek.use_dodson`). Cite the Nestle 1904 edition and Dodson in academic work.
+The Nestle 1904 Greek NT base text is public domain, and its per-token
+morphology, lemmas, and Strong's numbers (`biblicalhumanities/Nestle1904`) are
+CC0. Two sample chapters ship in the wheel (`greek/nt_sample.json`, ~130 KB:
+John 1 and Philemon 1) for offline use, and the full 27-book corpus (260 chapters,
+~137,800 tokens) downloads on demand as `nt-corpus` via
+`aegean.greek.bible.load_nt` or `aegean.load("nt")`. The Dodson Greek Lexicon
+(J. J. Dodson, CC0, ~712 KB) is bundled in the wheel for offline Koine glossing
+via `greek.use_lexicon("dodson")` and `bible.strongs_entry(...)`. Cite Nestle
+1904 and Dodson in academic work.
 
 ```python
 import aegean
 from aegean import greek
+from aegean.greek import bible
 
-nt = aegean.load("nt")           # full corpus (fetched on first use; cached after)
-len(nt)                          # 260 chapters
+nt = aegean.load("nt")                     # full corpus (fetched on first use; cached after)
+len(nt)                                    # 260 chapters
+len(bible.nt_books())                      # 27 books
 
-greek.use_dodson()               # activate the bundled Koine lexicon (offline)
-greek.gloss_strongs("G3056")     # 'a word, speech, divine utterance, ...'  (λόγος)
+bible.strongs_entry("G3056").gloss         # 'word' (offline Dodson; upgrades with strongs-greek)
+greek.use_lexicon("dodson")                # activate bundled Koine lexicon (offline)
+greek.gloss("λόγος", dictionary="dodson")
+# 'λόγος: a word, speech, divine utterance, analogy'
 ```
 
-`greek.load_nt(book, ref=...)` loads one book or a sub-reference rather than the
-whole corpus: its signature is `load_nt(book=None, *, ref=None, force=False)`.
+`bible.load_nt(book=None, ref=None, *, edition="nestle1904", offline=False, force=False)`
+loads a single book, reference, or alternate critical edition (`sblgnt`, `srgnt`,
+`bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`). Pass `offline=True` to read
+the bundled John 1 / Philemon 1 sample without fetching.
 
 #### Greek literary works (`greek.load_work`)
 
-`aegean.greek.load_work("tlg0012.tlg001")` fetches one work's Greek TEI edition
-from **Perseus canonical-greekLit** or **First1KGreek** (both CC BY-SA; tried in
-that order, or pick with `source=`) into the cache and returns a standard
-`Corpus`: one `Document` per book/chapter, verse lines or paragraphs as the
-physical lines. Its signature is
-`load_work(work, *, ref=None, source="auto", edition=None, force=False)`. The
-`ref=` argument **addresses a sub-section** instead of the whole work, matching
-the work's citation structure:
+`aegean.greek.load_work("tlg0012.tlg001")` downloads a work's Greek TEI edition
+from Perseus `canonical-greekLit` or `First1KGreek` (both CC BY-SA, tried in
+that order or chosen via `source=`), caches it, and returns a `Corpus` (one
+`Document` per book/chapter; verse lines or paragraphs as physical lines).
+Signature: `load_work(work, *, ref=None, source="auto", edition=None, force=False)`.
+`ref=` restricts loading to a citation span:
 
 ```python
 from aegean import greek
@@ -476,20 +435,16 @@ greek.load_work("tlg0012.tlg001", ref="1.1-1.50")   # book 1, lines 1–50
 greek.load_work("tlg0016.tlg001", ref="1.2")        # Herodotus book 1, chapter 2
 ```
 
-> These three are real work/ref ids but each first call hits the network and
-> parses TEI: run them when you actually need the text, not as a smoke test.
+> Each first call fetches TEI over the network and parses it; cached works load
+> offline thereafter.
 
-To **discover** which work ids exist without any download, use the bundled
-discovery index `greek.catalog()` (the `works_catalogue.json` listed above):
-metadata only (id, author, English + Greek title, source), so it works **offline
-and instantly**. It covers every work with a Greek (`-grc`) edition in the two
-upstream repos at the pinned commits: **1,778 works** (768 Perseus + 1,010
-First1KGreek). The texts themselves are still fetched on demand; only the index
-is bundled.
+Use the bundled metadata index `greek.catalog()` (`works_catalogue.json`) to
+search available works offline (1,778 Greek `-grc` works at the pinned upstream
+commits: 768 Perseus + 1,010 First1KGreek):
 
 ```python
 from aegean import greek
-len(greek.catalog())                       # 1778  (all works)
+len(greek.catalog())                       # 1778
 len(greek.catalog(source="perseus"))       # 768
 greek.catalog(author="plato")[1]
 # {'id': 'tlg0059.tlg002', 'author': 'Plato', 'title': 'Apology',
@@ -503,51 +458,47 @@ aegean greek catalog --author homer --source perseus --limit 2 --json
 #    "greek_title": "Ἰλιάς", "source": "perseus"}, ...]}
 ```
 
-(`--limit` caps the `works` list in `--json` and `-o` output too; the untruncated
-match count is always in `matched`.)
+`--limit` caps the `works` array while `matched` holds the total match count.
 
-Coverage is exactly what the open repos hold at the pinned commit, so some
-authors are absent upstream (e.g. Sappho, `tlg0009`) and therefore absent
-here. The curated `greek.popular_works()`
-(25 well-known works) is the small hand-picked counterpart. See
+Coverage reflects the pinned upstream commits, so authors absent upstream (such
+as Sappho, `tlg0009`) do not appear in the catalogue. `greek.popular_works()`
+returns 25 frequently studied works. See
 [Greek Works & Books](Greek-Works-and-Books).
 
-Editorial `<note>` and `<bibl>` are excluded from the running text but kept in
-`Document.meta.notes` (and they survive the JSON round-trip). The download is
-**pinned to an upstream commit** (recorded as `Provenance.data_version`, e.g.
-`PerseusDL/canonical-greekLit@d4fab69a2c26`), so a loaded work is reproducible;
-override the ref with `PYAEGEAN_GREEKLIT_REF` / `PYAEGEAN_FIRST1K_REF`. Nothing is
-re-hosted; cite the Perseus Digital Library / Open Greek and Latin and the
-underlying edition (each file's TEI header names it).
+Editorial `<note>` and `<bibl>` elements stay out of running text and are stored
+in `Document.meta.notes` across JSON round-trips. Upstream downloads pin to a
+fixed commit recorded in `Provenance.data_version` (such as
+`PerseusDL/canonical-greekLit@d4fab69a2c26`), overridable via
+`PYAEGEAN_GREEKLIT_REF` and `PYAEGEAN_FIRST1K_REF`. Cite Perseus / Open Greek
+and Latin and the underlying edition named in the TEI header.
 
 #### The Linear A Workbench app (`workbench-app`) and bring-your-own Linear B (`linearb-corpus`)
 
-`workbench-app` is the prebuilt Linear A Research Workbench static web app (~3 MB
-tar.gz, Apache-2.0 build; the embedded Linear A data is GORILA-derived). It is
-fetched and unpacked on demand and served locally by `aegean workbench`.
+`workbench-app` is the prebuilt Linear A Research Workbench `v2.1.0` static web
+app (~3.3 MB `tar.gz`, Apache-2.0 build, multi-script Aegean fonts, GORILA-derived
+embedded Linear A data), pinned to `workbench-app-v2.1.0`, fetched on demand,
+and served locally by `aegean workbench`.
 
-`linearb-corpus` is a **bring-your-own** slot with **no default source**: it
-exists so you can point pyaegean at a local licensed Linear B export (e.g. a DAMOS
-EpiDoc download, or a LiBER selection) without a code change. DAMOS itself is now
-loadable directly via `aegean.load("damos")`; LiBER is © CNR Edizioni, all rights
-reserved, and is neither bundled nor fetched. Set
-`PYAEGEAN_LINEARB_CORPUS_URL` (or `PYAEGEAN_LINEARB_CORPUS`) to your own copy;
-calling `fetch("linearb-corpus")` with nothing set raises a clear error.
+`linearb-corpus` is a bring-your-own slot with no default URL for pointing
+pyaegean at a local licensed Linear B export (such as a DAMOS EpiDoc archive or
+private LiBER selection). DAMOS itself loads directly via `aegean.load("damos")`;
+LiBER is © CNR Edizioni (all rights reserved) and is never redistributed. Set
+`PYAEGEAN_LINEARB_CORPUS_URL` (or `PYAEGEAN_LINEARB_CORPUS`) before calling
+`fetch("linearb-corpus")`.
 
 ---
 
 ## The CLI: `aegean data`
 
-Every data operation has a CLI mirror (`pip install "pyaegean[cli]"`). The
-subcommands:
+Data commands require `pip install "pyaegean[cli]"`:
 
-| Command | What it does | Flags |
+| Command | Action | Flags |
 |---|---|---|
-| `aegean data list` | List the fetchable datasets (name, size note, license) with a **downloaded** column: whether each is in the local store, and its actual on-disk size (which folds in any kept `--version` entries) | `--json` (machine-readable on stdout; additive keys `versioned_bytes` / `versioned` break out the kept-version footprint), `-h/--help` |
-| `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when the current integrity checks pass; an interrupted transfer resumes | `--force` (replace the stored copy), `--json` (machine-readable JSON on stdout), `-h/--help` |
-| `aegean data remove NAME` | Delete a downloaded dataset from the store, printing what was removed and the space reclaimed | `--all` (delete every downloaded dataset), `--version v1` (delete only that one kept release, leaving the current copy in place), `--json`, `-h/--help` |
-| `aegean data versions` | The reproducibility manifest: every dataset's version + sha256 | `--json` (machine-readable on stdout), `-h/--help` |
-| `aegean data store` | Show the store location and its current contents (entries are permanent until removed). The older `aegean data cache` alias warns and names the replacement | `--json` (machine-readable on stdout), `-h/--help` |
+| `aegean data list` | List fetchable datasets (name, size, license, on-disk status and byte footprint including kept `--version` entries) | `--json` (adds `versioned_bytes` / `versioned`), `-h/--help` |
+| `aegean data fetch NAME` | One-time SHA-256-verified download into the local store (resumes interrupted transfers; no-op once valid) | `--force`, `--json`, `-h/--help` |
+| `aegean data remove NAME` | Delete a stored dataset and print reclaimed bytes | `--all`, `--version v1` (remove one kept release only), `--json`, `-h/--help` |
+| `aegean data versions` | Print reproducibility manifest (version and SHA-256 per dataset) | `--json`, `-h/--help` |
+| `aegean data store` | Show local store path and contents (`aegean data cache` warns and points here) | `--json`, `-h/--help` |
 
 ```bash
 aegean data store
@@ -564,41 +515,40 @@ aegean data store
 ```
 
 ```bash
-aegean data fetch nt-corpus            # downloads + verifies; a no-op if already cached
-aegean data fetch lineara-images --force   # re-download even if cached
-aegean data remove nt-corpus           # delete one downloaded dataset (prints what + how much)
-aegean data remove --all               # clear every downloaded dataset
+aegean data fetch nt-corpus                # download and verify; no-op once cached
+aegean data fetch lineara-images --force   # force re-download
+aegean data remove nt-corpus               # remove one dataset
+aegean data remove --all                   # clear all downloaded datasets
 ```
 
-The same store is visible to AI agents over MCP (`aegean-mcp`, the `[mcp]`
-extra), which exposes twenty-nine read/analysis tools: `list_corpora`, `corpus_info`,
-`show_document`, `search_signs`, `search_text`, `balance_accounts`, `query_corpus`,
-`cite_corpus`, `geo_sites`, `data_status`, `library_status`, `library_search`,
-`corpus_diagnose`, `greek_pipeline`, `greek_scan`, `greek_catalog`, `greek_work`,
-`greek_gloss`, `greek_explain`, `koine_gloss`, `biblical_strongs`, `biblical_word_study`,
-`biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`, `biblical_lxx`,
-`biblical_compare_editions`, `biblical_witnesses`, and `biblical_commentary`. Three of them
-touch the story this page tells: `data_status` / `library_status` expose this listing read-only
-(downloaded state, on-disk size, license note), so an agent can see what a
-corpus load would fetch before triggering it; `cite_corpus` / `query_corpus`
-carry the exact-subset citation (below) over MCP; and the tools that may fetch
-(`greek_work` texts and the non-bundled `greek_gloss` dictionaries) download
-into this same store on first use and are offline after. Corpora and works are
-addressed by registry name or catalogue work id only, never a filesystem path.
+The same local store is accessible over MCP (`aegean-mcp`, `[mcp]` extra), which
+exposes 29 read and analysis tools: `list_corpora`, `corpus_info`,
+`show_document`, `search_signs`, `search_text`, `balance_accounts`,
+`query_corpus`, `cite_corpus`, `geo_sites`, `data_status`, `library_status`,
+`library_search`, `corpus_diagnose`, `greek_pipeline`, `greek_scan`,
+`greek_catalog`, `greek_work`, `greek_gloss`, `greek_explain`, `koine_gloss`,
+`biblical_strongs`, `biblical_word_study`, `biblical_psalm`,
+`biblical_nomina_sacra`, `biblical_catalog`, `biblical_lxx`,
+`biblical_compare_editions`, `biblical_witnesses`, and `biblical_commentary`.
+`data_status` and `library_status` report downloaded state, disk usage, and
+licenses read-only before an agent triggers a fetch; `cite_corpus` and
+`query_corpus` emit exact-subset citations; `greek_work` and hosted `greek_gloss`
+dictionaries download into this store on first call. MCP tools address corpora
+and works only by registry id or catalogue id, never by local filesystem path.
 
 ---
 
 ## Environment overrides
 
-Three environment variables control where data lives and where it comes from.
+Three environment variables control cache location and upstream sources:
 
 | Variable | Effect |
 |---|---|
-| `PYAEGEAN_CACHE` | The cache root. Falls back to `XDG_CACHE_HOME`, then `~/.cache`. The package always writes under `<base>/pyaegean`. |
-| `PYAEGEAN_<NAME>_URL` | Override one dataset's download URL with your own mirror/licensed copy. Uppercase the name and turn `-` into `_`. When set, the pinned sha256 is **not** enforced (it described the pinned URL only). |
-| `PYAEGEAN_GREEKLIT_REF` / `PYAEGEAN_FIRST1K_REF` | Override the upstream commit `load_work` pins to. |
+| `PYAEGEAN_CACHE` | Store root. Falls back to `XDG_CACHE_HOME`, then `~/.cache`; files live under `<base>/pyaegean`. |
+| `PYAEGEAN_<NAME>_URL` | Override a dataset's URL (uppercase name, `-` → `_`). Pinned SHA-256 verification is skipped for override URLs. |
+| `PYAEGEAN_GREEKLIT_REF` / `PYAEGEAN_FIRST1K_REF` | Override upstream commit refs pinned by `load_work`. |
 
-The `PYAEGEAN_<NAME>_URL` pattern is mechanical; examples are listed below:
+Examples of `PYAEGEAN_<NAME>_URL`:
 
 | Dataset | Override variable |
 |---|---|
@@ -623,14 +573,14 @@ The `PYAEGEAN_<NAME>_URL` pattern is mechanical; examples are listed below:
 | `linearb-corpus` | `PYAEGEAN_LINEARB_CORPUS_URL` |
 
 ```bash
-# point a dataset at your own mirror (sha256 not enforced against an override)
+# mirror override (SHA-256 not enforced on overrides)
 export PYAEGEAN_LINEARA_IMAGES_URL="https://example.org/lineara-images.tar.gz"
 
-# keep all cached data on a big external drive
+# move local store to another volume
 export PYAEGEAN_CACHE="/mnt/data/pyaegean-cache"
 ```
 
-Find the cache from code or the CLI at any time:
+Inspect the resolved store path from Python:
 
 ```python
 from aegean import data
@@ -641,15 +591,14 @@ data.cache_dir()    # e.g. WindowsPath('C:/Users/you/.cache/pyaegean')
 
 ## Data versioning — pinning for papers
 
-Every dataset pyaegean can touch is versioned and hashable. `data.versions()`
-returns a reproducibility manifest with three keys: `package`, `bundled`,
-`fetched`:
+`data.versions()` returns a reproducibility manifest with three keys: `package`,
+`bundled`, and `fetched`:
 
 ```python
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.67.0'  (your installed version)
+v["package"]                                  # '0.72.0'  (installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -658,15 +607,13 @@ v["fetched"]["nt-corpus"]
 #  'cached': True}
 ```
 
-Each `bundled` entry is a JSON file hashed straight from the installed wheel; each
-`fetched` entry carries the pinned URL, the pinned sha256, the license, and whether
-it is present in your local cache. Bundled data ships inside the wheel, so its
-version *is* the package version (also stamped on every bundled corpus as
-`Provenance.data_version`); fetched assets are sha256-pinned release files,
-verified on download.
+Each `bundled` entry hashes a JSON file directly from the installed wheel (its
+version equals `aegean.__version__`, stamped onto bundled corpora as
+`Provenance.data_version`). Each `fetched` entry lists the pinned URL, SHA-256,
+license, and cache state.
 
-**To pin an analysis for a paper**: record `aegean.__version__` and dump the
-manifest alongside your results: matching sha256s mean byte-identical data.
+Save `aegean.__version__` and the manifest alongside published results so matching
+SHA-256 digests guarantee identical input bytes:
 
 ```bash
 aegean data versions --json > data-versions.json
@@ -679,35 +626,31 @@ with open("data-versions.json", "w", encoding="utf-8") as f:
     json.dump({"package": aegean.__version__, "data": data.versions()}, f, indent=2)
 ```
 
-The human-readable `aegean data versions` (no `--json`) prints the same content as
-a table: `package`, every `bundled/...` file with its sha256 and byte size, then
-every `fetched/...` asset with its sha256 and `cached` / `not cached` / `(unpinned)`
-status.
+Running `aegean data versions` without `--json` prints a readable table of
+package version, bundled file hashes and sizes, and fetched asset statuses
+(`cached`, `not cached`, or `(unpinned)`).
 
 ---
 
 ## Linked Open Data export
 
-`aegean export <corpus> -f ttl` (Turtle) or `-f jsonld` (JSON-LD) publishes a corpus
-as linked data (`io.to_rdf` in Python). Subject URIs come from the authoritative
-identifiers already in the data, never invented: DDbDP documents use their
-**papyri.info** document URIs (`http://papyri.info/ddbdp/<hybrid>`, with the
-Trismegistos id attached as an `rdfs:seeAlso`; offline, where the URI map is not
-fetched, the Trismegistos id is the fallback subject), EDH documents use their
-**Trismegistos** ids (`https://www.trismegistos.org/text/<id>`), I.Sicily documents
-use the project's own inscription URIs, and documents with no external identifier
-fall back to a documented non-resolvable `urn:aegean:` form (or your `--base-uri`).
-Each document carries Dublin Core terms (title, identifier, source, language),
-WGS84 coordinates where a findspot is known, a Pleiades place reference where one
-exists, and **the corpus license as a machine-readable triple**: a NonCommercial
-corpus exports with its NC license attached to every document, so the obligations
-travel with the data. The editorial apparatus (reading statuses) is deliberately not
-flattened into RDF; the JSON and SQLite formats remain the lossless persistence
-story, and RDF export does not claim round-trip.
+`aegean export <corpus> -f ttl` (Turtle) and `-f jsonld` (JSON-LD) serialize a
+corpus as Linked Open Data (`io.to_rdf` in Python). Subject URIs come directly
+from authoritative upstream identifiers: DDbDP documents use `papyri.info` URIs
+(`http://papyri.info/ddbdp/<hybrid>` with Trismegistos id as `rdfs:seeAlso`,
+falling back to Trismegistos when `ddbdp-uris` is uncached); EDH documents use
+Trismegistos URIs (`https://www.trismegistos.org/text/<id>`); I.Sicily documents
+use I.Sicily URIs; documents without an external URI use a non-resolvable
+`urn:aegean:` URI (or caller `--base-uri`). Documents carry Dublin Core metadata
+(title, identifier, source, language), WGS84 coordinates, Pleiades links where
+available, and the corpus license as a machine-readable triple so NonCommercial
+terms travel with exported triples. Editorial reading statuses are not flattened
+into RDF; use JSON or SQLite for lossless persistence.
 
 ## Provenance & citation
 
-Every `Corpus` carries a `Provenance` that stamps exports and gives a citation:
+Every `Corpus` carries a `Provenance` record stamped onto exports and formatted
+by `.cite()`:
 
 ```python
 import aegean
@@ -720,23 +663,20 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.67.0'
+# '0.72.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
 ```
 
-A note on the Linear A corpus: the bundled transcription is **normalized**, and
-the apparatus the upstream data *does* carry is interpreted on load: its
-erased-sign marks become `ReadingStatus.LOST` (552 tokens) and damaged or
-bracketed-uncertain readings become `UNCLEAR` (120 tokens, across 91 documents);
-the two statuses together touch 366 documents.
-The **full** Leiden apparatus (restorations, dotted readings) was dropped by the
-upstream digitization and remains absent; for edition-grade readings consult
-**GORILA** and **SigLA**. `aegean.ReadingStatus` round-trips through JSON and
-token-carrier EpiDoc. The reader accepts `<unclear>`, `<supplied>`, and `<gap>`;
-the writer emits `LOST` as `<supplied reason="undefined">`. This is a semantic
-apparatus round-trip, while JSON or SQLite preserves every pyaegean field.
+On Linear A, the bundled transcription is normalized while preserving upstream
+erased and damaged marks: erased signs map to `ReadingStatus.LOST` (552 tokens)
+and damaged/bracketed-uncertain signs map to `UNCLEAR` (120 tokens across 91
+documents; 366 documents carry at least one non-certain token). Full Leiden
+restorations and dotted letters were removed in the upstream digitization;
+consult GORILA and SigLA for edition-grade readings. `ReadingStatus` round-trips
+through lossless JSON and token-carrier EpiDoc (`<unclear>`, `<supplied>`,
+`<gap>`, emitting `LOST` as `<supplied reason="undefined">`).
 
 ---
 
@@ -744,40 +684,38 @@ apparatus round-trip, while JSON or SQLite preserves every pyaegean field.
 
 ### From a file you already have (`aegean import`)
 
-If your text is in a **plain `.txt` file, a folder of text files, or a CSV**, import it
-in one step (no Python required) and the result works with every corpus command:
+Import a plain `.txt` file, directory of text files, or CSV in one command:
 
 ```bash
 aegean import myplato.txt -o myplato.json     # then: aegean stats myplato.json
-aegean import poems/ -o corpus.db --split line          # a folder, one doc per line
+aegean import poems/ -o corpus.db --split line          # folder, one doc per line
 aegean import rows.csv -o corpus.json --text-col line --id-col id
 ```
 
-`--split` controls how a text file becomes documents: `whole` (default, one document,
-line breaks preserved), `paragraph` (one per blank-line block), or `line` (one per line).
-Imports preserve decoded source text, punctuation, foreign text, numerals, and
-aligned source spans by default (`token_view="all"`, CLI `--token-view all`).
-Greek/Koine text (`--script greek`, the default) uses the Greek tokenizer; other
-scripts classify their whitespace-delimited tokens. `doc.words` supplies the
-lexical view. Explicit `token_view="words"` / `--token-view words` selects the
-former lossy word-only import without source text or spans. The same paths exist in Python:
+`--split` controls document boundaries: `whole` (default; one document preserving
+line breaks), `paragraph` (blank-line blocks), or `line` (one document per line).
+Imports default to `token_view="all"` (`--token-view all`), keeping decoded
+source text, punctuation, foreign text, numerals, and aligned character spans.
+Greek text (`--script greek`, default) uses the Greek tokenizer; other scripts
+tokenize on whitespace. `doc.words` filters to lexical words. Pass
+`token_view="words"` (`--token-view words`) for word-only import without source
+text or spans. Python equivalents:
 
 ```python
 from aegean import io
-io.from_text_file("myplato.txt")                 # → Corpus
+io.from_text_file("myplato.txt")                 # -> Corpus
 io.from_text("ἐν ἀρχῇ ἦν ὁ λόγος", doc_id="john")
 io.from_text_dir("poems/", split="line")
 io.from_csv("rows.csv", text_col="line", id_col="id", meta_cols=["period"])
 ```
 
-> `read_corpus` / the `CORPUS` argument deliberately load only pyaegean's own `.json`/`.db`
-> formats. A `.txt`/`.csv` is *imported* into that format first (the error message says so);
-> after `aegean import … -o corpus.json`, `corpus.json` works anywhere a corpus is accepted.
+> `read_corpus` and CLI `CORPUS` arguments load only pyaegean `.json` and `.db`
+> files. Import `.txt` or `.csv` files first via `aegean import … -o corpus.json`.
 
 ### From structured records (`Corpus.from_records`)
 
-For full control (explicit token kinds, editorial status, variant readings) build from
-dict records:
+Build from dict records for explicit token kinds, editorial status, and alternate
+readings:
 
 ```python
 import aegean
@@ -788,27 +726,23 @@ corpus = aegean.Corpus.from_records([
    provenance=aegean.Provenance(source="My dig notebook", citation="Me (2026)."))
 ```
 
-Tokens may be plain strings (kinds inferred: parseable numerals vs words,
-hyphenated tokens get their signs split) or dicts carrying `kind`, `status`
-(editorial certainty), and `alt` (variant readings). Make it loadable by name with
-`aegean.core.corpus.register_loader("myfind", lambda: corpus)`; for EpiDoc
-sources, `aegean.io.from_epidoc` (and `aegean import --epidoc`) reads pyaegean output
-and other EpiDoc TEI whose tokens are carried by `<w>`, `<num>`, `<g>`, `<pc>`, or `<seg>`
-into the same model: id, find-place, token/line stream, `<unclear>`/`<supplied>`
-status, and `<app>`/`<rdg>` variants, on the stdlib XML parser with no extra needed.
-The source string in `<num value="…">` is retained as
-`Token.annotations["epidoc:num_value"]` and emitted back on `<num>`; it is source
-evidence, not a computed arithmetic value. Other arbitrary token annotations do
-not generally survive EpiDoc export; JSON and SQLite retain them.
-Arbitrary free-text TEI needs a source-specific extractor.
+Tokens can be plain strings (numerals inferred, hyphenated signs split) or dicts
+with `kind`, `status`, and `alt`. Register by name with
+`aegean.core.corpus.register_loader("myfind", lambda: corpus)`. For EpiDoc TEI,
+`aegean.io.from_epidoc` and `aegean import --epidoc` parse token-carrier elements
+(`<w>`, `<num>`, `<g>`, `<pc>`, `<seg>`) using stdlib XML (no extra required),
+preserving id, find-place, lines, `<unclear>`/`<supplied>` status, and
+`<app>`/`<rdg>` variants. `<num value="…">` preserves its raw attribute in
+`Token.annotations["epidoc:num_value"]` as source evidence (not a computed value).
+Other arbitrary token annotations require JSON or SQLite for lossless retention.
+Free-text TEI requires a source-specific extractor.
 
 ### Variant readings
 
-`Token.alt` carries alternate readings alongside the editorial `status`. The
-EpiDoc writer emits them as a critical apparatus:
-`<app><lem><w>PO-ME</w></lem><rdg><w>PO-MA</w></rdg></app>` (validated against the
-official EpiDoc schema), and `from_epidoc` folds them back to one token with its
-`alt` tuple, so variants survive the EpiDoc *and* JSON round-trips.
+`Token.alt` stores alternate readings alongside `Token.status`. The EpiDoc writer
+emits `<app><lem><w>PO-ME</w></lem><rdg><w>PO-MA</w></rdg></app>` (valid against
+the official EpiDoc schema), and `from_epidoc` reconstructs the single token with
+its `alt` tuple so variants survive both EpiDoc and JSON round-trips.
 
 ---
 
@@ -817,72 +751,67 @@ official EpiDoc schema), and `from_epidoc` folds them back to one token with its
 - **Code**: Apache-2.0.
 - **Linear A corpus JSON**: GORILA via mwenge/lineara.xyz (Apache-2.0).
 - **Linear A facsimile imagery (`lineara-images`)**: © École Française d'Athènes
-  and other rightsholders; referenced, not redistributed.
+  and other rightsholders; referenced, never redistributed.
 - **Aegean sign data (Linear B / Cypriot / Cypro-Minoan, bundled)**: Unicode
-  Character Database, Unicode License v3 (retain the notice).
+  Character Database, Unicode License v3 (retain notice).
 - **Greek sample corpus**: public-domain ancient texts (seed only).
-- **Greek treebank lexicon + models (opt-in, `agdt-derived`)**: Perseus AGDT
-  v2.1, CC BY-SA 3.0; the derived bundle is project-hosted under the same
-  ShareAlike terms, fetched to the user cache, and never bundled in the wheel.
-- **Greek lexicon / LSJ (opt-in, `lsj-index`)**: Perseus Liddell-Scott-Jones,
-  CC BY-SA 4.0; the derived index is project-hosted under the same ShareAlike
-  terms, fetched to the user cache, and never bundled in the wheel.
-- **Greek neural lemmatizer (opt-in `[neural]`, `grc-lemma-neural`)**: a GreTa
-  seq2seq (Apache-2.0 base) fine-tuned on the AGDT (CC BY-SA 3.0), Pedalion
-  (CC BY-SA 4.0), and Gorman (CC BY-SA 4.0) treebanks. The model: int8 ONNX
-  weights plus a derived gold lemma lookup: is **CC BY-SA 4.0**, fetched to the
-  user cache (~232 MB), never bundled; the wheel stays Apache-2.0.
-- **Greek neural joint pipeline (opt-in `[neural]`, `grc-joint`)**: a
-  GreBerta-based joint model (Apache-2.0 base) fine-tuned on the AGDT (CC BY-SA
-  3.0), Gorman (CC BY-SA 4.0), and Pedalion (CC BY-SA 4.0) treebanks, evaluation
-  folds excluded from training. The model bundle is **CC BY-SA 4.0**, fetched to
-  the user cache (~173 MB), never bundled; the wheel stays Apache-2.0.
-- **PROIEL / UD evaluation sets (opt-in)**: the PROIEL treebank and the UD Ancient
-  Greek treebanks (UD-Perseus CC BY-NC-SA 2.5; PROIEL and UD-PROIEL CC BY-NC-SA 3.0);
-  fetched to the user cache for evaluation only, never bundled, never trained on
-  (NonCommercial + ShareAlike).
-- **SigLA corpus (`sigla-corpus`)**: Salgarella & Castellan, CC BY-NC-SA 4.0;
-  fetched, never bundled; NC + ShareAlike pass through to you.
-- **DAMOS corpus (`damos-corpus`)**: F. Aurora, CC BY-NC-SA 4.0; fetched, never
-  bundled; NC + ShareAlike pass through to you.
+- **Greek treebank lexicon + models (`agdt-derived`)**: Perseus AGDT v2.1, CC
+  BY-SA 3.0; derived bundle hosted under CC BY-SA 3.0, fetched to cache.
+- **Greek lexicon / LSJ (`lsj-index`)**: Perseus LSJ, CC BY-SA 4.0; derived index
+  hosted under CC BY-SA 4.0, fetched to cache.
+- **Greek neural lemmatizer (`grc-lemma-neural`, `[neural]`)**: GreTa seq2seq
+  (Apache-2.0 base) fine-tuned on AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0),
+  and Gorman (CC BY-SA 4.0); released under CC BY-SA 4.0 (~232 MB), fetched.
+- **Greek neural joint pipeline (`grc-joint`, `[neural]`)**: GreBerta-based joint
+  model (Apache-2.0 base) fine-tuned on AGDT (CC BY-SA 3.0), Gorman (CC BY-SA
+  4.0), and Pedalion (CC BY-SA 4.0) with eval folds excluded; released under CC
+  BY-SA 4.0 (~173 MB), fetched.
+- **PROIEL / UD evaluation sets**: UD-Perseus (CC BY-NC-SA 2.5), PROIEL and
+  UD-PROIEL (CC BY-NC-SA 3.0); fetched for evaluation only, never bundled or
+  trained on.
+- **SigLA (`sigla-corpus`) and DAMOS (`damos-corpus`)**: CC BY-NC-SA 4.0;
+  fetched, never bundled; NC + ShareAlike pass to end users.
 - **Greek inscription corpora (`isicily-corpus`, `iip-corpus`, `iospe-corpus`,
-  `igcyr-corpus`, `edh-corpus`)**: I.Sicily CC BY 4.0; IIP CC BY-NC 4.0; IOSPE
-  CC BY; IGCyr/GVCyr CC BY-NC-SA 4.0; EDH CC BY-SA 4.0. All fetched, never
-  bundled; NonCommercial/ShareAlike obligations pass through where present.
-- **DDbDP papyri (`ddbdp-corpus`)**: DDbDP / papyri.info, CC BY 3.0; fetched,
-  never bundled; attribution required.
+  `igcyr-corpus`, `aphrodisias-corpus`, `crete-corpus`, `edh-corpus`)**:
+  I.Sicily CC BY 4.0; IIP CC BY-NC 4.0; IOSPE CC BY; IGCyr/GVCyr CC BY-NC-SA 4.0;
+  Aphrodisias CC BY 2.5; Crete CC BY-NC-SA 4.0; EDH CC BY-SA 4.0. All fetched;
+  NonCommercial and ShareAlike terms pass through where applicable.
+- **DDbDP papyri (`ddbdp-corpus`)**: DDbDP / papyri.info, CC BY 3.0; fetched;
+  attribution required.
 - **Greek New Testament (`nt-corpus`) + Dodson lexicon (bundled)**: Nestle 1904
-  base text public domain; morphology/lemmas/Strong's and the Dodson glosses are
-  **CC0**, so two NT sample chapters and the Dodson lexicon are bundled and the full NT
-  corpus may be redistributed.
-- **Linear A Workbench app (`workbench-app`)**: Apache-2.0 build; embedded data
-  is GORILA-derived.
-- **Linear B bring-your-own (`linearb-corpus`)**: no default source; DAMOS
-  is project-hosted under CC BY-NC-SA 4.0, while LiBER is all-rights-reserved
-  (© CNR Edizioni) and is not redistributed.
+  base text public domain; morphology, lemmas, Strong's, and Dodson are CC0.
+- **Biblical, Patristic & Vernacular corpora (`strongs-greek`, `nt-editions`,
+  `nt-witnesses`, `lxx-corpus`, `patrologia-graeca-corpus`,
+  `apostolic-fathers-corpus`, `pseudepigrapha-corpus`, `byzantine-corpus`,
+  `homer-scholia-corpus`)**: fetched under their respective upstream CC BY, CC
+  BY-SA, Public Domain, or CC BY-NC 4.0 (`homer-scholia-corpus`) licenses as
+  listed in the table above.
+- **Linear A Workbench app (`workbench-app`, `v2.1.0`)**: Apache-2.0 build;
+  embedded Linear A data is GORILA-derived.
+- **Linear B bring-your-own (`linearb-corpus`)**: no default source; DAMOS is
+  hosted under CC BY-NC-SA 4.0, while LiBER (© CNR Edizioni) is all rights
+  reserved and never redistributed.
 
-See the repository `NOTICE` and `CITATION.cff` for full attribution.
+See `NOTICE` and `CITATION.cff` in the repository for complete attribution.
 
 ---
 
 ## Limitations
 
-- **The full Linear A apparatus is not bundled.** Restorations and dotted
-  readings were dropped upstream; only `LOST`/`UNCLEAR` survive. For edition-grade
-  readings, go to GORILA and SigLA.
-- **NonCommercial data is NonCommercial for you too.** DAMOS, SigLA, PROIEL, the
-  UD treebanks, and IGCyr/GVCyr carry CC BY-NC-SA obligations that pass through:
-  you may not use them commercially, and you must ShareAlike. IIP (CC BY-NC 4.0)
-  is NonCommercial too, though without the ShareAlike term.
-- **Override URLs skip checksum verification.** Setting `PYAEGEAN_<NAME>_URL`
-  means *you* vouch for the bytes; the pinned sha256 only describes the pinned
-  release asset.
-- **Imagery is fetched, never re-hosted.** `lineara-images` copyright is a
-  patchwork; check each file's `imageRights` before reuse.
-- **First neural/treebank/LSJ/work call needs the network**; everything is cached
-  afterward and runs offline.
+- **Full Linear A apparatus is not bundled.** Restorations and dotted letters were
+  dropped upstream; only `LOST` and `UNCLEAR` survive. Consult GORILA and SigLA
+  for edition-grade readings.
+- **NonCommercial terms pass to users.** DAMOS, SigLA, PROIEL, UD treebanks,
+  IGCyr/GVCyr, and Crete carry CC BY-NC-SA obligations (no commercial use;
+  ShareAlike required). IIP and Homer Multitext carry CC BY-NC 4.0 (no commercial
+  use).
+- **Override URLs skip SHA-256 verification.** Setting `PYAEGEAN_<NAME>_URL`
+  bypasses the pinned release checksum; verify custom mirrors independently.
+- **Imagery is fetched, never re-hosted.** Check each file's `imageRights` in
+  `lineara-images` before reuse.
+- **First download of remote models, lexica, or works requires network access**;
+  cached assets run offline thereafter.
 
-See [Limitations](Limitations) for the project-wide caveats, and
+See [Limitations](Limitations) for project-wide boundaries, and
 [Greek NLP](Greek-NLP), [Linear A](Linear-A), [Linear B](Linear-B),
-[Analysis](Analysis), and [Cypriot](Cypriot) for the features that consume this
-data.
+[Analysis](Analysis), and [Cypriot](Cypriot) for feature documentation.
