@@ -30,18 +30,23 @@ def test_biblical_is_lazily_exported_from_top_level():
 
 
 def test_lxx_catalog_matches_bundled_works_catalogue():
-    """All 55 LXX books must map to real TLG IDs in bundled works_catalogue.json."""
+    """All 55 First1KGreek LXX books match works_catalogue.json and Ecclesiastes is tlg0527.tlg030."""
     from aegean.data import load_bundled_json
 
     cat = load_bundled_json("greek", "works_catalogue.json")
     valid_ids = {w["id"] for w in cat["works"]}
     books = bib.lxx_books()
-    assert len(books) == 55
+    assert len(books) == 56
     for b in books:
-        assert b["work_id"] in valid_ids, b
+        if b["name"] == "Eccl":
+            assert b["work_id"] == "tlg0527.tlg030"
+        else:
+            assert b["work_id"] in valid_ids, b
 
     assert bib.resolve_lxx_book("Gen").work_id == "tlg0527.tlg001"
     assert bib.resolve_lxx_book("Psalms").work_id == "tlg0527.tlg027"
+    assert bib.resolve_lxx_book("Ecclesiastes").work_id == "tlg0527.tlg030"
+    assert bib.resolve_lxx_book("Qoheleth").work_id == "tlg0527.tlg030"
     assert bib.resolve_lxx_book("1Sam").work_id == "tlg0527.tlg011"
     assert bib.resolve_lxx_book("Sirach").work_id == "tlg0527.tlg034"
     assert bib.resolve_lxx_book("Dan-OG").work_id == "tlg0527.tlg056"
@@ -77,28 +82,34 @@ def test_psalm_lxx_mt_numbering_roundtrip():
 
 
 def test_patristic_commentaries_match_bundled_works_catalogue():
-    """All 77 First1KGreek commentaries exist in works_catalogue.json and all 9 PG volumes exist in PG_VOLUMES."""
+    """All 77 First1KGreek commentaries, 9 PG volumes, and 26 Chrysostom series match their bundled indices."""
     from aegean.data import load_bundled_json
+    from aegean.scripts.greek._collections import collection_works
     from aegean.scripts.greek.patrologia import PG_VOLUMES
 
     cat = load_bundled_json("greek", "works_catalogue.json")
     valid_tlg_ids = {w["id"] for w in cat["works"]}
     valid_pg_ids = {v["id"] for v in PG_VOLUMES}
+    valid_chrys_ids = {w["work_id"] for w in collection_works("chrysostom")}
     comms = bib.patristic_commentaries()
-    assert len(comms) == 86
+    assert len(comms) == 112
     assert len(bib.patristic_commentaries(kind="catena")) == 30
     assert len(bib.patristic_commentaries(kind="origen")) == 41
+    assert len(bib.patristic_commentaries(kind="chrysostom")) == 26
     assert len(bib.patristic_commentaries(kind="patristic")) == 6
     assert len(bib.patristic_commentaries(kind="patrologia")) == 9
     for c in comms:
         if c["kind"] == "patrologia":
             assert c["work_id"] in valid_pg_ids, c
+        elif c["kind"] == "chrysostom":
+            assert c["work_id"] in valid_chrys_ids, c
         else:
             assert c["work_id"] in valid_tlg_ids, c
 
     john = bib.patristic_commentaries("John")
     assert any(c["work_id"] == "tlg4102.tlg005" for c in john)
     assert any(c["work_id"] == "tlg2042.tlg005" for c in john)
+    assert any(c["work_id"] == "ogc002058" for c in john)  # John Chrysostom on John
     assert any(c["work_id"] == "PG073" for c in john)  # Cyril of Alexandria on John
     assert any(c["work_id"] == "PG123" for c in john)  # Theophylact of Bulgaria
 
@@ -277,7 +288,7 @@ def test_cli_bible_commands_json():
 
     r2 = runner.invoke(app, ["bible", "books", "lxx", "--json"])
     assert r2.exit_code == 0, r2.output
-    assert len(json.loads(r2.output)) == 55
+    assert len(json.loads(r2.output)) == 56
 
     r3 = runner.invoke(app, ["bible", "books", "witnesses", "--json"])
     assert r3.exit_code == 0, r3.output
@@ -462,7 +473,7 @@ def test_bible_cli_lxx_autodetect_and_colon_refs():
     r_all = runner.invoke(app, ["bible", "books", "all", "--json"])
     assert r_all.exit_code == 0, r_all.output
     payload = json.loads(r_all.stdout)
-    assert len(payload["nt"]) == 27 and len(payload["lxx"]) == 55
+    assert len(payload["nt"]) == 27 and len(payload["lxx"]) == 56
 
 
 def test_bible_commentary_natural_read_search_and_work_id(monkeypatch):

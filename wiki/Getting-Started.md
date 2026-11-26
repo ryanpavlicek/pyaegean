@@ -111,7 +111,7 @@ Check the installation:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.72.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.73.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code

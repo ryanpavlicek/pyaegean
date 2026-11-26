@@ -16,10 +16,19 @@ from ...core.catalog import make_json_corpus_loader as _make_json_corpus_loader
 from ...core.corpus import register_loader as _register_loader
 from ...core.model import SignInventory, Token
 from ...core.script import Script, register
+from . import _collections  # noqa: F401 — registers the 8 Greek collection loaders
 from . import ddbdp  # noqa: F401 — registers the DDbDP corpus loader on import
 from . import loader  # noqa: F401 — registers the bundled Greek sample loader
 from . import nt  # noqa: F401 — registers the New Testament corpus loader
 from . import patrologia  # noqa: F401 — registers the Patrologia Graeca loader
+from ._collections import (
+    COLLECTION_IDS,
+    collection_works,
+    collections,
+    load_collection,
+    load_collection_work,
+    resolve_collection_work,
+)
 from .ddbdp import ddbdp_db, load_ddbdp
 from .inventory import greek_inventory
 from .nt import load_nt
@@ -28,10 +37,24 @@ from .patrologia import load_patrologia, patrologia_volumes
 if TYPE_CHECKING:
     from .perseus import load_work
 
-# Specialized Greek corpora with custom loaders (bundled sample, NT, SQLite DDbDP,
-# volume-scoped Patrologia Graeca). Every other hosted Greek corpus in
-# aegean.core.catalog is a standard JSON/JSON.gz release asset registered below.
-_CUSTOM_GREEK_CORPORA = frozenset({"greek", "nt", "ddbdp", "patrologia"})
+
+def _load_lxx_registered() -> Any:
+    """Load the 56-book Greek Septuagint (LXX) corpus, falling back to bundled sample offline."""
+    from ...data import DataNotAvailableError
+    from ...greek.bible._lxx import load_lxx
+
+    try:
+        return load_lxx(offline=False)
+    except DataNotAvailableError:
+        return load_lxx(offline=True)
+
+
+_register_loader("lxx", _load_lxx_registered, fresh=True)
+
+# Specialized Greek corpora with custom loaders (bundled sample, NT, LXX, SQLite DDbDP,
+# volume-scoped Patrologia Graeca, and the 8 work-indexed Greek library collections).
+# Every other hosted Greek corpus in aegean.core.catalog is a standard JSON/JSON.gz asset.
+_CUSTOM_GREEK_CORPORA = frozenset({"greek", "nt", "lxx", "ddbdp", "patrologia", *COLLECTION_IDS})
 
 _DYNAMIC_LOADERS: dict[str, Any] = {}
 for _spec in _CORPORA:
@@ -64,6 +87,12 @@ load_pseudepigrapha = _DYNAMIC_LOADERS["load_pseudepigrapha"]
 
 __all__ = [
     "Greek",
+    "COLLECTION_IDS",
+    "collections",
+    "collection_works",
+    "load_collection",
+    "load_collection_work",
+    "resolve_collection_work",
     "load_work",
     "load_nt",
     "load_isicily",

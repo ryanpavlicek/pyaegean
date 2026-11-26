@@ -24,7 +24,7 @@ fetch-on-demand release assets:
    trees and Hebrew equivalents.
 4. **Septuagint (LXX) & Psalm Numbering** (:func:`lxx_books`, :func:`load_lxx`,
    :func:`psalm_lxx_to_mt`, :func:`psalm_mt_to_lxx`): friendly book-name access
-   to all 55 Swete Septuagint books in First1KGreek plus exact LXX ↔ Masoretic
+   to all 56 Septuagint books (Swete + Ecclesiastes) plus exact LXX ↔ Masoretic
    Psalm numbering conversion.
 5. **Greek Patristic Commentaries & Word Studies** (:func:`patristic_commentaries`,
    :func:`load_commentary`, :func:`word_study`, :func:`search_bible`): friendly
@@ -59,6 +59,7 @@ from ._lxx import (
     CommentaryExcerpt,
     LxxHit,
     commentary_excerpt,
+    enrich_lxx_interlinear,
     load_lxx,
     lxx_loaded,
     search_lxx,
@@ -141,6 +142,7 @@ __all__ = [
     "word_study",
     "search_bible",
     "load_lxx",
+    "enrich_lxx_interlinear",
     "lxx_loaded",
     "search_lxx",
     "load_commentary",

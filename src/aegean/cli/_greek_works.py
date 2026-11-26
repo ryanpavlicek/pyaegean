@@ -197,6 +197,32 @@ def work(
             "well-known ids; `aegean greek catalog NAME` searches ~1,800; "
             "`aegean greek work all AUTHOR` fetches a whole author"
         )
+    if work_id.lower().startswith("ogc"):
+        from aegean.greek import load_collection_work
+
+        try:
+            c = load_collection_work(work_id)
+        except (DataNotAvailableError, ValueError) as exc:
+            raise fail(str(exc)) from None
+        if output is not None:
+            write_corpus(c, output)
+            print(f"wrote {len(c)} documents to {output}", file=sys.stderr)
+            return
+        summary = {
+            "work": work_id,
+            "documents": len(c),
+            "tokens": sum(len(d.tokens) for d in c),
+            "first": c.documents[0].id if len(c) else "",
+            "name": c.documents[0].meta.name if len(c) else "",
+            "source": c.provenance.source if c.provenance else "",
+            "data_version": c.provenance.data_version if c.provenance else "",
+        }
+        if json_out:
+            emit_json(summary)
+            return
+        table(f"{work_id}", ["field", "value"], [[k, str(v)] for k, v in summary.items() if k != "work"])
+        print(f"read it:  aegean show {work_id}")
+        return
     if source not in ("auto", "perseus", "first1k"):
         raise fail("--source must be auto, perseus, or first1k")
     was_cached = any(w["id"] == work_id for w in list_fetched_works())
@@ -373,8 +399,76 @@ def catalog(
     print("Load one with, e.g.:  aegean greek work tlg0012.tlg001 --ref 1.1-1.10")
 
 
+def collections_cmd(
+    collection: str | None = typer.Argument(
+        None,
+        help=(
+            "Optional collection id to browse its works offline (chrysostom, church-fathers-early, "
+            "church-fathers-late, classical-greek, hellenistic-greek, imperial-greek, "
+            "late-antique-greek, byzantine-lit). Omit to summarize all 8 collections."
+        ),
+    ),
+    author: str | None = typer.Option(None, "--author", "-a", help="Filter works by author substring."),
+    query: str | None = typer.Option(None, "--query", "-q", help="Search work IDs, authors, titles, and TLG IDs."),
+    limit: int = typer.Option(40, "--limit", "--top", "-n", help="Max rows when listing works (0 = all)."),
+    output: Path | None = RESULT_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Browse the 8 categorized open-licensed Ancient, Patristic & Byzantine Greek collections (3,844 works, offline)."""
+    from aegean.greek import collection_works, collections as list_collections
+
+    if collection is None and author is None and query is None:
+        rows = list_collections()
+        if emit_result({"collections": rows}, json_output=json_out, output=output):
+            return
+        table(
+            "Categorized Greek Library Collections (3,844 works · 64.35M tokens)",
+            ["id", "category", "works", "authors", "tokens", "installed"],
+            [
+                [
+                    r["id"],
+                    r["category"],
+                    f"{r['works']:,}",
+                    f"{r['authors']:,}",
+                    f"{r['tokens']:,}",
+                    "yes" if r["installed"] else "no",
+                ]
+                for r in rows
+            ],
+        )
+        print("\nBrowse works offline:  aegean greek collections chrysostom")
+        print("Install a collection:  aegean library install chrysostom   (or pack: church-fathers, ancient-greek, byzantine-pack)")
+        print('Search installed text: aegean find "ἀγάπη" chrysostom')
+        return
+
+    try:
+        rows = collection_works(collection, author=author, query=query, limit=0)
+    except ValueError as exc:
+        raise fail(str(exc)) from None
+    total = len(rows)
+    shown = rows if limit <= 0 else rows[:limit]
+    if emit_result({"matched": total, "works": shown}, json_output=json_out, output=output):
+        return
+    if not total:
+        print("No collection works match that filter.")
+        return
+    scope = collection or "all Greek collections"
+    table(
+        f"{scope} ({total:,} work{'' if total == 1 else 's'})",
+        ["work_id", "collection", "author", "title", "tokens", "license"],
+        [
+            [r["work_id"], r["collection"], r["author"][:26], r["title"][:44], f"{r['tokens']:,}", r["license"]]
+            for r in shown
+        ],
+    )
+    if limit > 0 and total > limit:
+        print(f"\n… and {total - limit:,} more — filter with --author / --query or pass --limit 0.")
+    print(f"Load one:  aegean show {shown[0]['work_id']}   (or Python: aegean.open({shown[0]['work_id']!r}))")
+
+
 def register(greek_app: typer.Typer) -> None:
-    """Attach the literary-work and catalog commands to ``greek_app``."""
+    """Attach the literary-work, collection, and catalog commands to ``greek_app``."""
     greek_app.command("work")(work)
     greek_app.command("works")(works)
     greek_app.command("catalog")(catalog)
+    greek_app.command("collections")(collections_cmd)

@@ -4,32 +4,47 @@ This page covers loading complete Ancient Greek texts into pyaegean as standard
 `Corpus` objects ready for tokenization, scansion, tagging, and frequency
 analysis.
 
-Three loaders cover the main Greek collections:
+Four loaders cover the Greek text collections:
 
+- **`greek.collections()` / `greek.load_collection_work("ogc002060")`** (or
+  `aegean.open("ogc002060")` / `aegean.open("chrysostom:In Matthaeum")`):
+  **3,844 open-licensed Greek works across 1,414 authors (64.35M tokens, 8th c.
+  BCE–1453 CE)** grouped into 8 categorized SHA-256-pinned collections:
+  `chrysostom` (155 John Chrysostom works), `church-fathers-early` (432 works),
+  `church-fathers-late` (280 works), `classical-greek` (684 works),
+  `hellenistic-greek` (740 works), `imperial-greek` (1,078 works),
+  `late-antique-greek` (290 works), and `byzantine-lit` (185 works). Search all
+  3,844 works offline via `greek.collection_works(...)` or
+  `aegean greek collections [COLLECTION]`.
 - **`greek.load_work("tlg0012.tlg001")`**: any of 1,778 Greek works in Perseus
   `canonical-greekLit` and `First1KGreek`, addressed by CTS ID
   (`tlgAAAA.tlgBBB`).
 - **`aegean.greek.bible` (`bible.load_nt(...)`, `bible.load_lxx(...)`,
-  `bible.load_witness(...)`)**: 9 Greek New Testament editions, 55 Swete
-  Septuagint books, 13 early manuscript witnesses, and 86 patristic commentaries.
-- **`aegean.load(...)`** for dedicated hosted Greek collections:
-  `apostolic-fathers` (15 works), `pseudepigrapha` (44 Second Temple Greek
-  works), `patrologia` (33 *Patrologia Graeca* volumes, 6.79M words),
-  `byzantine` (12 medieval and early-modern vernacular texts), and
+  `bible.load_witness(...)`)**: 9 Greek New Testament editions, 56 Septuagint
+  books (Swete + Ecclesiastes, with inline refs, Masoretic Psalm numbering, and
+  automatic offline interlinear), 13 early manuscript witnesses, and 112
+  patristic commentaries (including 26 John Chrysostom homily series).
+- **`aegean.load(...)`** for dedicated hosted Greek collections: `lxx` (56-book
+  Septuagint), `apostolic-fathers` (15 works), `pseudepigrapha` (44 Second
+  Temple Greek works), `patrologia` (33 *Patrologia Graeca* volumes, 6.79M
+  words), `byzantine` (12 medieval and early-modern vernacular texts), and
   `homer-scholia` (54 documents: 24 books of the Venetus A *Iliad* plus Venetus
   A, Venetus B, and Escorial Homeric scholia). Install them in groups with
-  `aegean library install biblical`, `patristic`, or `literary`.
+  `aegean library install biblical`, `church-fathers`, `patristic`,
+  `ancient-greek`, `byzantine-pack`, or `literary`.
 
 Each path caches fetched files locally for subsequent offline use and returns a
 standard `Corpus`. Every analysis stage on [Greek NLP](Greek-NLP) runs directly
 on the result.
 
 > **Work IDs work anywhere a corpus is accepted.** Commands taking a `CORPUS`
-> argument accept a registered corpus ID (`lineara`, `nt`, …), a Greek CTS work
-> ID (`tlg0012.tlg001`), a path to a saved `.json` or `.db` corpus, or `-` for
-> JSON on stdin. For example, `aegean stats tlg0012.tlg001`, `aegean export
-> tlg0012.tlg002 -f csv -o odyssey.csv`, and `aegean db build tlg0012.tlg001 -o
-> iliad.db` all resolve the work ID automatically through `load_work`. See
+> argument accept a registered corpus ID (`lineara`, `nt`, `lxx`, …), an Open
+> Greek Corpus work ID (`ogc002060` or `chrysostom:In Matthaeum`), a Perseus /
+> First1KGreek CTS work ID (`tlg0012.tlg001`), a *Patrologia Graeca* volume
+> (`PG073`), a path to a saved `.json` or `.db` corpus, or `-` for JSON on
+> stdin. For example, `aegean stats tlg0012.tlg001`, `aegean stats ogc002060`,
+> `aegean export tlg0012.tlg002 -f csv -o odyssey.csv`, and
+> `aegean db build tlg0012.tlg001 -o iliad.db` all resolve automatically. See
 > [§5](#5-put-works-into-a-database).
 
 > New to pyaegean? Start with [Getting Started](Getting-Started) and the
@@ -672,7 +687,7 @@ From the shell:
 
 ```bash
 aegean bible books nt          # 27 NT books and accepted aliases
-aegean bible books lxx         # 55 Swete Septuagint books
+aegean bible books lxx         # 56 Septuagint books (Swete + Ecclesiastes)
 aegean bible books nt --json   # JSON output
 ```
 

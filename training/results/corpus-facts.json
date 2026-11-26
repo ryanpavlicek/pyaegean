@@ -148,6 +148,69 @@
       "words": 6787292,
       "measured_from": "cached-asset",
       "measured": "2026-11-25"
+    },
+    "lxx": {
+      "documents": 1149,
+      "tokens": 592436,
+      "words": 592436,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
+    },
+    "chrysostom": {
+      "documents": 155,
+      "tokens": 3738372,
+      "words": 3738372,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
+    },
+    "church-fathers-early": {
+      "documents": 432,
+      "tokens": 6216570,
+      "words": 6216570,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
+    },
+    "church-fathers-late": {
+      "documents": 280,
+      "tokens": 7962722,
+      "words": 7962722,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
+    },
+    "classical-greek": {
+      "documents": 684,
+      "tokens": 5088194,
+      "words": 5088194,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
+    },
+    "hellenistic-greek": {
+      "documents": 740,
+      "tokens": 4672040,
+      "words": 4672040,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
+    },
+    "imperial-greek": {
+      "documents": 1078,
+      "tokens": 14662168,
+      "words": 14662168,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
+    },
+    "late-antique-greek": {
+      "documents": 290,
+      "tokens": 11333916,
+      "words": 11333916,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
+    },
+    "byzantine-lit": {
+      "documents": 185,
+      "tokens": 10676388,
+      "words": 10676388,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-26"
     }
   },
   "sign_inventories": {

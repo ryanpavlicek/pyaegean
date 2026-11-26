@@ -345,16 +345,47 @@ Early Greek New Testament Manuscript Witnesses — nt-witnesses (fetched on dema
   compare_witnesses(). Never bundled in the Apache-2.0 wheel. Attribute CNTR / Alan Bunning
   in academic work.
 
-Septuagint (LXX) — Swete Greek Old Testament (Genesis 1:1-5 and LXX Psalm 22:1-6 sample in code; full 55-book lxx-corpus fetched on demand, NOT bundled)
+Septuagint (LXX) — Swete Greek Old Testament + Ecclesiastes (Genesis 1:1-5 and LXX Psalm 22:1-6 sample in code; full 56-book lxx-corpus fetched on demand, NOT bundled)
   Henry Barclay Swete, The Old Testament in Greek according to the Septuagint (Cambridge
-  University Press, 1887-1894; Greek base text Public Domain). The full 55-book, 29,248-verse
-  TEI XML digitization from the Open Greek and Latin / First1KGreek Project
-  (https://github.com/OpenGreekAndLatin/First1KGreek, CC BY-SA 4.0) is hosted as the
-  `lxx-corpus` release asset (built by scripts/build_lxx_corpus.py), redistributed under the
-  same CC BY-SA 4.0 ShareAlike terms, and fetched on demand via aegean.greek.bible.load_lxx() /
-  search_lxx(); it is never bundled in the Apache-2.0 wheel. The eleven-verse offline sample
-  (Genesis 1:1-5 and LXX Psalm 22:1-6) in src/aegean/greek/bible/_lxx.py is public-domain text
-  from Swete (1887-1894). Attribute OpenGreekAndLatin / First1KGreek when using `lxx-corpus`.
+  University Press, 1887-1894; Greek base text Public Domain). The 55 Swete books from the
+  Open Greek and Latin / First1KGreek Project (https://github.com/OpenGreekAndLatin/First1KGreek,
+  CC BY-SA 4.0) plus Ecclesiastes (tlg0527.tlg030) from Greek Wikisource via Open Greek Corpus
+  (https://github.com/open-greek/open-greek-corpus, CC BY-SA 4.0 / Public Domain ancient text)
+  total 56 books and 29,470 verses and are hosted as the `lxx-corpus` release asset (built by
+  scripts/build_lxx_corpus.py), redistributed under CC BY-SA 4.0 ShareAlike terms, and fetched
+  on demand via aegean.load("lxx") / aegean.greek.bible.load_lxx(); never bundled in the
+  Apache-2.0 wheel. The eleven-verse offline sample (Genesis 1:1-5 and LXX Psalm 22:1-6) in
+  src/aegean/greek/bible/_lxx.py is public-domain text from Swete (1887-1894). Attribute
+  OpenGreekAndLatin / First1KGreek and Greek Wikisource when using `lxx-corpus`.
+
+Categorized Ancient, Classical, Patristic & Byzantine Greek Library Collections (8 project-hosted release assets, fetched on demand, NOT bundled; 95 KB offline work index bundled)
+  Eight categorized work-indexed corpus bundles (`chrysostom-corpus`, `church-fathers-early-corpus`,
+  `church-fathers-late-corpus`, `classical-greek-corpus`, `hellenistic-greek-corpus`,
+  `imperial-greek-corpus`, `late-antique-greek-corpus`, and `byzantine-lit-corpus`) covering
+  3,844 open-licensed Greek works across 1,414 authors (64,350,370 tokens, Archaic through
+  1453 CE), built reproducibly by scripts/build_greek_collections.py from commit-pinned
+  open-greek/open-greek-corpus (https://github.com/open-greek/open-greek-corpus, release
+  corpus-2026-11-26, commit ea39ee6024e1a68b4dfd285f06c5863523fcb686; aggregate corpus license
+  CC BY-SA 4.0, excluding all NonCommercial and proprietary texts). Every work preserves its
+  exact upstream license, edition, source, and OCR correction status in its embedded `_info`
+  metadata. Contributing open upstream editions include:
+  - Perseus Digital Library canonical-greekLit (https://github.com/PerseusDL/canonical-greekLit,
+    CC BY-SA 4.0);
+  - Open Greek and Latin First1KGreek (https://github.com/OpenGreekAndLatin/First1KGreek,
+    CC BY-SA 4.0);
+  - Patristic Text Archive (PTA, Berlin-Brandenburg Academy of Sciences and Humanities /
+    Annette von Stockhausen et al., https://pta.bbaw.de, CC BY 4.0);
+  - Calfa-GREgORI Patrologia Graeca (CGPG, UCLouvain & Calfa, CC BY 4.0);
+  - Digital Fragmenta Historicorum Graecorum (DFHG, Monica Berti, University of Leipzig,
+    CC BY-SA 4.0);
+  - Galenus Verbatim, Sharing Ancient Wisdoms (SAWS, CC BY 4.0), GLAUx (CC BY-SA 4.0),
+    Greek Wikisource (CC BY-SA 4.0), Project Gutenberg, and Public Domain 19th-century
+    print editions digitized via OCR (with explicit per-work OCR fidelity tags);
+  - Open Greek Authority / OGA author and dating metadata (CC BY-SA 4.0).
+  The compact bundled offline discovery index (`src/aegean/data/bundled/greek/collections_index.json.gz`,
+  ~95 KB) stores only factual bibliographic catalogue metadata (work IDs, author names, titles,
+  token counts, and license tags); all text bundles are fetched on demand and never bundled in
+  the Apache-2.0 wheel. Attribute Open Greek Corpus and the underlying editions in academic work.
 
 Patrologia Graeca — CGPG Corpus (project-hosted, fetched on demand, NOT bundled)
   Calfa-GREgORI Patrologia Graeca (CGPG) project (Jean-Marie Auwers, Chahan Vidal-Gorène &

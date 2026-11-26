@@ -121,7 +121,7 @@ class CommentaryExcerpt:
 
 
 def lxx_loaded() -> bool:
-    """Return ``True`` if the full 55-book ``lxx-corpus`` bundle is cached locally."""
+    """Return ``True`` if the full 56-book ``lxx-corpus`` bundle is cached locally."""
     if _LXX_CACHE is not None:
         return True
     from ...data import _REMOTE, cache_dir, present_paths
@@ -130,7 +130,11 @@ def lxx_loaded() -> bool:
     return bool(spec and present_paths(spec, cache_dir()))
 
 
-def _load_lxx_bundle(*, allow_fetch: bool = True, force: bool = False) -> dict[str, Any] | None:
+def _load_lxx_bundle(
+    *,
+    allow_fetch: bool = True,
+    force: bool = False,
+) -> dict[str, Any] | None:
     global _LXX_CACHE
     if _LXX_CACHE is not None and not force:
         return _LXX_CACHE
@@ -146,6 +150,96 @@ def _load_lxx_bundle(*, allow_fetch: bool = True, force: bool = False) -> dict[s
         path = paths[0]
     _LXX_CACHE = load_gzip_json(path)
     return _LXX_CACHE
+
+
+def _ensure_lxx_book(
+    bundle: dict[str, Any] | None,
+    required_book: str | None,
+    *,
+    allow_fetch: bool,
+) -> dict[str, Any] | None:
+    """Auto-upgrade a cached v1 (55-book) LXX bundle when a v2 book like Eccl is requested."""
+    if bundle is None or required_book is None:
+        return bundle
+    if required_book in bundle.get("books", {}):
+        return bundle
+    from ...data import DataNotAvailableError
+
+    if not allow_fetch:
+        raise DataNotAvailableError(
+            f"cached lxx-corpus bundle (v1, 55 books) does not include {required_book!r} — "
+            "run `aegean data fetch lxx-corpus --force` to upgrade to v2 (56 books)"
+        )
+    return _load_lxx_bundle(allow_fetch=True, force=True)
+
+
+def _split_lxx_book_and_ref(
+    book: str | None,
+    ref: str | None,
+    numbering: str,
+) -> tuple[str | None, str | None, str]:
+    """Allow inline refs like ``load_lxx('Gen 1:1-5')`` or ``load_lxx('MT Ps 23')``."""
+    if book is None:
+        return None, ref, numbering
+    raw = book.strip()
+    sys_mode = numbering.strip().lower()
+    if raw.upper().startswith("MT "):
+        sys_mode = "mt"
+        raw = raw[3:].strip()
+    if ref is not None:
+        return raw, ref, sys_mode
+    parts = raw.split()
+    if len(parts) < 2:
+        return raw, None, sys_mode
+    # Handle numbered books like "1 Kgdms 1:1" or "1 Macc 2:1-5"
+    if parts[0].isdigit() and len(parts) >= 3:
+        tail = " ".join(parts[2:])
+        if any(ch.isdigit() for ch in tail) or tail.lower() in ("prologue", "praef"):
+            return f"{parts[0]} {parts[1]}", tail, sys_mode
+    tail = " ".join(parts[1:])
+    if any(ch.isdigit() for ch in tail) or tail.lower() in ("prologue", "praef"):
+        return parts[0], tail, sys_mode
+    return raw, None, sys_mode
+
+
+def _translate_mt_psalm_ref(ref: str) -> tuple[str, dict[str, int]]:
+    """Map a Masoretic Psalm ref (e.g. ``'23'``, ``'23:1-6'``, ``'23-24'``) to LXX ref + map."""
+    from ._catalogs import psalm_mt_to_lxx
+
+    s = ref.strip().replace(":", ".")
+    lxx_to_mt: dict[str, int] = {}
+    if "." in s:
+        chap_part, _, vpart = s.partition(".")
+        if not chap_part.strip().isdigit():
+            raise ValueError(f"invalid Masoretic Psalm reference {ref!r}")
+        mt_num = int(chap_part.strip())
+        lxx_nums = psalm_mt_to_lxx(mt_num)
+        for ln in lxx_nums:
+            lxx_to_mt[str(ln)] = mt_num
+        # Single-chapter MT Psalm -> primary LXX Psalm number
+        return f"{lxx_nums[0]}.{vpart}", lxx_to_mt
+    if "-" in s:
+        a, _, b = s.partition("-")
+        if not (a.strip().isdigit() and b.strip().isdigit()):
+            raise ValueError(f"invalid Masoretic Psalm range {ref!r}")
+        lo, hi = int(a.strip()), int(b.strip())
+        if lo > hi:
+            raise ValueError(f"invalid Masoretic Psalm range {ref!r}")
+        lxx_all: list[int] = []
+        for mt_n in range(lo, hi + 1):
+            for ln in psalm_mt_to_lxx(mt_n):
+                lxx_all.append(ln)
+                lxx_to_mt.setdefault(str(ln), mt_n)
+        return f"{min(lxx_all)}-{max(lxx_all)}", lxx_to_mt
+    if not s.isdigit():
+        raise ValueError(f"invalid Masoretic Psalm reference {ref!r}")
+    mt_num = int(s)
+    lxx_nums = psalm_mt_to_lxx(mt_num)
+    for ln in lxx_nums:
+        lxx_to_mt[str(ln)] = mt_num
+    if len(lxx_nums) == 1:
+        return str(lxx_nums[0]), lxx_to_mt
+    return f"{min(lxx_nums)}-{max(lxx_nums)}", lxx_to_mt
 
 
 def _select_lxx_verses(
@@ -192,24 +286,82 @@ def _select_lxx_verses(
     return out
 
 
+def enrich_lxx_interlinear(corpus: Any) -> Any:
+    """Attach automatic offline lemma, POS, Strong's ID, and gloss to LXX tokens in place.
+
+    Clearly tags each enriched token with ``annotation_source="auto-lexicon"`` so
+    automatic offline lookup is always distinguished from gold treebank/Nestle 1904
+    annotations. Uses the offline lemmatizer + Dodson / Extended Strong's (when cached).
+    """
+    from ..lemmatize import lemmatize
+    from ..pos import pos_tag
+    from ._strongs import strongs_entry
+
+    entry_cache: dict[str, Any] = {}
+    for doc in corpus:
+        for tok in doc.tokens:
+            ann = tok.annotations
+            if ann.get("lemma") and ann.get("gloss"):
+                continue
+            surface = tok.text
+            lem = ann.get("lemma") or lemmatize(surface)
+            pos = ann.get("morph") or ann.get("pos") or pos_tag(surface)
+            key = _fold(lem)
+            if key not in entry_cache:
+                ent = strongs_entry(lem, allow_fetch=False)
+                if ent is None and _fold(surface) != key:
+                    ent = strongs_entry(surface, allow_fetch=False)
+                entry_cache[key] = ent
+            ent = entry_cache[key]
+            ann["lemma"] = ent.lemma if ent is not None else lem
+            if pos:
+                ann.setdefault("morph", pos)
+            if ent is not None:
+                ann.setdefault("strongs", ent.strongs)
+                ann.setdefault("gloss", ent.gloss)
+            ann["annotation_source"] = "auto-lexicon"
+    return corpus
+
+
 def load_lxx(
     book: str | None = None,
     ref: str | None = None,
     *,
+    numbering: str = "lxx",
+    interlinear: bool = False,
     offline: bool = False,
     force: bool = False,
 ) -> Any:
     """Load a Septuagint (LXX) book or passage as a :class:`~aegean.core.corpus.Corpus`.
 
-    Uses the SHA-256-pinned ``lxx-corpus`` bundle (all 55 Swete Septuagint books,
-    29,248 verses) when cached or ``offline=False``. When ``offline=True`` and the
-    full bundle is not yet cached, serves from the bundled Swete 1887 offline
-    sample (Genesis 1:1–5 and LXX Psalm 22:1–6 [MT Psalm 23]).
+    Uses the SHA-256-pinned ``lxx-corpus`` bundle (all 56 Greek Septuagint books
+    including Ecclesiastes, 29,470 verses) when cached or ``offline=False``.
+    When ``offline=True`` and the full bundle is not yet cached, serves from the
+    bundled Swete 1887 offline sample (Genesis 1:1–5 and LXX Psalm 22:1–6 [MT 23]).
+
+    Accepts inline references (``load_lxx("Gen 1:1-5")`` or ``load_lxx("MT Ps 23")``),
+    Masoretic Psalm numbering (``numbering="mt"``), and automatic offline interlinear
+    glossing (``interlinear=True``, tagged ``annotation_source="auto-lexicon"``).
     """
+    book, ref, sys_mode = _split_lxx_book_and_ref(book, ref, numbering)
+    if sys_mode not in ("lxx", "mt"):
+        raise ValueError(f"numbering must be 'lxx' or 'mt', got {numbering!r}")
     if ref is not None and book is None:
         raise ValueError("ref requires a book name, e.g. load_lxx('Gen', ref='1.1-5')")
 
-    bundle = _load_lxx_bundle(allow_fetch=not offline, force=force)
+    book_specs = [resolve_lxx_book(book)] if book is not None else list(_LXX_BOOKS)
+    req_book = book_specs[0].name if book is not None else None
+
+    lxx_to_mt_map: dict[str, int] = {}
+    effective_ref = ref
+    if sys_mode == "mt" and req_book == "Ps" and ref is not None:
+        effective_ref, lxx_to_mt_map = _translate_mt_psalm_ref(ref)
+
+    bundle = _ensure_lxx_book(
+        _load_lxx_bundle(allow_fetch=not offline, force=force),
+        req_book,
+        allow_fetch=not offline,
+    )
     using_sample = bundle is None
 
     from ...core.corpus import Corpus
@@ -217,8 +369,6 @@ def load_lxx(
     from ...core.provenance import Provenance
     from ...data import DataNotAvailableError
     from ..tokenize import tokenize
-
-    book_specs = [resolve_lxx_book(book)] if book is not None else list(_LXX_BOOKS)
 
     if using_sample:
         if book is not None and book_specs[0].name not in _OFFLINE_LXX_SAMPLE:
@@ -236,7 +386,7 @@ def load_lxx(
             assert bundle is not None
             vmap = bundle["books"][bspec.name]["verses"]
         try:
-            selected = _select_lxx_verses(vmap, bspec.name, ref)
+            selected = _select_lxx_verses(vmap, bspec.name, effective_ref)
         except ValueError as exc:
             if using_sample:
                 raise DataNotAvailableError(
@@ -252,6 +402,7 @@ def load_lxx(
         for chap_s, cverses in by_chap.items():
             tokens: list[Token] = []
             lines: list[list[int]] = []
+            mt_num = lxx_to_mt_map.get(chap_s)
             for idx, (verse_s, text) in enumerate(cverses, start=1):
                 vno = _verse_line_int(verse_s, idx)
                 line_indices: list[int] = []
@@ -259,6 +410,12 @@ def load_lxx(
                     if not any(ch.isalpha() for ch in tok.text):
                         continue
                     pos = len(tokens)
+                    ann: dict[str, Any] = {
+                        "ref": f"{bspec.name}.{chap_s}.{verse_s}",
+                        "edition": "swete-lxx",
+                    }
+                    if mt_num is not None:
+                        ann["mt_ref"] = f"MT Ps.{mt_num}.{verse_s}"
                     tokens.append(
                         Token(
                             text=unicodedata.normalize("NFC", tok.text),
@@ -266,16 +423,14 @@ def load_lxx(
                             glyphs=unicodedata.normalize("NFC", tok.text),
                             line_no=vno,
                             position=pos,
-                            annotations={
-                                "ref": f"{bspec.name}.{chap_s}.{verse_s}",
-                                "edition": "swete-lxx",
-                            },
+                            annotations=ann,
                         )
                     )
                     line_indices.append(pos)
                 if line_indices:
                     lines.append(line_indices)
             if tokens:
+                mt_suffix = f" [MT Ps {mt_num}]" if mt_num is not None else ""
                 docs.append(
                     Document(
                         id=f"{bspec.name} {chap_s}",
@@ -284,7 +439,7 @@ def load_lxx(
                         lines=lines,
                         meta=DocumentMeta(
                             period="Koine",
-                            name=f"{bspec.title} {chap_s} (Swete LXX)",
+                            name=f"{bspec.title} {chap_s} (Swete LXX{mt_suffix})",
                         ),
                     )
                 )
@@ -294,19 +449,25 @@ def load_lxx(
             source="Swete Septuagint (1887–1894, offline sample: Gen 1:1–5, Ps 22:1–6)",
             license="Public Domain (Henry Barclay Swete, Cambridge University Press, 1887–1894)",
             url="https://github.com/OpenGreekAndLatin/First1KGreek",
-            notes=("Bundled offline Swete Septuagint sample; fetch 'lxx-corpus' for all 55 books.",),
+            notes=("Bundled offline Swete Septuagint sample; fetch 'lxx-corpus' for all 56 books.",),
         )
     else:
         assert bundle is not None
         meta = bundle.get("_meta", {})
         prov = Provenance(
-            source="Swete Septuagint (1887–1894) via OpenGreekAndLatin/First1KGreek",
+            source=meta.get(
+                "edition",
+                "Swete Septuagint (1887–1894) + Wikisource Ecclesiastes",
+            ),
             license=meta.get("license", "CC BY-SA 4.0"),
             url=meta.get("source_repo", "https://github.com/OpenGreekAndLatin/First1KGreek"),
             data_version=meta.get("source_commit"),
-            notes=("Loaded from SHA-256-pinned lxx-corpus release asset.",),
+            notes=("Loaded from SHA-256-pinned lxx-corpus release asset (56 books).",),
         )
-    return Corpus(docs, script_id="greek", provenance=prov)
+    corpus = Corpus(docs, script_id="greek", provenance=prov)
+    if interlinear:
+        enrich_lxx_interlinear(corpus)
+    return corpus
 
 
 # Per-bundle pre-folded search index: keyed by id(source_map) so force-reloads and
@@ -345,7 +506,7 @@ def search_lxx(
 ) -> list[LxxHit]:
     """Search the Greek Septuagint (LXX) by Greek word, folded stem, or phrase.
 
-    Searches all 55 Swete Septuagint books when ``lxx-corpus`` is cached or
+    Searches all 56 Greek Septuagint books when ``lxx-corpus`` is cached or
     ``offline=False``, or searches the bundled Swete 1887 sample (Genesis 1:1–5
     and LXX Psalm 22:1–6) when ``offline=True`` and the full bundle is not cached.
     ``limit <= 0`` returns all matches.
@@ -357,7 +518,12 @@ def search_lxx(
     if not q_fold:
         return []
 
-    bundle = _load_lxx_bundle(allow_fetch=not offline)
+    req_book = resolve_lxx_book(book).name if book is not None else None
+    bundle = _ensure_lxx_book(
+        _load_lxx_bundle(allow_fetch=not offline),
+        req_book,
+        allow_fetch=not offline,
+    )
     using_sample = bundle is None
     source_key = id(_OFFLINE_LXX_SAMPLE) if using_sample else id(bundle)
 
@@ -371,6 +537,9 @@ def search_lxx(
 
     if using_sample:
         book_specs = [b for b in book_specs if b.name in _OFFLINE_LXX_SAMPLE]
+    elif bundle is not None:
+        avail_books = bundle.get("books", {})
+        book_specs = [b for b in book_specs if b.name in avail_books]
 
     hits: list[LxxHit] = []
     from ..tokenize import tokenize
@@ -416,13 +585,14 @@ def commentary_excerpt(
     limit: int = 5,
     force: bool = False,
 ) -> list[CommentaryExcerpt]:
-    """Read or search Greek patristic commentary sections (Catenae, Origen, First1KGreek
-    Fathers, or *Patrologia Graeca*) for a book.
+    """Read or search Greek patristic commentary sections (Catenae, Origen, John
+    Chrysostom, First1KGreek Fathers, or *Patrologia Graeca*) for a book.
 
-    Loads First1KGreek volumes via :func:`aegean.greek.load_work` and *Patrologia Graeca*
-    volumes (``PG*``) via :func:`aegean.scripts.greek.load_patrologia`, returning structured
-    :class:`CommentaryExcerpt` records optionally filtered by Greek ``query``
-    (accent/case-insensitive).
+    Loads First1KGreek volumes via :func:`aegean.greek.load_work`, John Chrysostom
+    commentary/homily series (``ogc*``) via :func:`aegean.greek.load_collection_work`,
+    and *Patrologia Graeca* volumes (``PG*``) via :func:`aegean.scripts.greek.load_patrologia`,
+    returning structured :class:`CommentaryExcerpt` records optionally filtered by
+    Greek ``query`` (accent/case-insensitive).
     """
     if work_id is not None:
         wid_up = work_id.strip().upper()
@@ -430,13 +600,27 @@ def commentary_excerpt(
             c for c in patristic_commentaries()
             if c["work_id"].upper() == wid_up
         ]
-        meta = matches[0] if matches else {
-            "work_id": work_id,
-            "book": book,
-            "author": "Patristic",
-            "title": work_id,
-            "kind": "patrologia" if wid_up.startswith("PG") else (kind or "catena"),
-        }
+        if matches:
+            meta = matches[0]
+        elif wid_up.startswith("OGC"):
+            from ...scripts.greek._collections import resolve_collection_work
+
+            resolved = resolve_collection_work(work_id)
+            meta = {
+                "work_id": resolved["work_id"],
+                "book": book,
+                "author": resolved["author"],
+                "title": resolved["title"],
+                "kind": "chrysostom" if resolved["collection"] == "chrysostom" else (kind or "patristic"),
+            }
+        else:
+            meta = {
+                "work_id": work_id,
+                "book": book,
+                "author": "Patristic",
+                "title": work_id,
+                "kind": "patrologia" if wid_up.startswith("PG") else (kind or "catena"),
+            }
     else:
         canon = _normalize_commentary_book(book)
         candidates = patristic_commentaries(canon, kind=kind)
@@ -450,7 +634,7 @@ def commentary_excerpt(
     wid = str(meta["work_id"])
     q_fold = _fold(query.strip()) if query and query.strip() else ""
 
-    # Build (section_id, words) chunks: page-by-page for PG volumes, doc-by-doc for First1K.
+    # Build (section_id, words) chunks: page-by-page for PG, locus-by-locus for OGC, doc-by-doc for First1K.
     chunks: list[tuple[str, list[str]]] = []
     if wid.upper().startswith("PG"):
         from ...scripts.greek.patrologia import load_patrologia
@@ -465,6 +649,19 @@ def commentary_excerpt(
                 by_page.setdefault(pg, []).append(tok.text)
             for pg, words in by_page.items():
                 chunks.append((f"{doc.id} p.{pg}", words))
+    elif wid.lower().startswith("ogc"):
+        from ...scripts.greek._collections import load_collection_work
+
+        corp = load_collection_work(wid, force=force)
+        for doc in corp:
+            by_locus: dict[str, list[str]] = {}
+            for tok in doc.tokens:
+                loc = str(tok.annotations.get("ref", "1"))
+                if ref and ref.strip().lower() not in loc.lower():
+                    continue
+                by_locus.setdefault(loc, []).append(tok.text)
+            for loc, words in by_locus.items():
+                chunks.append((loc, words))
     else:
         from ...scripts.greek.perseus import load_work
 

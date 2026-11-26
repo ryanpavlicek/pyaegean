@@ -489,17 +489,21 @@ def test_biblical_mcp_tools_offline() -> None:
     assert "error" in m.biblical_nomina_sacra("   ")
 
     cat_lxx = m.biblical_catalog("lxx")
-    assert cat_lxx["count"] == 55
+    assert cat_lxx["count"] == 56
     cat_wit = m.biblical_catalog("witnesses")
     assert cat_wit["count"] == 13
     cat_comm = m.biblical_catalog("commentaries", book="John")
-    assert cat_comm["count"] >= 5
+    assert cat_comm["count"] >= 6
+    assert m.biblical_catalog("commentaries")["count"] == 112
     bad_cat = m.biblical_catalog("edtion")
     assert "error" in bad_cat and "'editions'" in bad_cat["error"]
 
-    lxx_read = m.biblical_lxx("Gen", ref="1.1-3")
+    lxx_read = m.biblical_lxx("Gen", ref="1.1-3", interlinear=True)
     assert lxx_read["mode"] == "read" and len(lxx_read["verses"]) == 3
     assert "θεὸς" in lxx_read["verses"][0]["text"]
+    assert lxx_read["verses"][0]["tokens"][0]["annotation_source"] == "auto-lexicon"
+    lxx_mt = m.biblical_lxx("Ps", ref="23.1", numbering="mt")
+    assert lxx_mt["numbering"] == "mt" and lxx_mt["verses"][0]["ref"] == "Ps.22.1"
     lxx_srch = m.biblical_lxx("Gen", query="φῶς")
     assert lxx_srch["mode"] == "search" and lxx_srch["count"] >= 3
     assert "error" in m.biblical_lxx("NotABook", ref="1.1")

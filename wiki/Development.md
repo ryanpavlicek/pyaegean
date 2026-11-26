@@ -39,7 +39,7 @@ Verify the install:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.72.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.73.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### What `[dev]` installs
@@ -157,7 +157,7 @@ Wheel check confirming code and JSON only (no binaries):
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.72.0-py3-none-any.whl: ... KB uncompressed, ... files
+# wheel dist/pyaegean-0.73.0-py3-none-any.whl: ... KB uncompressed, ... files
 # OK  nothing-heavy-bundled
 ```
 
@@ -165,19 +165,19 @@ Metadata check for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.72.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.73.0-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
 
 `scripts/check_footprint.py` enforces core import cleanliness, cold-import speed,
-and a 6 MiB uncompressed wheel ceiling:
+and a 7 MiB uncompressed wheel ceiling:
 
 | Check | Invocation | Assertion |
 | --- | --- | --- |
 | **import-clean** | (no args) | `import aegean` imports zero watched heavy packages and no stdlib modules unvendored by Pyodide |
 | **import-fast** | (no args) | fastest of 5 cold subprocess imports (after 1 warmup) stays under 750 ms on Windows and 500 ms in CI |
-| **nothing-heavy-bundled** | `--wheel <path>` | wheel contains code and JSON only (no `.so`, `.pyd`, `.dll`, `.onnx`, `.npy`, `.gz`, …) under the 6 MiB ceiling |
+| **nothing-heavy-bundled** | `--wheel <path>` | wheel contains code and JSON only (no `.so`, `.pyd`, `.dll`, `.onnx`, `.npy`, `.gz`, …) under the 7 MiB ceiling |
 
 Watched modules: `pandas`, `numpy`, `scipy`, `lxml`, `anthropic`, `openai`,
 `google`, `torch`, `onnxruntime`, `tokenizers`, `transformers`, `geopandas`,

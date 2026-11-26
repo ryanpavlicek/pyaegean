@@ -6,7 +6,7 @@ in pyaegean:
 - **Registered corpora** (bundled or hosted): ``lineara``, ``damos``, ``isicily``,
   ``aphrodisias``, ``crete``, ``apostolic-fathers``, ``pseudepigrapha``,
   ``byzantine``, ``homer-scholia``, ``nt``, ``ddbdp``, ``patrologia``, ...
-- **Biblical & Patristic bundles**: ``lxx`` (all 55 Swete Septuagint books),
+- **Biblical & Patristic bundles**: ``lxx`` (all 56 Septuagint books),
   ``nt`` / ``nt-editions`` (any of the 9 Greek NT editions), ``PG073`` (or any
   *Patrologia Graeca* volume), or ``tlg0012.tlg001`` (Perseus / First1KGreek work).
 - **Local files**: ``.json``, ``.json.gz``, or ``.db``/``.sqlite`` corpora.
@@ -51,6 +51,7 @@ __all__ = [
 _SCHEMA_VERSION = "2"
 _PG_RE = re.compile(r"^PG\d+(?:_\d+)?$", re.IGNORECASE)
 _TLG_RE = re.compile(r"^(?:tlg|stoa)\d+\.(?:tlg|stoa)\d+$", re.IGNORECASE)
+_OGC_RE = re.compile(r"^ogc\d{4,}$", re.IGNORECASE)
 _WORD_RE = re.compile(r"[^\W_]+", re.UNICODE)
 
 
@@ -170,6 +171,40 @@ def _iter_json_rows(
                 text = str(pg.get("text", "")).strip()
                 if text:
                     yield (vid, f"{vid} p.{pnum}", vid.lower(), text, meta_base)
+        return
+
+    # 1b. Work-indexed Greek library collection:
+    #     {"works": {work_id: {"_info": {...}, "passages": [[locus, text], ...]}}}
+    if isinstance(data, dict) and isinstance(data.get("works"), dict):
+        col_id = str((data.get("_meta") or {}).get("collection", source_label))
+        for wid, entry in data["works"].items():
+            if not isinstance(entry, dict):
+                continue
+            info = entry.get("_info") or {}
+            author = str(info.get("author", ""))
+            title = str(info.get("title", wid))
+            tlg = str(info.get("tlg", ""))
+            meta_base = json.dumps(
+                {
+                    "work_id": wid,
+                    "author": author,
+                    "title": title,
+                    "collection": col_id,
+                    "tlg": tlg,
+                    "license": str(info.get("license", "")),
+                    "correction": str(info.get("correction", "")),
+                },
+                ensure_ascii=False,
+            )
+            scope = wid.lower()
+            for pair in entry.get("passages", ()):
+                if not isinstance(pair, (list, tuple)) or len(pair) < 2:
+                    continue
+                locus = str(pair[0] or "").strip()
+                text = str(pair[1] or "").strip()
+                if text:
+                    ref = f"{wid} {locus}".strip() if locus else wid
+                    yield (wid, ref, scope, text, meta_base)
         return
 
     # 2. Swete Septuagint bundle: {"books": {book_code: {verse_ref: text}}}
@@ -479,18 +514,19 @@ def search_corpus(
 
 
 def _resolve_cached_asset(asset_name: str, *, offline: bool) -> Path:
-    from .data import _REMOTE, DataNotAvailableError, cache_dir, fetch, is_downloaded
+    from .data import _REMOTE, DataNotAvailableError, cache_dir, fetch, present_paths
 
     if asset_name not in _REMOTE:
         raise ValueError(f"unknown dataset asset {asset_name!r}")
     spec = _REMOTE[asset_name]
     if offline:
-        if not is_downloaded(spec, cache_dir()):
+        paths = present_paths(spec, cache_dir())
+        if not paths:
             raise DataNotAvailableError(
                 f"{asset_name} is not installed locally — run `aegean library install {asset_name}` "
                 "or omit offline=True."
             )
-        return fetch(asset_name)
+        return paths[0]
     return fetch(asset_name)
 
 
@@ -611,10 +647,37 @@ def search_text(
             for doc_id, pos, tok_text in rows
         ]
 
-    # 6. Registered corpus via declarative catalog (FTS5 sidecar for hosted JSON, in-memory for bundled)
-    from .core.catalog import CORPUS_BY_ID
+    # 5b. Open Greek Corpus work ID (e.g. "ogc002060") or <collection>:<work>
+    if _OGC_RE.match(t) or (":" in t and t.partition(":")[0].strip().lower().removesuffix("-corpus") in {
+        "chrysostom",
+        "church-fathers-early",
+        "church-fathers-late",
+        "classical-greek",
+        "hellenistic-greek",
+        "imperial-greek",
+        "late-antique-greek",
+        "byzantine-lit",
+    }):
+        from .scripts.greek._collections import resolve_collection_work
 
-    spec = CORPUS_BY_ID.get(tl)
+        resolved = resolve_collection_work(t)
+        cid = resolved["collection"]
+        wid = resolved["work_id"]
+        asset_path = _resolve_cached_asset(f"{cid}-corpus", offline=offline)
+        idx = _ensure_fts_index(asset_path, source_label=cid)
+        return _query_fts_sidecar(
+            idx, q, source_label=cid, limit=limit, exact=exact, scope_filter=wid.lower()
+        )
+
+    # 6. Registered corpus via declarative catalog (FTS5 sidecar for hosted JSON, in-memory for bundled)
+    from .core.catalog import CORPORA, CORPUS_BY_ID
+
+    spec = CORPUS_BY_ID.get(tl) or CORPUS_BY_ID.get(tl.removesuffix("-corpus"))
+    if spec is None:
+        for cand in CORPORA:
+            if tl in (a.lower() for a in cand.aliases):
+                spec = cand
+                break
     if spec is not None:
         if spec.bundled:
             import aegean
@@ -665,6 +728,7 @@ def search_text(
     close = suggest(t, candidates, n=2)
     hint = f" — did you mean {' or '.join(repr(c) for c in close)}?" if close else ""
     raise CorpusNotFound(
-        f"unknown search target {target!r}{hint}; pass a corpus id (nt, lxx, patrologia, "
-        "isicily, ...), a PG volume (PG073), a TLG work id (tlg0012.tlg001), or a .json/.db path"
+        f"unknown search target {target!r}{hint}; pass a corpus id (nt, lxx, chrysostom, "
+        "classical-greek, church-fathers-early, byzantine-lit, patrologia, isicily, ...), "
+        "a PG volume (PG073), a work id (ogc002060, tlg0012.tlg001), or a .json/.db path"
     )

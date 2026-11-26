@@ -70,7 +70,7 @@ upgrade accuracy behind the same function calls.
 
 ## One call: `pipeline()`
 
-> **Available in v0.72.0.** Isolated pipeline instances, explicit long-input and
+> **Available in v0.73.0.** Isolated pipeline instances, explicit long-input and
 > runtime-variant selection, analysis receipts, source alignment, typed editorial
 > form states, and lossless CoNLL-U representation are part of the current
 > release.
@@ -1640,7 +1640,7 @@ tok.text, tok.annotations["lemma"], tok.annotations["morph"], tok.annotations["s
 bible.load_nt("Romans", ref="8")                      # whole chapter; ref="8.28" for one verse
 bible.load_nt("John", ref="1.18", edition="sblgnt")   # compare or load another edition
 bible.compare_editions("John", "1.18")                # word-level variant diff across editions
-bible.load_lxx("Gen", ref="1.1-5", offline=True)      # Swete Septuagint (55 books)
+bible.load_lxx("Gen 1:1-5", interlinear=True, offline=True)  # 56-book Septuagint (with auto-lexicon interlinear)
 bible.load_witness("P66", "John", "1.1-5")            # early NT manuscript witness
 ```
 
@@ -1667,13 +1667,14 @@ from aegean.greek import bible
 
 entry = bible.strongs_entry("G3056")   # StrongsEntry(strongs='G3056', lemma='λόγος', ...)
 bible.strongs_entry("ἀγάπη").gloss     # 'love'
-study = bible.word_study("G3056")      # gloss, root tree, NT counts, morphology breakdown
+study = bible.word_study("G3056")      # gloss, root tree, NT + LXX counts, morphology breakdown
 ```
 
 From the shell:
 
 ```bash
 aegean bible read John 1:1-5 --interlinear
+aegean bible read Ps 23 --mt --interlinear --offline
 aegean bible compare John 1.18
 aegean bible strongs "ἀγάπη"
 aegean bible strongs G3056 --roots
@@ -1741,13 +1742,14 @@ From the shell (`--ref`, `--source`, `--edition`, `--output`/`-o`, `--json`):
 
 ```bash
 aegean greek work tlg0012.tlg001 --ref 1.1-1.10
+aegean greek work ogc002060                      # John Chrysostom, In Matthaeum
 ```
 
-Texts are **CC BY-SA**, fetched to cache on demand and never bundled.
+Texts are **CC BY-SA** / **CC BY** / **Public Domain**, fetched to cache on demand and never bundled.
 
 ## Discovering works and books
 
-Three bundled offline helpers list loadable literary and biblical catalogues:
+Four bundled offline helpers list loadable literary, patristic, and biblical catalogues:
 
 ```python
 from aegean import greek
@@ -1756,20 +1758,22 @@ from aegean.greek import bible
 greek.popular_works()                  # 25 curated works: {'id', 'author', 'title'}
 # [{'id': 'tlg0012.tlg001', 'author': 'Homer', 'title': 'Iliad'}, …]
 
-greek.catalog()                        # full 1,778-work index (768 Perseus + 1,010 First1KGreek)
-# [{'id': 'tlg0001.tlg001', 'author': 'Apollonius Rhodius', 'title': 'Argonautica',
-#   'greek_title': 'Argonautica', 'source': 'perseus'}, …]
+greek.catalog()                        # full 1,778-work Perseus/First1KGreek index
 len(greek.catalog(author="plato"))     # 39
 
+greek.collections()                    # 8 categorized Greek collections (3,844 works, 1,414 authors)
+greek.collection_works("chrysostom")   # 155 open-licensed John Chrysostom works (offline index)
+
 bible.nt_books()                       # all 27 NT books: {'name', 'aliases'}
-# [{'name': 'Matt', 'aliases': ['matthew', 'matt', 'mt']}, …]
+bible.lxx_books()                      # all 56 Septuagint books (Swete + Ecclesiastes)
 ```
 
 ```bash
 aegean greek works                    # 25 curated works (--json for machine-readable output)
-aegean greek catalog --author plato   # search all 1,778 works
+aegean greek catalog --author plato   # search all 1,778 Perseus/First1KGreek works
+aegean greek collections chrysostom   # list 155 John Chrysostom works offline
 aegean bible books nt                 # 27 NT books and accepted aliases
-aegean bible books lxx                # 55 Swete Septuagint books
+aegean bible books lxx                # 56 Septuagint books (Swete + Ecclesiastes)
 ```
 
 `load_work` / `aegean greek work` accept any Perseus `canonical-greekLit` or

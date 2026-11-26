@@ -4,6 +4,35 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.73.0 (2026-11-26)
+
+### Added
+
+- **3,844 open-licensed Ancient, Classical, Patristic & Byzantine Greek works across 8 categorized release collections (64.35M tokens, 1,414 authors, 8th c. BCE–1453 CE)**:
+  - Hosted 8 deterministic, SHA-256-pinned `.json.gz` release assets (`_REMOTE` expanded from 39 → 47 datasets; 100% verified Public Domain, CC BY 4.0, or CC BY-SA 4.0 with full provenance in `NOTICE`, zero NonCommercial or proprietary material):
+    - `chrysostom` (`chrysostom-corpus-v1`, 155 works, 3.74M tokens): John Chrysostom complete open Greek corpus (homilies, sermons, biblical commentaries, treatises, and letters).
+    - `church-fathers-early` (`church-fathers-early-corpus-v1`, 432 works, 58 authors, 6.22M tokens): Ante-Nicene & Nicene Church Fathers (Athanasius, Basil the Great, Gregory of Nazianzus, Gregory of Nyssa, Origen, Eusebius, Clement of Alexandria, Irenaeus, Justin Martyr, Epiphanius).
+    - `church-fathers-late` (`church-fathers-late-corpus-v1`, 280 works, 38 authors, 7.96M tokens): Post-Nicene, Eastern & Byzantine Church Fathers and Saints (Cyril of Alexandria, Theodoret, Maximus the Confessor, John of Damascus, Theodore the Studite, Photius, Symeon the New Theologian, Gregory Palamas).
+    - `classical-greek` (`classical-greek-corpus-v1`, 684 works, 246 authors, 5.09M tokens): Archaic & Classical Greek poetry, drama, history, philosophy, oratory, and medicine (Homer, Hesiod, Pindar, Aeschylus, Sophocles, Euripides, Aristophanes, Herodotus, Thucydides, Xenophon, Plato, Aristotle, Demosthenes, Hippocrates).
+    - `hellenistic-greek` (`hellenistic-greek-corpus-v1`, 740 works, 587 authors, 4.67M tokens): Hellenistic poetry, history, science, Jewish-Greek literature, and DFHG fragmentary historians (Polybius, Callimachus, Apollonius, Theocritus, Euclid, Archimedes, Diodorus, Philo, Strabo).
+    - `imperial-greek` (`imperial-greek-corpus-v1`, 1,078 works, 373 authors, 14.66M tokens): Imperial-era literature, philosophy, medicine, and rhetoric (Plutarch, Galen, Lucian, Josephus, Epictetus, Marcus Aurelius, Cassius Dio, Pausanias, Athenaeus, Sextus Empiricus).
+    - `late-antique-greek` (`late-antique-greek-corpus-v1`, 290 works, 82 authors, 11.33M tokens): Late Antique Neoplatonism, rhetoric, poetry, and scholia (Plotinus, Porphyry, Iamblichus, Proclus, Libanius, Julian, Nonnus, Simplicius, John Philoponus).
+    - `byzantine-lit` (`byzantine-lit-corpus-v1`, 185 works, 94 authors, 10.68M tokens): Byzantine historiography, literature, and lexicography through 1453 (Procopius, Anna Comnena, Michael Psellus, Eustathius of Thessalonica, Suda, Photius, Niketas Choniates, Constantine VII, George Sphrantzes).
+  - Bundled a compact plain-JSON offline work index (`collections_index.json`, 292 KB uncompressed / ~80 KB in the wheel) supporting instant offline discovery via `aegean.greek.collections()`, `aegean.greek.collection_works()`, `aegean.greek.resolve_collection_work()`, `aegean greek collections [COLLECTION]`, and `aegean library search`.
+  - Wired work-level loading and diacritic-insensitive FTS5 search directly into `aegean.open("ogc002060")`, `aegean.open("chrysostom:In Matthaeum")`, `aegean.search.search_text(query, "chrysostom" | "ogc002060")`, `aegean greek work ogc002060`, and `aegean.library` (new categories `patristics`, `classical`, `byzantine`; 10 named packs adding `church-fathers`, `ancient-greek`, and `byzantine-pack`).
+  - Expanded `patristic_commentaries()` from 86 → **112 indexed Greek patristic biblical commentaries** across 11 Church Fathers and traditions by adding 26 John Chrysostom biblical homily and commentary series (`kind="chrysostom"`, Genesis through Hebrews).
+- **First-class Septuagint (LXX) parity & complete 56-book corpus (`lxx-corpus-v2`)**:
+  - Published `lxx-corpus-v2` (`sha256: 8efd72c7...`; `lxx-corpus-v1` preserved in `_REMOTE_HISTORY`), adding the missing 56th book **Ecclesiastes** (`Eccl`, `tlg0527.tlg030`, 222 verses) for 29,470 verses and 592,436 word tokens across all 56 Septuagint books.
+  - Registered `"lxx"` as a top-level corpus (`aegean.load("lxx")`, `aegean.open("lxx")`, `aegean.open("Gen 1:1-5")`, `aegean.open("MT Ps 23")`).
+  - Added inline reference parsing (`load_lxx("Gen 1:1-5")`), Masoretic Psalm numbering (`load_lxx("Ps", ref="23", numbering="mt")` / `aegean bible read Ps 23 --mt`), and automatic offline interlinear glossing (`load_lxx(..., interlinear=True)`, `enrich_lxx_interlinear()`, `aegean bible read Gen 1:1-5 --interlinear`), explicitly tagged `annotation_source="auto-lexicon"`.
+  - Unified `search_bible(..., corpus="auto"|"nt"|"lxx"|"both")` (`--corpus` on `aegean bible search`) and `word_study(..., include_lxx=...)` (`lxx_total`, `lxx_scope`, `lxx_by_book`, `lxx_occurrences`) across both Testaments.
+  - Split the TUI Biblical screen (`aegean tui` key `b`) into 6 dedicated tabs with separate **Septuagint (LXX)** and **Patristics** tabs, automatic LXX interlinear rendering, and inline John Chrysostom (`ogc*`) and *Patrologia Graeca* (`PG*`) reading/search.
+
+### Fixed
+
+- `aegean.search._resolve_cached_asset(..., offline=True)` now returns the cached path directly via `present_paths()` instead of calling `fetch()`, preventing unintended network downloads when `offline=True` is requested.
+- `aegean.greek.bible.search_bible(..., corpus="both")` now balances its hit budget between the New Testament and the Septuagint when `limit > 0`, so common NT words no longer crowd out LXX matches.
+
 ## 0.72.0 (2026-11-26)
 
 ### Added

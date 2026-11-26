@@ -60,7 +60,10 @@ def _render_status(json_out: bool = False) -> None:
     cat_labels = {
         "corpus": "Corpora (Aegean & Greek)",
         "bible": "Biblical & Koine Greek",
-        "work": "Greek literary works",
+        "patristics": "Church Fathers & Patristics",
+        "classical": "Ancient, Classical & Imperial Greek",
+        "byzantine": "Byzantine Greek",
+        "work": "Greek literary works (TEI)",
         "commentary": "Patristic commentaries",
         "lexicon": "Greek dictionaries",
         "model": "NLP & neural models",

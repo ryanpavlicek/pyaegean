@@ -191,7 +191,11 @@ class LibraryScreen(Screen[None]):
     def _populate_installed(self, query: str) -> None:
         tbl = self.query_one("#lib-installed-table", DataTable)
         tbl.clear()
-        items = adapter.library_items(status="installed", query=query or None, include_works=True)
+        items = [
+            it
+            for it in adapter.library_items(status="installed", query=query or None, include_works=True)
+            if not it.source.startswith("collection:")
+        ]
         row_map: dict[str, Any] = {}
         for it in items:
             tbl.add_row(it.id, it.category, _status_text(it), it.title, key=it.id)
@@ -202,7 +206,11 @@ class LibraryScreen(Screen[None]):
         tbl = self.query_one("#lib-corpora-table", DataTable)
         tbl.clear()
         all_items = adapter.library_items(query=query or None, include_works=False)
-        items = [it for it in all_items if it.category in ("corpus", "bible")]
+        items = [
+            it
+            for it in all_items
+            if it.category in ("corpus", "bible", "patristics", "classical", "byzantine")
+        ]
         row_map: dict[str, Any] = {}
         for it in items:
             tbl.add_row(it.id, it.category, _status_text(it), it.title, key=it.id)

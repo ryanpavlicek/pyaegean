@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.72.0 (beta).** See the
+**Latest PyPI release: v0.73.0 (beta).** See the
 [scholarly workflow](scholarly-workflow.md) for source preservation, optional review,
 counting choices, and translation evidence.
 
@@ -69,12 +69,15 @@ The [getting-started notebook](https://colab.research.google.com/github/ryanpavl
 runs in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
 the core pipeline client-side.
 
-Recent releases add multi-script Aegean support in `aegean workbench` (`workbench-app-v2.1.0`
-for Linear A, Linear B, Cypriot, and Cypro-Minoan), interactive annotation and conflict
-review in `aegean tui` (`r` key / `aegean tui --review`), portable SHA-256-verified
-research bundles (`aegean.bundle` / `aegean bundle`), named sentence policies (`prose`,
-`verse`, `inscription`, `papyrus`), compact editable review spreadsheets (`layout="editable"`)
-with calibrated-risk prioritization, resumable SQLite corpus annotation jobs
+Recent releases add **8 categorized open-licensed Ancient, Classical, Patristic, and Byzantine
+Greek collections** (3,844 works across 1,414 authors, 64.35M tokens, 8th c. BCE–1453 CE,
+including the complete open Greek corpus of John Chrysostom), **first-class 56-book Septuagint
+(LXX) parity** (adding Ecclesiastes, inline references, Masoretic Psalm numbering, and automatic
+offline interlinear), multi-script Aegean support in `aegean workbench` (`workbench-app-v2.1.0`),
+interactive annotation and conflict review in `aegean tui` (`r` key / `aegean tui --review`),
+portable SHA-256-verified research bundles (`aegean.bundle` / `aegean bundle`), named sentence
+policies (`prose`, `verse`, `inscription`, `papyrus`), compact editable review spreadsheets
+(`layout="editable"`) with calibrated-risk prioritization, resumable SQLite corpus annotation jobs
 (`aegean db annotate`), contextual dictionary grounding for AI translation, lossless CoNLL-U
 preservation, and optional [interoperability adapters](interoperability.md) for spaCy,
 Stanza, and CLTK. The
@@ -91,7 +94,9 @@ match your task to a working pattern, and
 [Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes) for end-to-end scholarly
 workflows, each ending in a citation.
 [Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP) is the full reference
-for the pipeline (scansion, accentuation, IPA, tagging, lemmatization, parsing).
+for the pipeline (scansion, accentuation, IPA, tagging, lemmatization, parsing), and
+[Greek Works & Books](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-Works-and-Books) covers
+both Perseus/First1KGreek works and the 3,844 works in the 8 categorized Greek library collections.
 
 **I work with inscriptions or papyri.**
 [Using Critical Editions](https://github.com/ryanpavlicek/pyaegean/wiki/Using-Critical-Editions)
@@ -103,14 +108,15 @@ edition-fidelity flag.
 **I study Biblical, Second Temple & Patristic Greek.**
 [Biblical & Koine Greek](https://github.com/ryanpavlicek/pyaegean/wiki/New-Testament) and the
 [`aegean.greek.bible`](api/greek_bible.md) reference cover the `aegean bible` CLI, the `b` screen in
-`aegean tui` (with inline downloads for missing bundles), **9 collated Greek NT editions**
-(`nestle1904`, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`), **13 early
-2nd–5th c. CE manuscript witnesses** with *nomina sacra* expansion, 11,142-entry Extended Strong's
-with root tracing, the **55-book Swete Septuagint** (`lxx-corpus`), and **86 Greek patristic
-commentaries** across 10 Church Fathers/traditions (First1KGreek + *Patrologia Graeca*). Install
-packs at once with `aegean bible install` or `aegean library install patristic` (adding Open
-Apostolic Fathers, 44 Greek OT Pseudepigrapha, and 33 *Patrologia Graeca* volumes; see
-[`aegean.library`](api/library.md)).
+`aegean tui` (with dedicated Septuagint and Patristics tabs and inline downloads), **9 collated
+Greek NT editions** (`nestle1904`, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`,
+`tr`), **13 early 2nd–5th c. CE manuscript witnesses** with *nomina sacra* expansion, 11,142-entry
+Extended Strong's with root tracing, the **complete 56-book Septuagint (LXX)** (`lxx-corpus-v2`,
+with Ecclesiastes, Masoretic Psalm numbering, and automatic offline interlinear), and **112 Greek
+patristic commentaries** across 11 Church Fathers/traditions (First1KGreek, 26 John Chrysostom
+homily series, and *Patrologia Graeca*). Install themed packs at once with `aegean bible install`,
+`aegean library install church-fathers` (882 patristic works including all 155 John Chrysostom
+works), or `aegean library install patristic` (see [`aegean.library`](api/library.md)).
 
 **I study the Aegean scripts.**
 [Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A) is the per-script

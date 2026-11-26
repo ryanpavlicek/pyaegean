@@ -32,7 +32,7 @@ def test_declarative_catalog_drives_all_surfaces() -> None:
     from aegean.library import _BUNDLED_CORPORA, _DATASET_META
     from aegean.tui import data as tui_data
 
-    assert len(catalog.CORPORA) == 21
+    assert len(catalog.CORPORA) == 30
     assert tui_data.CORPUS_IDS == catalog.tui_browsable_ids()
     assert tui_data._CORPUS_BLURB == catalog.tui_blurbs()
     assert tui_data.UNDECIPHERED == catalog.UNDECIPHERED_IDS
@@ -179,7 +179,7 @@ def test_new_mcp_parity_tools_and_path_security() -> None:
     # Library status & search (read-only)
     st = m.library_status()
     assert "summary" in st and "packs" in st
-    assert len(st["packs"]) == 7
+    assert len(st["packs"]) == 10
 
     sr = m.library_search("patrologia")
     assert sr["count"] >= 1
@@ -195,11 +195,11 @@ def test_new_mcp_parity_tools_and_path_security() -> None:
     bad2 = m.search_text("λογος", target="corpus.json")
     assert "error" in bad2
 
-    # Biblical catalog reflects 9 editions & 86 commentaries
+    # Biblical catalog reflects 9 editions & 112 commentaries
     eds = m.biblical_catalog("editions")
     assert eds["count"] == 9
     comms = m.biblical_catalog("commentaries")
-    assert comms["count"] == 86
+    assert comms["count"] == 112
 
 
 def test_tui_biblical_screen_9_editions_and_pg_patristics() -> None:
@@ -215,4 +215,4 @@ def test_tui_biblical_screen_9_editions_and_pg_patristics() -> None:
 
     txt = bible_lxx_and_catenae_text("PG073")
     assert "PG073" in txt
-    assert "10 Fathers / traditions" in txt
+    assert "11 Fathers / traditions" in txt

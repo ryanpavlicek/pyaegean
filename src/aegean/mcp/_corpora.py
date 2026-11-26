@@ -515,7 +515,7 @@ def search_text(
 ) -> dict[str, Any]:
     """Fast diacritic-insensitive full-text search across any registered corpus
     (lineara, damos, isicily, aphrodisias, crete, apostolic-fathers, pseudepigrapha,
-    byzantine, homer-scholia, nt, ddbdp, patrologia), lxx (55 Swete Septuagint books),
+    byzantine, homer-scholia, nt, ddbdp, patrologia), lxx (56 Septuagint books),
     nt-editions (9 NT editions), a Patrologia Graeca volume (e.g. PG073), or a CTS
     work ID (e.g. tlg0012.tlg001). Never accepts filesystem paths; uses local cached
     datasets and SQLite FTS5 sidecar indexes (offline-only, never downloads)."""

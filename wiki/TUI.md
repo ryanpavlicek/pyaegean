@@ -86,14 +86,14 @@ Missing corpora and bundles can be downloaded directly inside the TUI:
   **Biblical Pack** to install all 5 Biblical bundles; the active tab reloads
   automatically on completion.
 - **Corpus Browser (`c`):** selecting an uninstalled browsable corpus (`damos`,
-  `sigla`, `nt`, `apostolic-fathers`, `pseudepigrapha`, `isicily`, `iip`,
+  `sigla`, `nt`, `lxx`, `apostolic-fathers`, `pseudepigrapha`, `isicily`, `iip`,
   `iospe`, `igcyr`, `aphrodisias`, `crete`, `edh`, `byzantine`,
   `homer-scholia`) shows an inline **Download** bar (`f` fetches on a
   background worker and opens it).
 - **Library Manager (`l`):** five-tab manager across all resources:
-  - **Packs**: install (`f`) or remove (`x`) any of the 7 themed packs
-    (`biblical`, `patristic`, `aegean`, `epigraphy`, `literary`, `lexica`,
-    `neural`).
+  - **Packs**: install (`f`) or remove (`x`) any of the 10 themed packs
+    (`biblical`, `church-fathers`, `patristic`, `ancient-greek`,
+    `byzantine-pack`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`).
   - **Installed**: every bundled and downloaded resource on disk with byte
     sizes, **Open (`o`)**, and **Remove (`x`)** (bundled corpora stay
     protected).
@@ -356,30 +356,33 @@ all **9 Greek NT editions** (`Nestle 1904`, `SBLGNT`, `SRGNT`, `BHP`,
   `P45`–`P75`) with original/corrected hand selector, diplomatic text, and
   *nomina sacra* expansion (`nt-witnesses` asset).
 - **Word Study** — Strong's / Extended Strong's entry, etymological root tree,
-  NT book and morphology counts, and sample concordance for any Strong's ID
-  (`G3056`) or Greek lemma (`ἀγάπη`, `λόγος`).
-- **LXX & Patristics** — filterable catalogue of all 55 Swete Septuagint books
-  and 86 Greek patristic commentaries across 10 Church Fathers and traditions.
-  Entering a Psalm number (`23`) converts MT ↔ LXX inline; entering an LXX
-  passage (`Gen 1.1-5`, `Ps 22.1-6`) renders verses inline; entering a
-  *Patrologia Graeca* volume (`PG073`) reads excerpts; entering a Greek term or
-  `PG073 λόγος` runs live search.
+  NT + LXX book counts, Robinson morphology distribution, and sample concordance
+  for any Strong's ID (`G3056`) or Greek lemma (`ἀγάπη`, `λόγος`).
+- **Septuagint (LXX)** — filterable catalogue of all 56 Septuagint books (Swete
+  + Ecclesiastes), inline MT ↔ LXX Psalm conversion (`23` or `MT Ps 23`),
+  inline passage reading (`Gen 1.1-5`, `Ps 22.1-6`, `Eccl 1:1-4`) with automatic
+  offline interlinear glossing, and Greek concordance search.
+- **Patristics** — filterable catalogue of 112 Greek patristic commentaries across
+  11 Church Fathers and traditions (including 26 John Chrysostom `ogc*` series
+  and 9 *Patrologia Graeca* volumes). Entering `ogc002060` or `PG073` reads
+  excerpts inline; entering `ogc002060 ἀγάπη` or `PG073 λόγος` runs live search.
 
 ### Library manager (`l`)
 
-Five-tab manager covering bundled corpora, hosted datasets, Biblical and
-Patristic bundles, ~1,778 Greek literary works, 86 commentaries, lexica, and
-neural models:
+Five-tab manager covering bundled corpora, 47 hosted datasets, Biblical and
+Patristic bundles, 3,844 categorized Greek collection works, ~1,778 Perseus and
+First1KGreek works, 112 commentaries, lexica, and neural models:
 
-1. **Packs** — install (`f`) or remove (`x`) all 7 named packs (`biblical`,
-   `patristic`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`) with live
-   installed/missing counts and sizes.
+1. **Packs** — install (`f`) or remove (`x`) all 10 named packs (`biblical`,
+   `church-fathers`, `patristic`, `ancient-greek`, `byzantine-pack`, `aegean`,
+   `epigraphy`, `literary`, `lexica`, `neural`) with live installed/missing
+   counts and sizes.
 2. **Installed** — every local offline resource with disk footprint, `o` to
    open, and `x` to delete (bundled corpora cannot be removed).
-3. **Corpora & Biblical** — filterable list of corpora and Biblical/Patristic
-   bundles.
-4. **Works & Commentaries** — filterable list of Perseus/First1KGreek works and
-   patristic commentaries.
+3. **Corpora & Biblical** — filterable list of corpora, Biblical, Patristic,
+   Classical, and Byzantine collections.
+4. **Works & Commentaries** — filterable list of categorized Greek collection
+   works, Perseus/First1KGreek works, and patristic commentaries.
 5. **Lexica & Models** — hosted Greek dictionaries and neural model bundles.
 
 Keys inside Library Manager: `/` focus filter, `f` download, `o` open, `x`
@@ -453,7 +456,7 @@ Displays two live reports plus cache actions:
 1. **Environment report** (same checks as `aegean doctor`): Python and pyaegean
    versions, installed extras, data store location/size and partial downloads,
    neural model bundles, and analysis cache state.
-2. **Dataset table** (same rows as `aegean data list`): all 39 hosted datasets
+2. **Dataset table** (same rows as `aegean data list`): all 47 hosted datasets
    with downloaded state, on-disk size, and license.
 3. **Actions**: `f` downloads the highlighted dataset on a background worker,
    `x` deletes it from disk, and `r` refreshes both tables.

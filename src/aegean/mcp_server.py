@@ -8,7 +8,7 @@ use pyaegean without writing Python:
   ``search_signs``, ``search_text`` (diacritic-insensitive SQLite FTS5 across corpora,
   LXX, NT editions, and Patrologia Graeca), ``balance_accounts``, ``query_corpus``,
   ``cite_corpus``, ``geo_sites``, ``corpus_diagnose``, and ``data_status``;
-* library: ``library_status`` (all 39 datasets + 7 packs + disk footprint) and
+* library: ``library_status`` (all 47 datasets + 10 packs + disk footprint) and
   ``library_search`` (search corpora, works, commentaries, lexica, and models);
 * Greek NLP: ``greek_pipeline``, ``greek_explain``, ``greek_scan``, ``greek_catalog``,
   ``greek_work``, ``greek_gloss``, and ``koine_gloss``;

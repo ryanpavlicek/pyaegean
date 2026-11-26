@@ -9,6 +9,9 @@ from typing import Any
 CATEGORIES: tuple[str, ...] = (
     "corpus",
     "bible",
+    "patristics",
+    "classical",
+    "byzantine",
     "work",
     "commentary",
     "lexicon",
@@ -18,6 +21,7 @@ CATEGORIES: tuple[str, ...] = (
 
 _SIZE_RE = re.compile(r"(~?\d+(?:\.\d+)?\s*(?:GB|MB|KB|kB|B))")
 _TLG_RE = re.compile(r"^tlg\d+\.tlg\d+$", re.IGNORECASE)
+_OGC_RE = re.compile(r"^ogc\d{4,}$", re.IGNORECASE)
 
 
 def format_size(n: int | None) -> str:
@@ -202,14 +206,6 @@ _DATASET_META: dict[str, tuple[str, str, tuple[str, ...], tuple[str, ...], str |
         None,
         "~1.5 MB",
     ),
-    "lxx-corpus": (
-        "Swete Septuagint / LXX (55 Greek OT books)",
-        "bible",
-        ("bible", "corpus"),
-        ("lxx", "septuagint", "swete"),
-        None,
-        "~1.7 MB",
-    ),
     # Lexica
     "lsj-index": (
         "Liddell-Scott-Jones (LSJ) Greek Lexicon",
@@ -326,11 +322,30 @@ PACKS: tuple[LibraryPack, ...] = (
         description=(
             "Full 27-book Greek NT (Nestle 1904), 8 additional editions (SBLGNT, SRGNT, BHP, "
             "Tischendorf 8th, Westcott-Hort, Byzantine Majority, Antoniades 1904, TR), 13 early "
-            "manuscripts, Extended Strong's (11,142 entries), and all 55 Swete Septuagint books."
+            "manuscripts, Extended Strong's (11,142 entries), and all 56 Septuagint books "
+            "(Swete + Ecclesiastes)."
         ),
         items=("nt-corpus", "nt-editions", "nt-witnesses", "strongs-greek", "lxx-corpus"),
         size_hint="~27 MB",
         aliases=("bible", "koine", "nt-all"),
+    ),
+    LibraryPack(
+        id="church-fathers",
+        title="Greek Church Fathers & Saints Complete Pack",
+        description=(
+            "882 Greek works (17.98M tokens): John Chrysostom complete open corpus (155 works), "
+            "Early & Nicene Fathers (432 works: Athanasius, Basil, Cappadocians, Origen, Eusebius), "
+            "Post-Nicene & Eastern Fathers (280 works: Cyril, John of Damascus, Maximus, Photius, "
+            "Palamas), and Open Apostolic Fathers (15 works)."
+        ),
+        items=(
+            "chrysostom-corpus",
+            "church-fathers-early-corpus",
+            "church-fathers-late-corpus",
+            "apostolic-fathers-corpus",
+        ),
+        size_hint="~61 MB",
+        aliases=("fathers", "patristics-full", "saints"),
     ),
     LibraryPack(
         id="patristic",
@@ -345,7 +360,36 @@ PACKS: tuple[LibraryPack, ...] = (
             "patrologia-graeca-corpus",
         ),
         size_hint="~27.2 MB",
-        aliases=("fathers", "church-fathers", "second-temple"),
+        aliases=("second-temple",),
+    ),
+    LibraryPack(
+        id="ancient-greek",
+        title="Ancient, Classical, Hellenistic & Imperial Greek Pack",
+        description=(
+            "2,792 open-licensed Greek works (35.76M tokens, 8th c. BCE–6th c. CE): Archaic & "
+            "Classical Greek (684 works), Hellenistic & DFHG historians (740 works), Imperial "
+            "literature, philosophy & medicine (1,078 works), and Late Antique philosophy & scholia (290 works)."
+        ),
+        items=(
+            "classical-greek-corpus",
+            "hellenistic-greek-corpus",
+            "imperial-greek-corpus",
+            "late-antique-greek-corpus",
+        ),
+        size_hint="~123 MB",
+        aliases=("classical-pack", "ancient-library"),
+    ),
+    LibraryPack(
+        id="byzantine-pack",
+        title="Byzantine Greek Complete Pack (6th–15th c. + Vernacular)",
+        description=(
+            "197 Byzantine Greek works (10.87M tokens): Byzantine history, literature & lexicography "
+            "up to 1453 (185 works: Procopius, Anna Comnena, Psellus, Eustathius, Suda, Photius) "
+            "plus 12 Byzantine & Early Modern vernacular works."
+        ),
+        items=("byzantine-lit-corpus", "byzantine-corpus"),
+        size_hint="~41 MB",
+        aliases=("byzantine-all", "medieval-greek"),
     ),
     LibraryPack(
         id="aegean",
@@ -383,7 +427,7 @@ PACKS: tuple[LibraryPack, ...] = (
         ),
         items=("homer-scholia-corpus", "byzantine-corpus"),
         size_hint="~8.0 MB",
-        aliases=("epic", "scholia", "byzantine-lit"),
+        aliases=("epic", "scholia"),
     ),
     LibraryPack(
         id="lexica",

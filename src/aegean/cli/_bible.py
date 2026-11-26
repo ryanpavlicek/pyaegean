@@ -29,7 +29,7 @@ from ._complete import (
     shell_complete_witness,
 )
 
-_TLG_WORK_RE = re.compile(r"^(?:tlg\d+\.tlg\d+|pg\d+(?:_\d+)?)$", re.IGNORECASE)
+_TLG_WORK_RE = re.compile(r"^(?:tlg\d+\.tlg\d+|pg\d+(?:_\d+)?|ogc\d{4,})$", re.IGNORECASE)
 
 
 def _normalize_ref(ref: str | None) -> str | None:
@@ -53,7 +53,7 @@ def _cli_nt_error(exc: Exception) -> str:
 bible_app = typer.Typer(
     help=(
         "Biblical & Koine Greek specialist tools: Greek NT editions, early manuscripts, "
-        "Strong's lexicon, word studies, concordance, Septuagint (LXX), and patristic Catenae."
+        "Strong's lexicon, word studies, concordance, Septuagint (LXX), and patristic commentaries."
     ),
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -84,7 +84,7 @@ def _format_root_lines(node: dict[str, Any], prefix: str = "") -> list[str]:
 def read_cmd(
     book: str = typer.Argument(
         ...,
-        help="NT or Septuagint (LXX) book name (e.g. John, Rom, Gen, Ps, Wis); LXX books auto-detect.",
+        help="NT or Septuagint (LXX) book name (e.g. John, Rom, Gen, Ps, Eccl, Wis); LXX books auto-detect.",
         autocompletion=shell_complete_bible_book,
     ),
     passage: str | None = typer.Argument(None, help="Chapter or verse range (e.g. 1, 1.1-18, 3:16)."),
@@ -97,15 +97,20 @@ def read_cmd(
         "nestle1904",
         "--edition",
         "-e",
-        help="Greek NT edition: nestle1904, sblgnt, srgnt, byz, or tr.",
+        help="Greek NT edition: nestle1904, sblgnt, srgnt, bhp, tisch, wh, byz, antoniades, or tr.",
         autocompletion=shell_complete_edition,
     ),
     lxx: bool = typer.Option(False, "--lxx", help="Force reading from the Septuagint (LXX)."),
+    mt: bool = typer.Option(
+        False,
+        "--mt",
+        help="Use Masoretic/English Psalm numbering for Septuagint Psalms (e.g. `Ps 23 --mt` -> LXX Ps 22).",
+    ),
     interlinear: bool = typer.Option(
         False,
         "--interlinear",
         "-i",
-        help="Print word-by-word interlinear table (surface, lemma, morph, Strong's, gloss).",
+        help="Print word-by-word interlinear table (surface, lemma, morph/POS, Strong's, gloss).",
     ),
     output: Path | None = typer.Option(
         None,
@@ -123,7 +128,7 @@ def read_cmd(
         raise fail("give the passage as a positional OR --ref, not both")
     selection = _normalize_ref(passage or ref)
 
-    use_lxx = lxx
+    use_lxx = lxx or mt
     if not use_lxx:
         try:
             from aegean.scripts.greek.nt import _resolve_book as _resolve_nt
@@ -138,7 +143,13 @@ def read_cmd(
 
     try:
         corp = (
-            bib.load_lxx(book, ref=selection, offline=offline)
+            bib.load_lxx(
+                book,
+                ref=selection,
+                numbering="mt" if mt else "lxx",
+                interlinear=interlinear,
+                offline=offline,
+            )
             if use_lxx
             else bib.load_nt(book, ref=selection, edition=edition, offline=offline)
         )
@@ -176,6 +187,7 @@ def read_cmd(
                 "book": book,
                 "ref": selection,
                 "source": "lxx" if use_lxx else edition,
+                "numbering": "mt" if mt else "lxx" if use_lxx else None,
                 "citation": getattr(corp.provenance, "citation", ""),
                 "verses": verses,
             }
@@ -187,9 +199,11 @@ def read_cmd(
 
     title = getattr(corp.provenance, "citation", "") or f"{book} {selection or ''}".strip()
     c.print(f"[bold cyan]{title}[/bold cyan]")
+    if use_lxx and interlinear:
+        c.print("[dim]Interlinear annotations: automatic offline lemmatizer + Dodson/Strong's lexicon (auto-lexicon).[/dim]")
     for doc in corp:
         if interlinear:
-            table = Table(title=doc.id, show_lines=False)
+            table = Table(title=doc.meta.name or doc.id, show_lines=False)
             table.add_column("Ref", style="dim")
             table.add_column("Surface", style="bold")
             table.add_column("Lemma", style="green")
@@ -199,7 +213,7 @@ def read_cmd(
             for tok in doc.tokens:
                 ann = tok.annotations
                 table.add_row(
-                    str(ann.get("ref", tok.line_no or "")),
+                    str(ann.get("mt_ref") or ann.get("ref") or tok.line_no or ""),
                     tok.text,
                     str(ann.get("lemma", "")),
                     str(ann.get("morph", "")),
@@ -393,12 +407,12 @@ def strongs_cmd(
 @bible_app.command("word-study")
 def word_study_cmd(
     query: str = typer.Argument(..., help="Strong's ID (G3056, 26) or Greek lemma (λόγος, ἀγάπη)."),
-    book: str | None = typer.Option(None, "--book", "-b", help="Restrict concordance to one NT book."),
+    book: str | None = typer.Option(None, "--book", "-b", help="Restrict concordance to one NT or LXX book."),
     limit: int = typer.Option(15, "--limit", "--top", "-n", help="Maximum concordance verses to display (0 = all)."),
     offline: bool = typer.Option(False, "--offline", help="Use local cache / bundled sample without network."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
-    """Run a unified Koine Greek word study (lexicon, roots, NT distribution, morphology, concordance)."""
+    """Run a unified Koine Greek word study (lexicon, roots, NT + LXX distribution, morphology, concordance)."""
     import aegean.greek.bible as bib
 
     try:
@@ -423,7 +437,7 @@ def word_study_cmd(
     if ws.lexicon_entries:
         for lname, gloss in ws.lexicon_entries.items():
             c.print(f"  [magenta]{lname}:[/magenta] {gloss}")
-    c.print(f"\n  [bold]Occurrences:[/bold] {ws.total_occurrences}")
+    c.print(f"\n  [bold]NT Occurrences:[/bold] {ws.total_occurrences}")
     if ws.by_book:
         top_books = ", ".join(f"{k} ({v})" for k, v in list(ws.by_book.items())[:10])
         c.print(f"  [bold]By book:[/bold] {top_books}")
@@ -431,9 +445,16 @@ def word_study_cmd(
         top_morph = ", ".join(f"{k} ({v})" for k, v in list(ws.by_morph.items())[:8])
         c.print(f"  [bold]Morphology:[/bold] {top_morph}")
     if ws.occurrences:
-        c.print(f"\n  [bold]Sample concordance ({len(ws.occurrences)} of {ws.total_occurrences}):[/bold]")
+        c.print(f"\n  [bold]Sample NT concordance ({len(ws.occurrences)} of {ws.total_occurrences}):[/bold]")
         for hit in ws.occurrences:
             c.print(f"    [cyan]{hit.ref:12s}[/cyan] [{hit.morph}] {hit.verse_text}")
+    if ws.lxx_total > 0:
+        c.print(f"\n  [bold]LXX Occurrences:[/bold] {ws.lxx_total}  [dim]({ws.lxx_scope})[/dim]")
+        if ws.lxx_by_book:
+            top_lxx = ", ".join(f"{k} ({v})" for k, v in list(ws.lxx_by_book.items())[:10])
+            c.print(f"  [bold]LXX by book:[/bold] {top_lxx}")
+        for lhit in ws.lxx_occurrences[: max(1, min(limit, 8))]:
+            c.print(f"    [cyan]{lhit.ref:12s}[/cyan] {lhit.verse_text[:110]}")
 
 
 @bible_app.command("search")
@@ -443,16 +464,22 @@ def search_cmd(
     book: str | None = typer.Option(None, "--book", "-b", help="Restrict to one NT or LXX book."),
     section: str | None = typer.Option(None, "--section", help="Restrict LXX search to one section (Pentateuch, Wisdom, ...)."),
     edition: str = typer.Option("nestle1904", "--edition", "-e", help="NT edition."),
+    corpus: str = typer.Option(
+        "auto",
+        "--corpus",
+        help="Search scope: 'auto' (NT unless LXX book), 'nt', 'lxx', or 'both'.",
+    ),
     lxx: bool = typer.Option(False, "--lxx", help="Search the Septuagint (LXX) instead of the New Testament."),
     limit: int = typer.Option(25, "--limit", "--top", "-n", help="Maximum hits to return (0 = all)."),
     offline: bool = typer.Option(False, "--offline", help="Use local cache / bundled sample without network."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
-    """Search the Greek New Testament or Septuagint (LXX) concordance."""
+    """Search the Greek New Testament and/or Septuagint (LXX) concordance."""
     import aegean.greek.bible as bib
 
-    use_lxx = lxx or (section is not None)
-    if not use_lxx and book is not None:
+    scope = corpus.strip().lower()
+    use_lxx_only = lxx or (section is not None) or scope == "lxx"
+    if not use_lxx_only and scope == "auto" and book is not None:
         try:
             from aegean.scripts.greek.nt import _resolve_book as _resolve_nt
 
@@ -460,11 +487,11 @@ def search_cmd(
         except ValueError:
             try:
                 bib.resolve_lxx_book(book)
-                use_lxx = True
+                use_lxx_only = True
             except ValueError:
                 pass
 
-    if use_lxx:
+    if use_lxx_only:
         try:
             lxx_hits = bib.search_lxx(
                 query, book=book, section=section, limit=limit, offline=offline
@@ -487,7 +514,15 @@ def search_cmd(
         return
 
     try:
-        hits = bib.search_bible(query, by=by, book=book, edition=edition, limit=limit, offline=offline)
+        hits = bib.search_bible(
+            query,
+            by=by,
+            book=book,
+            edition=edition,
+            corpus=scope,
+            limit=limit,
+            offline=offline,
+        )
     except Exception as exc:
         raise fail(_cli_nt_error(exc)) from None
 
@@ -498,7 +533,8 @@ def search_cmd(
     c = console()
     from rich.table import Table
 
-    table = Table(title=f"Greek NT Concordance: {by}={query!r} ({len(hits)} hit(s))")
+    label = "Greek NT + LXX Concordance" if scope == "both" else "Greek NT Concordance"
+    table = Table(title=f"{label}: {by}={query!r} ({len(hits)} hit(s))")
     table.add_column("Ref", style="cyan")
     table.add_column("Form", style="bold")
     table.add_column("Lemma", style="green")
@@ -515,30 +551,31 @@ def commentary_cmd(
         None,
         metavar="[BOOK | WORK_ID | read TARGET | search TARGET TERM]",
         help=(
-            "List commentaries (`Matt`), read one directly (`tlg4102.tlg001`, `read Matt`, "
-            "`read tlg4102.tlg001`), or search one (`search Matt λόγος`)."
+            "List commentaries (`Matt`), read one directly (`ogc002060`, `tlg4102.tlg001`, "
+            "`PG073`, `read Matt`), or search one (`search Matt λόγος`)."
         ),
     ),
     kind: str | None = typer.Option(
         None,
         "--kind",
         "-k",
-        help="Filter by 'catena', 'origen', 'patristic', or 'patrologia'.",
+        help="Filter by 'catena', 'origen', 'chrysostom', 'patristic', or 'patrologia'.",
     ),
     read: bool = typer.Option(False, "--read", help="Fetch and print sections of the commentary text."),
     search: str | None = typer.Option(None, "--search", "-s", help="Search commentary text for a Greek term (e.g. λόγος)."),
-    work_id: str | None = typer.Option(None, "--work-id", help="Explicit TLG work ID (e.g. tlg4102.tlg005)."),
+    work_id: str | None = typer.Option(None, "--work-id", help="Explicit work ID (e.g. ogc002060, tlg4102.tlg005, PG073)."),
     ref: str | None = typer.Option(None, "--ref", help="Optional section reference when reading."),
     limit: int = typer.Option(5, "--limit", "--top", "-n", help="Maximum excerpts/sections when reading or searching (0 = all)."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
-    """List, read, or search Greek patristic biblical commentaries (NT Catenae & Origen).
+    """List, read, or search Greek patristic biblical commentaries (Catenae, Origen, John Chrysostom, Patrologia Graeca).
 
     Examples:
-      aegean bible commentary                      # list all 48 volumes
+      aegean bible commentary                      # list all 112 volumes
       aegean bible commentary Matt                 # list commentaries on Matthew
+      aegean bible commentary --kind chrysostom    # list all 26 Chrysostom commentary series
       aegean bible commentary read Matt            # read the Matthew catena
-      aegean bible commentary tlg4102.tlg001       # read a specific TLG volume
+      aegean bible commentary ogc002060            # read Chrysostom's Homilies on Matthew
       aegean bible commentary search John λόγος    # search John commentary for λόγος
     """
     import aegean.greek.bible as bib
@@ -556,8 +593,8 @@ def commentary_cmd(
             rest = pos[1:]
             if not rest and wid is None:
                 raise fail(
-                    "specify a book or TLG work ID to read, e.g. "
-                    "`aegean bible commentary read Matt` or `aegean bible commentary read tlg4102.tlg001`"
+                    "specify a book or work ID to read, e.g. "
+                    "`aegean bible commentary read Matt` or `aegean bible commentary read ogc002060`"
                 )
             for tok in rest:
                 if _TLG_WORK_RE.match(tok):
@@ -607,7 +644,7 @@ def commentary_cmd(
     try:
         if do_read or search_term:
             if book is None and wid is None:
-                raise fail("--read / --search requires a BOOK name or TLG work ID")
+                raise fail("--read / --search requires a BOOK name or work ID")
             excerpts = bib.commentary_excerpt(
                 book or "John",
                 work_id=wid,
@@ -663,7 +700,7 @@ def commentary_cmd(
 def books_cmd(
     collection: str = typer.Argument(
         "nt",
-        help="What to list: 'nt' (27 books), 'lxx' (55 books), 'editions' (9), 'witnesses' (13), or 'all'.",
+        help="What to list: 'nt' (27 books), 'lxx' (56 books), 'editions' (9), 'witnesses' (13), or 'all'.",
         autocompletion=shell_complete_bible_collection,
     ),
     section: str | None = typer.Option(None, "--section", help="Optional LXX section filter (Pentateuch, Wisdom, ...)."),
@@ -716,7 +753,7 @@ def books_cmd(
     from rich.table import Table
 
     if col == "nt":
-        table = Table(title="Greek New Testament Books (27)")
+        table = Table(title=f"Greek New Testament Books ({len(rows)})")
         table.add_column("OSIS", style="cyan")
         table.add_column("Aliases")
         for r in rows:
@@ -732,9 +769,9 @@ def books_cmd(
         for r in rows:
             table.add_row(r["name"], r["title"], r["section"], r["work_id"])
         c.print(table)
-        c.print("[dim]Read one:  aegean bible read Gen 1.1-5[/dim]")
+        c.print("[dim]Read one:  aegean bible read Gen 1:1-5   |   MT Psalm:  aegean bible read Ps 23 --mt[/dim]")
     elif col == "editions":
-        table = Table(title="Greek New Testament Editions (5)")
+        table = Table(title=f"Greek New Testament Editions ({len(rows)})")
         table.add_column("ID", style="cyan")
         table.add_column("Edition", style="bold")
         table.add_column("License", style="dim")
@@ -742,7 +779,7 @@ def books_cmd(
             table.add_row(r["id"], r["name"], r["license"])
         c.print(table)
     else:
-        table = Table(title="Early Greek NT Manuscript Witnesses (13)")
+        table = Table(title=f"Early Greek NT Manuscript Witnesses ({len(rows)})")
         table.add_column("Siglum", style="cyan")
         table.add_column("Alias", style="bold")
         table.add_column("Manuscript")
@@ -792,12 +829,14 @@ def status_cmd(
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Show which Biblical & Koine Greek texts, editions, witnesses, and commentaries are installed."""
+    import aegean.greek.bible as bib
     from aegean.library import format_size, list_items, list_packs
 
     pack = next(p for p in list_packs() if p.pack.id == "biblical")
     bundles = list_items(category="bible")
     bundle_rows = [it for it in bundles if it.kind == "dataset" and it.id in pack.pack.items]
     comms_installed = list_items(category="commentary", status="downloaded")
+    total_comms = len(bib.patristic_commentaries())
 
     if json_out:
         emit_json(
@@ -822,7 +861,7 @@ def status_cmd(
         sz = format_size(it.bytes) if it.installed and it.bytes else it.size_hint
         tbl.add_row(it.id, st, sz, it.title)
     c.print(tbl)
-    c.print(f"[dim]Patristic commentaries downloaded: {len(comms_installed)} of 48[/dim]")
+    c.print(f"[dim]Patristic commentaries available locally: {len(comms_installed)} of {total_comms}[/dim]")
     if pack.missing_ids:
         c.print(
             "[bold]Install all missing bundles:[/bold] `aegean bible install` "

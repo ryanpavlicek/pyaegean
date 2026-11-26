@@ -4,14 +4,14 @@ One-page index of every `aegean` command and its key flags with runnable
 examples. For guided explanations and worked outputs, see [CLI](CLI). If you are
 new to the terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.72.0.** All commands, research bundles, multi-script
-> workbench flags, TUI review options, and Greek pipeline controls below match
-> the current release.
+> **Available in v0.73.0.** All commands, Greek library collections, Septuagint
+> parity flags, research bundles, multi-script workbench flags, TUI review
+> options, and Greek pipeline controls below match the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; core library stays zero-dependency
 aegean --help                   # command map
-aegean --version                # pyaegean 0.72.0
+aegean --version                # pyaegean 0.73.0
 ```
 
 The core package installs the `aegean` entry point; executing commands requires
@@ -23,7 +23,7 @@ the `[cli]` extra.
 |---|---|---|
 | **`--json`** | Prints one JSON document to stdout with readable Greek (`ensure_ascii=False`). Combines with `-o/--output`: writes the file (`wrote <path>` on stderr) and still prints JSON to stdout. | `aegean info lineara --json` |
 | **`-` reads stdin** | Any command accepting a `TEXT` argument reads from stdin when given `-`. | `echo "μῆνιν" \| aegean greek lemmatize -` |
-| **Flexible corpus specifiers** | Every corpus argument accepts a registered id, a *Patrologia Graeca* volume (`PG073`), a Greek work id (`tlg0012.tlg001`), a saved `.json`/`.json.gz`/`.db` file, or `-` for corpus JSON on stdin. | `aegean stats lineara.json` |
+| **Flexible corpus specifiers** | Every corpus argument accepts a registered id, an Open Greek Corpus work id (`ogc002060` or `chrysostom:In Matthaeum`), a *Patrologia Graeca* volume (`PG073`), a CTS work id (`tlg0012.tlg001`), a saved `.json`/`.json.gz`/`.db` file, or `-` for corpus JSON on stdin. | `aegean stats lineara.json` |
 | **`--top` / `--limit`** | Interchangeable aliases for row caps, including `plot`. `0` lifts the cap wherever `--help` says `0 = all` (except `greek rarity`, which slices directly). | `aegean stats lineara --limit 3` |
 | **Exit codes** | `0` success · `1` domain error (one stderr line prefixed `aegean:`) · `2` usage error. | `aegean greek scan "λόγος"` → exit `1` |
 
@@ -36,13 +36,16 @@ Notation summary (full guide: [CLI → Reading usage lines](CLI#reading-usage-li
 | `"KU-*-RO"` (double quotes) | Quote values containing spaces, `*`, or punctuation (double quotes work across all shells) |
 
 Every command and group supports `-h` / `--help`. Five corpora are bundled
-offline (`lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`) and 16 more
-download to the local cache on first use (`damos`, `sigla`, `nt`,
-`apostolic-fathers`, `pseudepigrapha`, `isicily`, `iip`, `iospe`, `igcyr`,
-`aphrodisias`, `crete`, `edh`, `byzantine`, `homer-scholia`, `patrologia`,
-`ddbdp`). In Python, `aegean.open(spec)` and `aegean.read_corpus(spec)` resolve
-the same specifiers. For multi-million-word archives, use
-`aegean db search ddbdp "βασιλέως"` and `aegean find λόγος patrologia`.
+offline (`lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`) and 25 more
+download to the local cache on first use (`damos`, `sigla`, `nt`, `lxx`, the 8
+categorized Greek library collections `chrysostom`, `church-fathers-early`,
+`church-fathers-late`, `classical-greek`, `hellenistic-greek`,
+`imperial-greek`, `late-antique-greek`, `byzantine-lit`, `apostolic-fathers`,
+`pseudepigrapha`, `isicily`, `iip`, `iospe`, `igcyr`, `aphrodisias`, `crete`,
+`edh`, `byzantine`, `homer-scholia`, `patrologia`, `ddbdp`). In Python,
+`aegean.open(spec)` and `aegean.read_corpus(spec)` resolve the same specifiers.
+For multi-million-word archives, use `aegean db search ddbdp "βασιλέως"`,
+`aegean find ἀγάπη chrysostom`, or `aegean find λόγος patrologia`.
 
 ---
 
@@ -51,9 +54,9 @@ the same specifiers. For multi-million-word archives, use
 | Group | Commands |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `find` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`library`** | `status` `packs` `list` `search` `info` `install` `remove` (7 packs, 21 corpora, Biblical bundles, ~1,778 works, 86 commentaries, lexica, models) |
+| **`library`** | `status` `packs` `list` `search` `info` `install` `remove` (10 packs, 30 corpora, 47 datasets, 3,844 collection works, ~1,778 Perseus/First1KGreek works, 112 commentaries, lexica, models) |
 | **`bundle`** | `create` `inspect` `verify` `extract` `hydrate` (deterministic, SHA-256-verified, NC-safe `.zip` research bundles) |
-| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `work` `works` `catalog` `eval` |
+| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `collections` `work` `works` `catalog` `eval` |
 | **`bible`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
@@ -66,10 +69,10 @@ the same specifiers. For multi-million-word archives, use
 
 ## Corpus & analysis (top level)
 
-Every corpus command accepts a registered id, Greek work id, *Patrologia
-Graeca* volume (`PG073`), `.json`/`.json.gz`/`.db` path, or `-`, plus `--json`.
-`stats`, `dispersion`, `keyness`, `search`, and `balance` also take
-`-o/--output` (`.json`, `.csv`, or `.txt` by extension), printing
+Every corpus command accepts a registered id, OGC work id (`ogc002060`), CTS
+work id, *Patrologia Graeca* volume (`PG073`), `.json`/`.json.gz`/`.db` path, or
+`-`, plus `--json`. `stats`, `dispersion`, `keyness`, `search`, and `balance`
+also take `-o/--output` (`.json`, `.csv`, or `.txt` by extension), printing
 `wrote <path>` on stderr and combining cleanly with `--json`.
 
 | Command | Purpose | Key flags | Example |
@@ -77,12 +80,12 @@ Graeca* volume (`PG073`), `.json`/`.json.gz`/`.db` path, or `-`, plus `--json`.
 | `quickstart` | Offline 8-step tour on bundled data | `--no-run` | `aegean quickstart` |
 | `repl` | Interactive shell (also launched by bare `aegean` on a TTY): live inline ghost-text + dropdown prediction, persistent history, session corpus cache. Directives: `use CORPUS` (`use off`), `:examples`, `:help`, `:exit` | — | `aegean` (or `aegean repl`) |
 | `tui` | Full-screen Textual UI (`[tui]` extra): 9 screens — Home (`h`), Corpus browser (`c`), Greek workbench (`g`), Biblical Greek (`b`), Library manager (`l`), Annotation review (`r`), Works (`w`), Data store (`d`), Command console (`:`). See [TUI](TUI) | `-r/--review` `-c/--corpus` | `aegean tui --review a.csv --review b.csv --corpus nt` |
-| `library` | Manage 39 hosted datasets, 5 bundled corpora, ~1,778 Greek works, 86 patristic commentaries, lexica, models, and 7 packs (`biblical`, `patristic`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`) | `status` `packs` `list` `search` `info` `install` `remove` `--installed` `--available` `--all` `--json` | `aegean library install biblical` |
+| `library` | Manage 47 hosted datasets, 5 bundled corpora, 3,844 categorized Greek collection works, ~1,778 Perseus/First1KGreek works, 112 patristic commentaries, lexica, models, and 10 packs (`biblical`, `church-fathers`, `patristic`, `ancient-greek`, `byzantine-pack`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`) | `status` `packs` `list` `search` `info` `install` `remove` `--installed` `--available` `--all` `--json` | `aegean library install church-fathers` |
 | `doctor` | Offline environment check (versions, extras, data store, model bundles, analysis cache); exits `1` on issues | `--json -o/--output` | `aegean doctor` |
 | `info` | Corpus counts, provenance, license, citation | `--json` | `aegean info lineara` |
 | `load` | Filter by metadata; list matches or export | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |
 | `show` | One document's metadata and line-by-line tokens | `--json` | `aegean show lineara HT13` |
-| `find` | Diacritic-insensitive SQLite FTS5 search across any corpus, `lxx`, `nt-editions`, `patrologia` / `PG073`, TLG work, or local `.json`/`.db` | `-b/--book -e/--edition -n/--limit --exact --offline --json` | `aegean find λόγος patrologia` |
+| `find` | Diacritic-insensitive SQLite FTS5 search across any corpus, `lxx`, `nt-editions`, the 8 Greek library collections (`chrysostom`, `ogc002060`), `patrologia` / `PG073`, TLG work, or local `.json`/`.db` | `-b/--book -e/--edition -n/--limit --exact --offline --json` | `aegean find ἀγάπη chrysostom` |
 | `search` | Words matching a wildcard sign pattern (`*` = one sign) | `-o/--output --json` | `aegean search lineara "KU-*-RO"` |
 | `query` | Compound query engine (AND/OR/NOT) with explicit word views and count units | `--where --output-kind --view --count-unit --statuses --fields -o/--output --limit` | `aegean query lineara --where "site-is=Zakros"` |
 | `stats` | Word or sign frequency table | `--view --count-unit --statuses --details --signs --top -o/--output` | `aegean stats lineara --signs --top 5` |
@@ -679,20 +682,21 @@ Published numbers and protocols live on [Benchmarks](Benchmarks),
 ## Biblical & Koine Greek — `aegean bible …`
 
 9 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's +
-root trees, 55-book Swete Septuagint (LXX), and 86 Greek patristic commentaries
-across 10 Church Fathers and traditions. Full reference:
-[CLI: Biblical & Koine Greek](CLI-Bible).
+root trees, 56-book Septuagint (LXX, Swete + Ecclesiastes, `--mt` Psalm
+numbering, automatic offline `--interlinear`), and 112 Greek patristic
+commentaries across 11 Church Fathers and traditions (including 26 John
+Chrysostom series). Full reference: [CLI: Biblical & Koine Greek](CLI-Bible).
 
 | Command | Purpose | Key flags | Example |
 |---|---|---|---|
-| `read` | Read NT or LXX passage (LXX auto-detected; plain, interlinear, or `-o` export) | `--ref -e/--edition --lxx -i/--interlinear -o/--output --offline --json` | `aegean bible read John 1:1-5 -i` · `aegean bible read Gen 1:1-5` |
+| `read` | Read NT or 56-book LXX passage (`--mt` Psalm numbering, automatic offline `--interlinear`, `-o` export) | `--ref -e/--edition --lxx --mt -i/--interlinear -o/--output --offline --json` | `aegean bible read Ps 23 --mt -i` · `aegean bible read Gen 1:1-5 -i` |
 | `compare` | Word-level variant diff across up to 9 NT editions (`nestle1904`, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`) | `-e/--editions --offline --json` | `aegean bible compare John 1:18` |
 | `witnesses` | Compare 13 early NT manuscripts (*nomina sacra* expanded by default) | `-s/--sigla --hand -d/--diplomatic --no-expand --offline --json` | `aegean bible witnesses John 18:37 -s P52,01,03` |
 | `strongs` | Strong's / Extended Strong's lookup, search, or root tree | `-r/--roots -s/--search --fetch --offline -n/--limit/--top --json` | `aegean bible strongs G3056 --roots` |
-| `word-study` | Combined Strong's + root + morphology + NT concordance report | `-b/--book -n/--limit/--top --offline --json` | `aegean bible word-study ἀγάπη` |
-| `search` | NT concordance (`--by lemma\|text\|strongs\|morph\|gloss`) or LXX (auto-detected / `--lxx`) | `--by -b/--book --section -e/--edition --lxx -n/--limit/--top --offline --json` | `aegean bible search φῶς --lxx --offline` |
-| `commentary` | List, read (`read TARGET` or TLG/`PG*` ID), or search (`search TARGET TERM`) 86 patristic commentaries | `-k/--kind --ref -n/--limit/--top --json` | `aegean bible commentary read Matt` · `aegean bible commentary search PG073 λόγος` |
-| `books` | Offline catalogues: `nt`, `lxx`, `editions` (9), `witnesses` (13), `all` | `--section --json` | `aegean bible books editions` |
+| `word-study` | Combined Strong's + root + morphology + NT & LXX concordance report | `-b/--book -n/--limit/--top --offline --json` | `aegean bible word-study ἀγάπη` |
+| `search` | NT, LXX, or combined (`--corpus both`) concordance (`--by lemma\|text\|strongs\|morph\|gloss`) | `--by -b/--book --section -e/--edition --corpus --lxx -n/--limit/--top --offline --json` | `aegean bible search φῶς --corpus both --offline` |
+| `commentary` | List, read (`read TARGET` or TLG/`ogc*`/`PG*` ID), or search (`search TARGET TERM`) 112 patristic commentaries | `-k/--kind --ref -n/--limit/--top --json` | `aegean bible commentary read ogc002060` · `aegean bible commentary search PG073 λόγος` |
+| `books` | Offline catalogues: `nt` (27), `lxx` (56), `editions` (9), `witnesses` (13), `all` | `--section --json` | `aegean bible books lxx` |
 | `psalm` | Masoretic (`mt`) ↔ Septuagint (`lxx`) Psalm numbering | `--from --json` | `aegean bible psalm 23 --from mt` |
 | `status` | Show installed vs available Biblical bundles | `--json` | `aegean bible status` |
 | `install` | Download Biblical assets (`all` installs the full `biblical` pack) | `--force --json` | `aegean bible install all` |
@@ -736,9 +740,10 @@ reused without expiry; a changed pin or `--force` fetches a replacement, and
 | `versions` | Reproducibility manifest (version + SHA-256) | `--json` | `aegean data versions --json > data-versions.json` |
 | `store` | Store location and contents | `--json` | `aegean data store` |
 
-`aegean data list` shows the live registry (currently 39 entries). Use
-`aegean library packs` to install themed packs (`biblical`, `patristic`,
-`aegean`, `epigraphy`, `literary`, `lexica`, `neural`), and see
+`aegean data list` shows the live registry (currently 47 entries). Use
+`aegean library packs` to install themed packs (`biblical`, `church-fathers`,
+`patristic`, `ancient-greek`, `byzantine-pack`, `aegean`, `epigraphy`,
+`literary`, `lexica`, `neural`), and see
 [Data & Provenance](Data-and-Provenance) for sizes, SHA-256 pins, and licenses.
 
 ```bash

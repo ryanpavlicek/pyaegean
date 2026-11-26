@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 # Keep top-level import independent of importlib.metadata's comparatively large
 # discovery stack. The release gate pins this value to pyproject.toml.
-__version__ = "0.72.0"
+__version__ = "0.73.0"
 
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from ._log import set_verbosity  # opt-in library logging (off by default; stdlib logging)

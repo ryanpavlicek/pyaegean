@@ -22,11 +22,11 @@ Produces 8 deterministic, gzip-compressed (``mtime=0``), work-indexed JSON bundl
 8. ``byzantine-lit-corpus.json.gz``        (Byzantine History, Literature & Lexicography)
 
 Also writes a compact (~110 KB) offline discovery index to
-``src/aegean/data/bundled/greek/collections_index.json.gz`` when ``--index-out`` is given.
+``src/aegean/data/bundled/greek/collections_index.json`` when ``--index-out`` is given.
 
 Usage:
     python scripts/build_greek_collections.py /tmp/ogc-src --out-dir /tmp/greek-assets \\
-        --index-out src/aegean/data/bundled/greek/collections_index.json.gz
+        --index-out src/aegean/data/bundled/greek/collections_index.json
 """
 
 from __future__ import annotations
@@ -720,9 +720,36 @@ def build_all(ogc_dir: Path, out_dir: Path, index_out: Path | None = None) -> di
 
     if index_out is not None:
         index_works.sort(key=lambda r: r[0])
+        cols = sorted({w[1] for w in index_works})
+        authors = sorted({w[2] for w in index_works})
+        sources = sorted({w[6] for w in index_works})
+        licenses = sorted({w[7] for w in index_works})
+        corrs = sorted({w[8] for w in index_works})
+        periods = sorted({w[9] for w in index_works})
+        ci = {v: i for i, v in enumerate(cols)}
+        ai = {v: i for i, v in enumerate(authors)}
+        si = {v: i for i, v in enumerate(sources)}
+        li = {v: i for i, v in enumerate(licenses)}
+        ri = {v: i for i, v in enumerate(corrs)}
+        pi = {v: i for i, v in enumerate(periods)}
+        compact_rows = [
+            [
+                int(w[0][3:]) if isinstance(w[0], str) and w[0].startswith("ogc") and w[0][3:].isdigit() else w[0],
+                ci[w[1]],
+                ai[w[2]],
+                w[3],
+                w[4],
+                w[5],
+                si[w[6]],
+                li[w[7]],
+                ri[w[8]],
+                pi[w[9]],
+            ]
+            for w in index_works
+        ]
         index_payload = {
             "_meta": {
-                "format": "aegean-greek-collections-index/1",
+                "format": "aegean-greek-collections-index/2",
                 "source_repo": f"https://github.com/{OGC_REPO}",
                 "source_release": OGC_RELEASE,
                 "source_commit": OGC_COMMIT,
@@ -731,10 +758,21 @@ def build_all(ogc_dir: Path, out_dir: Path, index_out: Path | None = None) -> di
                 "tokens_count": grand_tokens,
             },
             "collections": index_collections,
-            "works": index_works,
+            "tables": {
+                "collection": cols,
+                "author": authors,
+                "source": sources,
+                "license": licenses,
+                "correction": corrs,
+                "period": periods,
+            },
+            "works": compact_rows,
         }
-        idx_sha = _write_deterministic_gz(index_out, index_payload, "collections_index.json")
-        idx_kb = index_out.stat().st_size / 1024.0
+        index_out.parent.mkdir(parents=True, exist_ok=True)
+        raw_idx = (json.dumps(index_payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+        index_out.write_bytes(raw_idx)
+        idx_sha = hashlib.sha256(raw_idx).hexdigest()
+        idx_kb = len(raw_idx) / 1024.0
         print(
             f"Wrote offline index {index_out} ({grand_works} works, {len(grand_authors)} authors, "
             f"{idx_kb:.1f} KB, sha256={idx_sha[:12]}...)"

@@ -6,8 +6,9 @@ from typing import Any
 
 
 def library_status() -> dict[str, Any]:
-    """Inspect the unified pyaegean library: bundled vs installed corpora, 7 themed packs
-    (biblical, patristic, aegean, epigraphy, literary, lexica, neural), cached Perseus/
+    """Inspect the unified pyaegean library: bundled vs installed corpora, 10 themed packs
+    (biblical, church-fathers, patristic, ancient-greek, byzantine-pack, aegean, epigraphy,
+    literary, lexica, neural), 3,844 categorized Greek collection works, cached Perseus/
     First1KGreek works, and total disk footprint. Strictly read-only, never downloads."""
     from .. import library as lib
 
@@ -23,9 +24,9 @@ def library_search(
     installed_only: bool = False,
     limit: int = 25,
 ) -> dict[str, Any]:
-    """Search across all 39 hosted datasets, 5 bundled corpora, 1,778 Greek literary
-    works, 86 patristic commentaries, 5 lexica, and neural models by ID, author, title,
-    or alias. Offline, strictly read-only."""
+    """Search across all 47 hosted datasets, 5 bundled corpora, 3,844 categorized Greek
+    collection works, 1,778 Perseus/First1KGreek works, 112 patristic commentaries,
+    5 lexica, and neural models by ID, author, title, or alias. Offline, strictly read-only."""
     from .. import library as lib
 
     q = query.strip()

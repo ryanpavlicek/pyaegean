@@ -10,12 +10,12 @@ print(library.summary()["installed_size"])
 for pack in library.list_packs():
     print(pack.pack.id, f"{pack.installed_count}/{pack.total_count}")
 
-# Search across all corpora, Biblical bundles, 1,778 Greek works, commentaries, lexica, and models
-hits = library.search("Iliad", limit=5)
+# Search across all 47 hosted datasets, 3,844 Greek collection works, 1,778 Perseus/First1KGreek works, 112 commentaries, lexica, and models
+hits = library.search("Chrysostom", limit=5)
 
-# Install by pack name, alias, dataset ID, work title, TLG ID, or author:<name>
+# Install by pack name, alias, dataset ID, work title, TLG/OGC ID, or author:<name>
 library.install("biblical")
-library.install(["damos", "Iliad"])
+library.install(["church-fathers", "Iliad"])
 
 # Safely delete downloaded files to reclaim disk space
 library.remove("damos")

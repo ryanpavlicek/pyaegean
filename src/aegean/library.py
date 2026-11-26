@@ -11,7 +11,7 @@ removing every resource pyaegean supports:
 - **Biblical & Koine Greek bundles** (5): ``nt-corpus``, ``nt-editions``
   (SBLGNT, SRGNT, Byzantine Majority, Textus Receptus), ``nt-witnesses``
   (13 early 2nd–5th c. CE uncials and papyri), ``strongs-greek`` (11,142
-  Extended Strong's entries), and ``lxx-corpus`` (55 Swete Septuagint books).
+  Extended Strong's entries), and ``lxx-corpus`` (56 Septuagint books, incl. Ecclesiastes).
 - **Greek literary works** (~1,778): Perseus ``canonical-greekLit`` and
   ``First1KGreek`` TEI editions.
 - **Greek patristic commentaries** (48): 30 NT *Catenae* volumes and 18 Origen
@@ -56,6 +56,7 @@ __all__ = [
 from ._library_meta import (  # noqa: E402, F401
     _BUNDLED_CORPORA,
     _DATASET_META,
+    _OGC_RE,
     _SIZE_RE,
     _TLG_RE,
     CATEGORIES,
@@ -136,13 +137,20 @@ def _dataset_items(*, root: Path | None = None) -> list[LibraryItem]:
     return out
 
 
-def _work_items(*, installed_only: bool = False) -> list[LibraryItem]:
+def _work_items(*, installed_only: bool = False, root: Path | None = None) -> list[LibraryItem]:
+    from .data import _REMOTE, cache_dir, is_downloaded
     from .greek.bible._catalogs import patristic_commentaries
     from .scripts.greek.perseus import POPULAR_WORKS, catalog, list_fetched_works
 
+    store_root = cache_dir() if root is None else root
     fetched = {w["id"]: w for w in list_fetched_works()}
     commentaries = {c["work_id"]: c for c in patristic_commentaries()}
     popular_titles = {w["id"]: w["title"] for w in POPULAR_WORKS}
+
+    pg_spec = _REMOTE.get("patrologia-graeca-corpus")
+    pg_installed = bool(pg_spec and is_downloaded(pg_spec, store_root))
+    chrys_spec = _REMOTE.get("chrysostom-corpus")
+    chrys_installed = bool(chrys_spec and is_downloaded(chrys_spec, store_root))
 
     out: list[LibraryItem] = []
     seen: set[str] = set()
@@ -162,7 +170,7 @@ def _work_items(*, installed_only: bool = False) -> list[LibraryItem]:
             aliases.append(popular_titles[wid])
         if comm is not None:
             category = "commentary"
-            tags: tuple[str, ...] = ("commentary", "work", "bible")
+            tags: tuple[str, ...] = ("commentary", "work", "bible", "patristics")
             display = f"{comm['author']} — {comm['title']}"
             desc = f"Greek patristic commentary on {comm['book']} ({comm['kind']}; {src})."
             aliases.append(f"commentary:{comm['book']}")
@@ -197,31 +205,145 @@ def _work_items(*, installed_only: bool = False) -> list[LibraryItem]:
             )
         )
 
-    # Also include any commentary IDs not in the bundled catalogue (defensive)
+    # Also include PG and Chrysostom collection commentary IDs not in the Perseus/First1K catalogue
     if not installed_only:
         for wid, comm in commentaries.items():
             if wid in seen:
                 continue
-            hit = fetched.get(wid)
-            out.append(
-                LibraryItem(
-                    id=wid,
-                    title=f"{comm['author']} — {comm['title']}",
-                    category="commentary",
-                    kind="work",
-                    status="installed" if hit is not None else "available",
-                    bytes=int(hit["bytes"]) if hit is not None else None,
-                    size_hint="TEI XML",
-                    license="CC BY-SA 4.0 (Open Greek and Latin, First1KGreek)",
-                    description=f"Greek patristic commentary on {comm['book']} ({comm['kind']}).",
-                    aliases=(f"commentary:{comm['book']}",),
-                    tags=("commentary", "work", "bible"),
-                    work_id=wid,
-                    open_spec=wid,
-                    author=comm["author"],
-                    source="first1k",
+            wid_up = wid.upper()
+            if wid_up.startswith("PG"):
+                out.append(
+                    LibraryItem(
+                        id=wid,
+                        title=f"{comm['author']} — {comm['title']}",
+                        category="commentary",
+                        kind="work",
+                        status="installed" if pg_installed else "available",
+                        bytes=None,
+                        size_hint="in patrologia-graeca-corpus",
+                        license="CC BY 4.0 (Calfa-GREgORI Patrologia Graeca)",
+                        description=f"Greek patristic commentary on {comm['book']} (Patrologia Graeca, OCR).",
+                        aliases=(f"commentary:{comm['book']}",),
+                        tags=("commentary", "work", "bible", "patristics"),
+                        asset_name="patrologia-graeca-corpus",
+                        work_id=wid,
+                        open_spec=wid,
+                        author=comm["author"],
+                        source="collection:patrologia",
+                    )
                 )
+            elif _OGC_RE.match(wid):
+                out.append(
+                    LibraryItem(
+                        id=wid,
+                        title=f"{comm['author']} — {comm['title']}",
+                        category="commentary",
+                        kind="work",
+                        status="installed" if chrys_installed else "available",
+                        bytes=None,
+                        size_hint="in chrysostom-corpus",
+                        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus)",
+                        description=f"John Chrysostom Greek commentary/homilies on {comm['book']}.",
+                        aliases=(f"commentary:{comm['book']}",),
+                        tags=("commentary", "work", "bible", "patristics"),
+                        asset_name="chrysostom-corpus",
+                        work_id=wid,
+                        open_spec=wid,
+                        author=comm["author"],
+                        source="collection:chrysostom",
+                    )
+                )
+            else:
+                hit = fetched.get(wid)
+                out.append(
+                    LibraryItem(
+                        id=wid,
+                        title=f"{comm['author']} — {comm['title']}",
+                        category="commentary",
+                        kind="work",
+                        status="installed" if hit is not None else "available",
+                        bytes=int(hit["bytes"]) if hit is not None else None,
+                        size_hint="TEI XML",
+                        license="CC BY-SA 4.0 (Open Greek and Latin, First1KGreek)",
+                        description=f"Greek patristic commentary on {comm['book']} ({comm['kind']}).",
+                        aliases=(f"commentary:{comm['book']}",),
+                        tags=("commentary", "work", "bible", "patristics"),
+                        work_id=wid,
+                        open_spec=wid,
+                        author=comm["author"],
+                        source="first1k",
+                    )
+                )
+    return out
+
+
+_COLLECTION_CATEGORY: dict[str, str] = {
+    "chrysostom": "patristics",
+    "church-fathers-early": "patristics",
+    "church-fathers-late": "patristics",
+    "classical-greek": "classical",
+    "hellenistic-greek": "classical",
+    "imperial-greek": "classical",
+    "late-antique-greek": "classical",
+    "byzantine-lit": "byzantine",
+}
+
+
+def _collection_work_items(
+    *,
+    installed_only: bool = False,
+    exclude_ids: set[str] | None = None,
+    root: Path | None = None,
+) -> list[LibraryItem]:
+    """Build offline discovery items for all 3,844 categorized Greek collection works."""
+    from .data import _REMOTE, cache_dir, is_downloaded
+    from .scripts.greek._collections import collection_works
+
+    store_root = cache_dir() if root is None else root
+    installed_cols: dict[str, bool] = {}
+    for cid in _COLLECTION_CATEGORY:
+        spec = _REMOTE.get(f"{cid}-corpus")
+        installed_cols[cid] = bool(spec and is_downloaded(spec, store_root))
+
+    skip = exclude_ids or set()
+    out: list[LibraryItem] = []
+    for row in collection_works():
+        wid = row["work_id"]
+        if wid in skip:
+            continue
+        cid = row["collection"]
+        is_inst = installed_cols.get(cid, False)
+        if installed_only and not is_inst:
+            continue
+        col_cat = _COLLECTION_CATEGORY.get(cid, "classical")
+        author = row["author"]
+        title = row["title"]
+        display = f"{author} — {title}".strip(" —") or wid
+        tlg = row.get("tlg", "")
+        aliases = (tlg,) if tlg else ()
+        out.append(
+            LibraryItem(
+                id=wid,
+                title=display,
+                category="work",
+                kind="work",
+                status="installed" if is_inst else "available",
+                bytes=None,
+                size_hint=f"in {cid}-corpus",
+                license=row["license"],
+                description=(
+                    f"{row['tokens']:,} tokens · {row['period'] or cid} · "
+                    f"source={row['source']} ({row['correction']}); packaged in {cid}-corpus."
+                ),
+                aliases=aliases,
+                tags=("work", col_cat, cid),
+                asset_name=f"{cid}-corpus",
+                work_id=wid,
+                open_spec=wid,
+                author=author,
+                source=f"collection:{cid}",
             )
+        )
     return out
 
 
@@ -320,9 +442,13 @@ def list_items(
     if cat not in ("work", "commentary"):
         items.extend(_dataset_items(root=root))
     if need_all_works:
-        items.extend(_work_items(installed_only=False))
+        w_items = _work_items(installed_only=False, root=root)
+        items.extend(w_items)
+        if cat != "commentary":
+            seen_w = {it.id for it in w_items}
+            items.extend(_collection_work_items(installed_only=False, exclude_ids=seen_w, root=root))
     elif cat in (None, "bible"):
-        items.extend(_work_items(installed_only=True))
+        items.extend(_work_items(installed_only=True, root=root))
 
     if cat is not None:
         items = [it for it in items if it.category == cat or cat in it.tags]
@@ -404,20 +530,33 @@ def get_item(identifier: str, *, root: Path | None = None) -> LibraryItem | None
         return None
     needle = raw.lower()
 
-    # Fast path: bundled & datasets (~37 items, zero catalogue load)
+    # Fast path: bundled & datasets (~52 items, zero catalogue load)
     for it in _bundled_items() + _dataset_items(root=root):
         if it.id.lower() == needle or needle in (a.lower() for a in it.aliases):
             return it
 
-    # TLG work id or unique popular-work title
-    if _TLG_RE.match(raw):
-        for it in _work_items(installed_only=False):
+    # Open Greek Corpus work id (ogc...)
+    if _OGC_RE.match(raw):
+        for it in _work_items(installed_only=False, root=root):
+            if it.id.lower() == needle:
+                return it
+        for it in _collection_work_items(installed_only=False, root=root):
             if it.id.lower() == needle:
                 return it
         return None
 
+    # TLG work id or unique popular-work title
+    if _TLG_RE.match(raw):
+        for it in _work_items(installed_only=False, root=root):
+            if it.id.lower() == needle:
+                return it
+        for it in _collection_work_items(installed_only=False, root=root):
+            if needle in (a.lower() for a in it.aliases):
+                return it
+        return None
+
     # Check exact popular work title or unique catalogue work title
-    works = _work_items(installed_only=False)
+    works = _work_items(installed_only=False, root=root)
     for it in works:
         if any(a.lower() == needle for a in it.aliases):
             return it
@@ -611,7 +750,7 @@ def install(
         if progress is not None:
             progress(f"{prefix}downloading {item.id} ({item.size_hint})…")
 
-        if item.kind == "dataset" and item.asset_name is not None:
+        if (item.kind == "dataset" or item.source.startswith("collection:")) and item.asset_name is not None:
             try:
                 path = fetch(
                     item.asset_name,
@@ -702,7 +841,11 @@ def remove(
     from .scripts.greek.perseus import remove_fetched_works
 
     if remove_all:
-        items = [it for it in list_items(status="downloaded", include_works=True, root=root)]
+        items = [
+            it
+            for it in list_items(status="downloaded", include_works=True, root=root)
+            if not it.source.startswith("collection:")
+        ]
     elif targets is not None:
         items = resolve_targets(targets, root=root)
     else:
@@ -755,6 +898,18 @@ def remove(
                         bytes_reclaimed=int(res["bytes"]),
                     )
                 )
+            continue
+
+        if item.kind == "work" and item.source.startswith("collection:"):
+            results.append(
+                RemoveResult(
+                    id=item.id,
+                    title=item.title,
+                    kind=item.kind,
+                    status="failed",
+                    error=f"packaged inside {item.asset_name}; remove {item.asset_name} to reclaim space",
+                )
+            )
             continue
 
         if item.kind == "work" and item.work_id is not None:
@@ -839,6 +994,9 @@ def missing_for_bible(
         _need("nt-corpus")
     elif tab_l == "lxx":
         _need("lxx-corpus")
+    elif tab_l == "patristics":
+        _need("chrysostom-corpus")
+        _need("patrologia-graeca-corpus")
     else:  # interlinear / read
         if book and _looks_like_lxx_book(book):
             if not _is_bundled_lxx_passage(book, ref):
@@ -908,6 +1066,7 @@ def summary(*, root: Path | None = None) -> dict[str, Any]:
     """Return a unified overview of the local library across all categories and packs."""
     from .data import cache_dir
     from .greek.bible._catalogs import patristic_commentaries
+    from .scripts.greek._collections import collection_works
     from .scripts.greek.perseus import catalog, list_fetched_works
 
     store_root = cache_dir() if root is None else root
@@ -922,7 +1081,7 @@ def summary(*, root: Path | None = None) -> dict[str, Any]:
     fetched_literary = [w for w in fetched_works if w["id"] not in commentary_ids]
 
     categories: dict[str, dict[str, Any]] = {}
-    for cat in ("corpus", "bible", "lexicon", "model", "other"):
+    for cat in ("corpus", "bible", "patristics", "classical", "byzantine", "lexicon", "model", "other"):
         b_items = [it for it in bundled if it.category == cat]
         d_items = [it for it in datasets if it.category == cat]
         dl = [it for it in d_items if it.installed]
@@ -959,6 +1118,7 @@ def summary(*, root: Path | None = None) -> dict[str, Any]:
         "downloaded_count": total_downloaded,
         "installed_bytes": total_bytes,
         "installed_size": format_size(total_bytes),
+        "greek_collection_works": len(collection_works()),
         "categories": categories,
         "packs": [p.to_dict() for p in list_packs(root=store_root)],
     }

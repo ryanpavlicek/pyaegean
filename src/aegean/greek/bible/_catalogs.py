@@ -2,7 +2,7 @@
 
 Maps friendly biblical book names and scholarly abbreviations onto:
 
-- **Septuagint (LXX)**: all 55 Swete Septuagint books (``tlg0527.*``) already
+- **Septuagint (LXX)**: all 56 Septuagint books (``tlg0527.*``, incl. Ecclesiastes) already
   present in pyaegean's First1KGreek work catalogue, plus exact **LXX ↔ Masoretic
   (MT) Psalm numbering** conversion.
 - **Greek Patristic Commentaries**: all 30 Greek New Testament *Catenae*
@@ -74,26 +74,26 @@ class CommentaryWork:
         return d
 
 
-# All 55 Swete Septuagint works in First1KGreek (works_catalogue.json), in LXX order.
+# All 56 Septuagint books (55 Swete First1KGreek + Ecclesiastes from Greek Wikisource), in LXX order.
 _LXX_BOOKS: tuple[LxxBook, ...] = (
     # Pentateuch
-    LxxBook("Gen", "Genesis", "tlg0527.tlg001", "Pentateuch", ("genesis", "gen", "gn")),
-    LxxBook("Exod", "Exodus", "tlg0527.tlg002", "Pentateuch", ("exodus", "exod", "ex")),
+    LxxBook("Gen", "Genesis", "tlg0527.tlg001", "Pentateuch", ("genesis", "gen", "gn", "ge")),
+    LxxBook("Exod", "Exodus", "tlg0527.tlg002", "Pentateuch", ("exodus", "exod", "ex", "exo")),
     LxxBook("Lev", "Leviticus", "tlg0527.tlg003", "Pentateuch", ("leviticus", "lev", "lv")),
     LxxBook("Num", "Numbers", "tlg0527.tlg004", "Pentateuch", ("numbers", "num", "nm", "numeri")),
-    LxxBook("Deut", "Deuteronomy", "tlg0527.tlg005", "Pentateuch", ("deuteronomy", "deut", "dt")),
+    LxxBook("Deut", "Deuteronomy", "tlg0527.tlg005", "Pentateuch", ("deuteronomy", "deut", "dt", "deu")),
     # Historical Books
     LxxBook("Josh", "Joshua", "tlg0527.tlg006", "History", ("joshua", "josh", "josue", "jos")),
     LxxBook("Judg", "Judges", "tlg0527.tlg008", "History", ("judges", "judg", "judices", "jdg")),
-    LxxBook("Ruth", "Ruth", "tlg0527.tlg010", "History", ("ruth", "ru")),
-    LxxBook("1Kgdms", "1 Kingdoms (1 Samuel)", "tlg0527.tlg011", "History", ("1kingdoms", "1kgdms", "1samuel", "1sam", "1reg", "regnorum1")),
-    LxxBook("2Kgdms", "2 Kingdoms (2 Samuel)", "tlg0527.tlg012", "History", ("2kingdoms", "2kgdms", "2samuel", "2sam", "2reg", "regnorum2")),
-    LxxBook("3Kgdms", "3 Kingdoms (1 Kings)", "tlg0527.tlg013", "History", ("3kingdoms", "3kgdms", "1kings", "1kgs", "3reg", "regnorum3")),
-    LxxBook("4Kgdms", "4 Kingdoms (2 Kings)", "tlg0527.tlg014", "History", ("4kingdoms", "4kgdms", "2kings", "2kgs", "4reg", "regnorum4")),
-    LxxBook("1Chr", "1 Chronicles (1 Paralipomenon)", "tlg0527.tlg015", "History", ("1chronicles", "1chr", "1par", "1paralipomenon")),
-    LxxBook("2Chr", "2 Chronicles (2 Paralipomenon)", "tlg0527.tlg016", "History", ("2chronicles", "2chr", "2par", "2paralipomenon")),
+    LxxBook("Ruth", "Ruth", "tlg0527.tlg010", "History", ("ruth", "ru", "rut")),
+    LxxBook("1Kgdms", "1 Kingdoms (1 Samuel)", "tlg0527.tlg011", "History", ("1kingdoms", "1kgdms", "1samuel", "1sam", "1sa", "1reg", "regnorum1")),
+    LxxBook("2Kgdms", "2 Kingdoms (2 Samuel)", "tlg0527.tlg012", "History", ("2kingdoms", "2kgdms", "2samuel", "2sam", "2sa", "2reg", "regnorum2")),
+    LxxBook("3Kgdms", "3 Kingdoms (1 Kings)", "tlg0527.tlg013", "History", ("3kingdoms", "3kgdms", "1kings", "1kgs", "1ki", "3reg", "regnorum3")),
+    LxxBook("4Kgdms", "4 Kingdoms (2 Kings)", "tlg0527.tlg014", "History", ("4kingdoms", "4kgdms", "2kings", "2kgs", "2ki", "4reg", "regnorum4")),
+    LxxBook("1Chr", "1 Chronicles (1 Paralipomenon)", "tlg0527.tlg015", "History", ("1chronicles", "1chr", "1ch", "1par", "1paralipomenon")),
+    LxxBook("2Chr", "2 Chronicles (2 Paralipomenon)", "tlg0527.tlg016", "History", ("2chronicles", "2chr", "2ch", "2par", "2paralipomenon")),
     LxxBook("1Esdr", "1 Esdras", "tlg0527.tlg017", "History", ("1esdras", "1esdr", "esdras1")),
-    LxxBook("2Esdr", "2 Esdras (Ezra–Nehemiah)", "tlg0527.tlg018", "History", ("2esdras", "2esdr", "esdras2", "ezra", "nehemiah", "neh")),
+    LxxBook("2Esdr", "2 Esdras (Ezra–Nehemiah)", "tlg0527.tlg018", "History", ("2esdras", "2esdr", "esdras2", "ezra", "ezr", "nehemiah", "neh")),
     LxxBook("Esth", "Esther", "tlg0527.tlg019", "History", ("esther", "esth", "est")),
     LxxBook("Jdt", "Judith", "tlg0527.tlg020", "Deuterocanonical", ("judith", "jdt")),
     LxxBook("Tob", "Tobit", "tlg0527.tlg021", "Deuterocanonical", ("tobit", "tob", "tobias")),
@@ -102,20 +102,21 @@ _LXX_BOOKS: tuple[LxxBook, ...] = (
     LxxBook("3Macc", "3 Maccabees", "tlg0527.tlg025", "Deuterocanonical", ("3maccabees", "3macc", "3mac")),
     LxxBook("4Macc", "4 Maccabees", "tlg0527.tlg026", "Deuterocanonical", ("4maccabees", "4macc", "4mac")),
     # Poetic & Wisdom Books
-    LxxBook("Ps", "Psalms", "tlg0527.tlg027", "Wisdom", ("psalms", "psalm", "ps", "pss", "psalmi")),
+    LxxBook("Ps", "Psalms", "tlg0527.tlg027", "Wisdom", ("psalms", "psalm", "ps", "psa", "pss", "psalmi")),
     LxxBook("Odes", "Odes", "tlg0527.tlg028", "Wisdom", ("odes", "odae", "ode")),
-    LxxBook("Prov", "Proverbs", "tlg0527.tlg029", "Wisdom", ("proverbs", "prov", "pr", "proverbia")),
-    LxxBook("Song", "Song of Songs (Canticum)", "tlg0527.tlg031", "Wisdom", ("song", "songofsongs", "cant", "canticum", "canticles")),
+    LxxBook("Prov", "Proverbs", "tlg0527.tlg029", "Wisdom", ("proverbs", "prov", "pr", "pro", "proverbia")),
+    LxxBook("Eccl", "Ecclesiastes (Qoheleth)", "tlg0527.tlg030", "Wisdom", ("ecclesiastes", "eccl", "ecc", "qoh", "qoheleth", "kohelet")),
+    LxxBook("Song", "Song of Songs (Canticum)", "tlg0527.tlg031", "Wisdom", ("song", "songofsongs", "songofsolomon", "sos", "cant", "canticum", "canticles")),
     LxxBook("Job", "Job", "tlg0527.tlg032", "Wisdom", ("job", "jb")),
     LxxBook("Wis", "Wisdom of Solomon", "tlg0527.tlg033", "Deuterocanonical", ("wisdom", "wisdomofsolomon", "wis", "sapientia")),
     LxxBook("Sir", "Sirach (Ecclesiasticus)", "tlg0527.tlg034", "Deuterocanonical", ("sirach", "sir", "ecclesiasticus", "ecclus", "bensira")),
     LxxBook("PssSol", "Psalms of Solomon", "tlg0527.tlg035", "Deuterocanonical", ("psalmsofsolomon", "psssol", "pssol")),
     # Minor Prophets (The Twelve, in LXX order)
     LxxBook("Hos", "Hosea", "tlg0527.tlg036", "Minor Prophets", ("hosea", "hos", "osee")),
-    LxxBook("Amos", "Amos", "tlg0527.tlg037", "Minor Prophets", ("amos", "am")),
+    LxxBook("Amos", "Amos", "tlg0527.tlg037", "Minor Prophets", ("amos", "am", "amo")),
     LxxBook("Mic", "Micah", "tlg0527.tlg038", "Minor Prophets", ("micah", "mic", "michaeas")),
-    LxxBook("Joel", "Joel", "tlg0527.tlg039", "Minor Prophets", ("joel", "jl")),
-    LxxBook("Obad", "Obadiah", "tlg0527.tlg040", "Minor Prophets", ("obadiah", "obad", "ob", "abdias")),
+    LxxBook("Joel", "Joel", "tlg0527.tlg039", "Minor Prophets", ("joel", "jl", "joe")),
+    LxxBook("Obad", "Obadiah", "tlg0527.tlg040", "Minor Prophets", ("obadiah", "obad", "ob", "oba", "abdias")),
     LxxBook("Jonah", "Jonah", "tlg0527.tlg041", "Minor Prophets", ("jonah", "jon", "jonas")),
     LxxBook("Nah", "Nahum", "tlg0527.tlg042", "Minor Prophets", ("nahum", "nah", "na")),
     LxxBook("Hab", "Habakkuk", "tlg0527.tlg043", "Minor Prophets", ("habakkuk", "hab", "habacuc")),
@@ -129,7 +130,7 @@ _LXX_BOOKS: tuple[LxxBook, ...] = (
     LxxBook("Bar", "Baruch", "tlg0527.tlg050", "Deuterocanonical", ("baruch", "bar")),
     LxxBook("Lam", "Lamentations", "tlg0527.tlg051", "Major Prophets", ("lamentations", "lam", "threni")),
     LxxBook("EpJer", "Epistle of Jeremiah", "tlg0527.tlg052", "Deuterocanonical", ("epistleofjeremiah", "epjer", "letterofjeremiah")),
-    LxxBook("Ezek", "Ezekiel", "tlg0527.tlg053", "Major Prophets", ("ezekiel", "ezek", "ez", "ezechiel")),
+    LxxBook("Ezek", "Ezekiel", "tlg0527.tlg053", "Major Prophets", ("ezekiel", "ezek", "ez", "eze", "ezechiel")),
     LxxBook("Sus-OG", "Susanna (Old Greek)", "tlg0527.tlg054", "Deuterocanonical", ("susanna-og", "sus-og", "susannaog")),
     LxxBook("Sus-Th", "Susanna (Theodotion)", "tlg0527.tlg055", "Deuterocanonical", ("susanna", "sus", "susanna-th", "sus-th")),
     LxxBook("Dan-OG", "Daniel (Old Greek)", "tlg0527.tlg056", "Major Prophets", ("daniel-og", "dan-og", "danielog")),
@@ -146,7 +147,7 @@ for _b in _LXX_BOOKS:
 
 
 def lxx_books(*, section: str | None = None) -> list[dict[str, Any]]:
-    """List the 55 Septuagint (LXX) books available in the First1KGreek catalogue.
+    """List all 56 Septuagint (LXX) books (55 Swete + Ecclesiastes).
 
     Optionally filter by ``section`` (``'Pentateuch'``, ``'History'``,
     ``'Wisdom'``, ``'Minor Prophets'``, ``'Major Prophets'``, or
@@ -173,11 +174,11 @@ def resolve_lxx_book(book: str) -> LxxBook:
         hint = canonical.name if canonical else close[0]
         raise ValueError(
             f"unknown LXX book {book!r} — did you mean {hint!r}? "
-            "(aegean.greek.bible.lxx_books() lists all 55)"
+            "(aegean.greek.bible.lxx_books() lists all 56)"
         )
     raise ValueError(
-        f"unknown LXX book {book!r}; try 'Gen', 'Exod', 'Ps', 'Isa', 'Wis', 'Sir', '1Macc', 'Dan' "
-        "(aegean.greek.bible.lxx_books() lists all 55)"
+        f"unknown LXX book {book!r}; try 'Gen', 'Exod', 'Ps', 'Eccl', 'Isa', 'Wis', 'Sir', '1Macc', 'Dan' "
+        "(aegean.greek.bible.lxx_books() lists all 56)"
     )
 
 
@@ -434,9 +435,36 @@ _COMMENTARIES: tuple[CommentaryWork, ...] = (
         books=("Acts", "Jas", "1John", "2John", "3John", "Jude", "Hos", "Hab", "Jonah", "Nah", "Mic"),
         source="patrologia-graeca-corpus",
     ),
+    # John Chrysostom Biblical Homilies & Commentaries (chrysostom-corpus, PD / CC BY-SA 4.0)
+    CommentaryWork("ogc002040", "Gen", "John Chrysostom", "In Genesim (Homiliae 1–67)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002041", "Gen", "John Chrysostom", "In Genesim (Sermones 1–9)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc001958", "Job", "John Chrysostom", "Commentarius in Job", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002009", "Ps", "John Chrysostom", "Expositiones in Psalmos", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002012", "Prov", "John Chrysostom", "Fragmenta in Proverbia (in Catenis)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002057", "Isa", "John Chrysostom", "In Isaiam", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002011", "Jer", "John Chrysostom", "Fragmenta in Jeremiam (in Catenis)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002082", "Dan-Th", "John Chrysostom", "Interpretatio in Danielem Prophetam [Sp.]", "chrysostom", books=("Dan-OG", "Dan-Th"), source="chrysostom-corpus"),
+    CommentaryWork("ogc002060", "Matt", "John Chrysostom", "In Matthaeum (Homiliae 1–90)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002058", "John", "John Chrysostom", "In Joannem (Homiliae 1–88)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002017", "Acts", "John Chrysostom", "In Acta Apostolorum (Homiliae 1–55)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002065", "Acts", "John Chrysostom", "In Principium Actorum (Homiliae 1–4)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002031", "Rom", "John Chrysostom", "In Epistulam ad Romanos (Homiliae 1–32)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002033", "1Cor", "John Chrysostom", "In Epistulam I ad Corinthios (Homiliae 1–44)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002036", "2Cor", "John Chrysostom", "In Epistulam II ad Corinthios (Homiliae 1–30)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002027", "Gal", "John Chrysostom", "In Epistulam ad Galatas Commentarius", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002026", "Eph", "John Chrysostom", "In Epistulam ad Ephesios (Homiliae 1–24)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002030", "Phil", "John Chrysostom", "In Epistulam ad Philippenses (Homiliae 1–15)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002025", "Col", "John Chrysostom", "In Epistulam ad Colossenses (Homiliae 1–12)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002034", "1Thess", "John Chrysostom", "In Epistulam I ad Thessalonicenses (Homiliae 1–11)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002037", "2Thess", "John Chrysostom", "In Epistulam II ad Thessalonicenses (Homiliae 1–5)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002035", "1Tim", "John Chrysostom", "In Epistulam I ad Timotheum (Homiliae 1–18)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002038", "2Tim", "John Chrysostom", "In Epistulam II ad Timotheum (Homiliae 1–10)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002032", "Titus", "John Chrysostom", "In Epistulam ad Titum (Homiliae 1–6)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002029", "Phlm", "John Chrysostom", "In Epistulam ad Philemonem (Homiliae 1–3)", "chrysostom", source="chrysostom-corpus"),
+    CommentaryWork("ogc002028", "Heb", "John Chrysostom", "In Epistulam ad Hebraeos (Homiliae 1–34)", "chrysostom", source="chrysostom-corpus"),
 )
 
-_COMMENTARY_KINDS = ("catena", "origen", "patristic", "patrologia")
+_COMMENTARY_KINDS = ("catena", "origen", "patristic", "patrologia", "chrysostom")
 
 
 def _normalize_commentary_book(book: str) -> str:
@@ -461,16 +489,19 @@ def patristic_commentaries(
     *,
     kind: str | None = None,
 ) -> list[dict[str, Any]]:
-    """List Greek patristic biblical commentaries across First1KGreek and Patrologia Graeca.
+    """List Greek patristic biblical commentaries across First1KGreek, Patrologia Graeca,
+    and the John Chrysostom corpus.
 
-    Covers 86 commentary volumes across 10 Church Fathers and traditions: all 30 Greek
+    Covers 112 commentary volumes across 11 Church Fathers and traditions: all 30 Greek
     NT *Catenae* volumes (``tlg4102.*``), 41 Origen biblical commentaries, homilies,
     scholia, selecta, and adnotationes (``tlg2042.*``), 6 additional First1KGreek Fathers
     (Cyril of Alexandria, Methodius, Eusebius, Clement of Alexandria, *Vitae Prophetarum*),
-    and 9 *Patrologia Graeca* commentary volumes (Cyril of Alexandria, Procopius of Gaza,
-    Photius, Oecumenius, and Theophylact of Bulgaria). Filter by ``book`` (e.g. ``'John'``,
-    ``'Rom'``, ``'Gen'``, ``'Hos'``) and/or ``kind`` (``'catena'``, ``'origen'``,
-    ``'patristic'``, or ``'patrologia'``). Pure metadata — works offline."""
+    9 *Patrologia Graeca* commentary volumes (Cyril of Alexandria, Procopius of Gaza,
+    Photius, Oecumenius, and Theophylact of Bulgaria), and 26 John Chrysostom homily and
+    commentary series (``ogc*``, Genesis through Hebrews). Filter by ``book`` (e.g.
+    ``'John'``, ``'Matt'``, ``'Rom'``, ``'Gen'``, ``'Hos'``) and/or ``kind`` (``'catena'``,
+    ``'origen'``, ``'patristic'``, ``'patrologia'``, or ``'chrysostom'``). Pure metadata —
+    works offline."""
     rows = _COMMENTARIES
     if book is not None:
         canon = _normalize_commentary_book(book)

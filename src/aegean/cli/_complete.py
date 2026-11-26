@@ -7,7 +7,7 @@ Shared by three surfaces so they can never drift:
 3. Native shell tab-completion (``aegean --install-completion`` via Typer/Click callbacks).
 
 All value providers are strictly offline and read only bundled/static metadata (registered
-corpus IDs, 39 remote dataset names, 27 NT books, 55 Swete LXX books, 9 NT editions, 13
+corpus IDs, 47 remote dataset names, 27 NT books, 56 LXX books, 9 NT editions, 13
 early manuscript witnesses, 10 Greek meters, 6 dictionaries, etc.) so keystroke prediction
 stays instantaneous and never triggers a network fetch.
 """
@@ -246,8 +246,16 @@ def _option_value_choices(
             return [
                 ("catena", "Greek NT Catenae (30 volumes)"),
                 ("origen", "Origen biblical commentaries (41 volumes)"),
+                ("chrysostom", "John Chrysostom commentaries & homilies (26 series)"),
                 ("patristic", "First1KGreek Fathers (Cyril, Methodius, Eusebius, Clement)"),
                 ("patrologia", "Patrologia Graeca commentaries (Cyril, Theophylact, Oecumenius, Photius, Procopius)"),
+            ], False
+        if opt == "--corpus":
+            return [
+                ("auto", "NT by default; LXX automatically for LXX books"),
+                ("nt", "Greek New Testament only"),
+                ("lxx", "Greek Septuagint (LXX, 56 books) only"),
+                ("both", "Search both New Testament and Septuagint"),
             ], False
         if opt == "--from":
             return [
@@ -338,10 +346,13 @@ def _option_value_choices(
 
 def _library_category_choices() -> list[tuple[str, str]]:
     return [
-        ("corpus", "21 Aegean & Greek corpora"),
-        ("bible", "8 Biblical, Second Temple & Koine bundles"),
-        ("work", "~1,778 Perseus / First1KGreek literary works"),
-        ("commentary", "86 Greek patristic commentaries (10 Fathers/traditions)"),
+        ("corpus", "30 Aegean & Greek corpora"),
+        ("bible", "6 Biblical & Koine Greek bundles"),
+        ("patristics", "5 Greek Church Fathers & Patristic collections"),
+        ("classical", "5 Archaic, Classical, Hellenistic, Imperial & Late Antique collections"),
+        ("byzantine", "2 Byzantine Greek collections (up to 1453 + vernacular)"),
+        ("work", "3,844 collection works + 1,778 Perseus / First1KGreek works"),
+        ("commentary", "112 Greek patristic commentaries (11 Fathers/traditions)"),
         ("lexicon", "5 hosted Greek dictionaries"),
         ("model", "4 NLP & neural models"),
         ("other", "benchmarks, images, and web app"),
@@ -446,7 +457,7 @@ def _positional_choices(
         if cmd_path == ("bible", "books"):
             return [
                 ("nt", "27 Greek New Testament books"),
-                ("lxx", "55 Swete Septuagint books"),
+                ("lxx", "56 Septuagint books (Swete + Ecclesiastes)"),
                 ("editions", "9 Greek NT editions"),
                 ("witnesses", "13 early 2nd–5th c. CE manuscript witnesses"),
                 ("all", "summary of all biblical catalogs"),
@@ -806,8 +817,8 @@ def shell_complete_bible_collection(incomplete: str) -> list[tuple[str, str]]:
     return _click_complete(
         [
             ("nt", "27 Greek New Testament books"),
-            ("lxx", "55 Swete Septuagint books"),
-            ("editions", "5 Greek NT editions"),
+            ("lxx", "56 Septuagint books (Swete + Ecclesiastes)"),
+            ("editions", "9 Greek NT editions"),
             ("witnesses", "13 early manuscript witnesses"),
         ],
         incomplete,

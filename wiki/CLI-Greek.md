@@ -337,9 +337,12 @@ aegean greek tag "…" --treebank --tagger                  # AGDT lookup + perc
 
 `work` downloads a CC BY-SA TEI text from Perseus `canonical-greekLit` or
 `First1KGreek` (commit-pinned, cached once) and parses it into a corpus. `works`
-lists 25 curated work ids; `catalog` searches the full 1,778-work offline
-metadata index. For NT and LXX book lists, use `aegean bible books`. See
-[Greek Works and Books](Greek-Works-and-Books) for the full ID reference.
+lists 25 curated work ids; `catalog` searches the 1,778-work Perseus /
+First1KGreek offline metadata index; `collections` browses all 8 categorized
+Ancient, Classical, Patristic, and Byzantine Greek collections (3,844 works
+across 1,414 authors, 64.35M tokens). For NT and LXX book lists, use
+`aegean bible books`. See [Greek Works and Books](Greek-Works-and-Books) for the
+full ID reference.
 
 ```bash
 aegean greek works
@@ -350,9 +353,15 @@ aegean greek works
 # tlg0059.tlg030  Plato         Republic
 # …  (curated subset — full canon at https://scaife.perseus.org)
 
+# browse the 8 categorized open Greek collections (3,844 works, offline index):
+aegean greek collections                         # list all 8 collections with counts and licenses
+aegean greek collections chrysostom              # list John Chrysostom works (155 works)
+aegean greek collections classical-greek --author Plato --limit 20
+
 # fetches on first use:
 aegean greek work tlg0012.tlg001                 # Iliad: 24 books, ~127k tokens
 aegean greek work tlg0012.tlg001 --ref 1.1-1.50  # book 1, lines 1–50
+aegean greek work ogc002060                      # John Chrysostom, In Matthaeum (chrysostom-corpus)
 aegean greek work tlg0012.tlg001 -o iliad.json   # save as a corpus file
 
 # manage cached works:

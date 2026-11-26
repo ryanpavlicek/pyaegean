@@ -146,12 +146,12 @@ def test_every_doc_echo_matches_the_registry() -> None:
 # ── (c) the registry is internally consistent and complete ──────────────────────────
 def test_registry_covers_every_loadable_corpus_and_bundled_inventory() -> None:
     reg = _registry()
+    from aegean.core.catalog import CORPORA
     from aegean.core.corpus import _LOADERS
-    from aegean.tui.data import CORPUS_IDS
 
-    # the browsable corpora plus ddbdp and patrologia (excluded from the TUI list only)
-    # are the 21 loadable ones; every one must carry a fact row, and there must be no phantom rows.
-    expected = set(CORPUS_IDS) | {"ddbdp", "patrologia"}
+    # Every registered corpus in the declarative catalog (30 total: 20 TUI-browsable
+    # plus 10 heavy multi-million-token archives) must carry a fact row, with no phantoms.
+    expected = {c.id for c in CORPORA}
     assert set(reg["corpora"]) == expected, (
         "corpus-facts.json corpora do not match the loadable set; a new corpus needs a fact row"
     )

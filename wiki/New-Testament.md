@@ -3,8 +3,9 @@
 `aegean.greek.bible` (CLI: `aegean bible`, TUI shortcut: `b`) provides pyaegean's
 tooling for Biblical and Koine Greek: nine New Testament editions with word-level
 variant comparison, thirteen 2nd–5th century CE manuscript witnesses, an Extended
-Strong's lexicon with root trees, the 55-book Swete Septuagint with LXX/Masoretic
-Psalm conversion, and 86 indexed Greek patristic commentaries.
+Strong's lexicon with root trees, the 56-book Septuagint (including Ecclesiastes)
+with LXX/Masoretic Psalm conversion and automatic offline interlinear, and 112
+indexed Greek patristic commentaries (including 26 John Chrysostom series).
 
 The default New Testament edition, **Nestle 1904**, ships as a pre-annotated
 `Corpus` in which every token carries gold annotations from the edition: a
@@ -151,7 +152,7 @@ From the shell:
 
 ```bash
 aegean bible books nt          # 27 NT books and accepted aliases
-aegean bible books lxx         # 55 Swete Septuagint books
+aegean bible books lxx         # 56 Septuagint books (Swete + Ecclesiastes)
 aegean bible books nt --json   # JSON output
 ```
 
@@ -305,34 +306,46 @@ small:
      Fathers, with recursive root chains and Hebrew equivalents.
    - Falls back offline to the bundled Dodson lexicon (CC0) without downloading.
 
-4. **Septuagint (LXX) corpus, concordance, and Psalm numbering**
-   (`bible.lxx_books()`, `bible.load_lxx()`, `bible.search_lxx()`,
-   `bible.convert_psalm()`, `bible.psalm_mt_to_lxx()`, `bible.psalm_lxx_to_mt()`;
-   asset `lxx-corpus`, ~1.7 MB gzip; Swete 1887–1894 Public Domain base text via
-   First1KGreek CC BY-SA 4.0):
-   - Verse-indexed reading and Greek concordance search across all **55 Swete
-     Septuagint books** (29,248 verses, including LXX-plus sub-verses and
-     prologues).
+4. **Septuagint (LXX) corpus, interlinear, concordance, and Psalm numbering**
+   (`bible.lxx_books()`, `bible.load_lxx()`, `bible.enrich_lxx_interlinear()`,
+   `bible.search_lxx()`, `bible.convert_psalm()`, `bible.psalm_mt_to_lxx()`,
+   `bible.psalm_lxx_to_mt()`, plus `aegean.load("lxx")` and `aegean.open("Gen 1:1-5")`;
+   asset `lxx-corpus-v2`, ~1.7 MB gzip; Swete 1887–1894 + Greek Wikisource Ecclesiastes,
+   CC BY-SA 4.0):
+   - Verse-indexed reading and Greek concordance search across all **56 Septuagint
+     books** (29,470 verses, 592,436 tokens, including **Ecclesiastes**
+     `tlg0527.tlg030`, LXX-plus sub-verses, and prologues).
+   - Accepts inline references (`bible.load_lxx("Gen 1:1-5")`,
+     `bible.load_lxx("MT Ps 23")`), Masoretic Psalm numbering (`numbering="mt"`),
+     and automatic offline interlinear annotation (`interlinear=True`, tagged
+     `annotation_source="auto-lexicon"` via the offline lemmatizer, Strong's/Dodson
+     lexicon, and morphology).
    - Ships with an offline Swete sample (`Gen 1:1–5` and LXX `Ps 22:1–6` [MT Psalm
      23]), plus bidirectional LXX ↔ Masoretic Psalm conversion
      (`bible.psalm_mt_to_lxx(23) == (22,)`).
 
-5. **Greek patristic commentaries, word studies, and concordance search**
+5. **Greek patristic commentaries, word studies, and cross-Testament concordance**
    (`bible.patristic_commentaries()`, `bible.load_commentary()`,
    `bible.commentary_excerpt()`, `bible.word_study()`, `bible.search_bible()`):
-   - **86 indexed commentary works** across 10 Church Fathers and traditions: **30
+   - **112 indexed commentary works** across 11 Church Fathers and traditions: **30
      Greek NT *Catenae* volumes** (`tlg4102.*`), **41 Origen** commentaries and
-     homilies (`tlg2042.*`), **6 First1KGreek Fathers** (Cyril of Alexandria,
-     Methodius, Eusebius, Clement of Alexandria, *Vitae Prophetarum* / Hesychius),
-     and **9 *Patrologia Graeca* commentary volumes** (`PG071`, `PG073` Cyril on
-     John; `PG087_1` Procopius of Gaza; `PG101` Photius; `PG118` Oecumenius;
-     `PG123`–`PG126` Theophylact of Bulgaria).
+     homilies (`tlg2042.*`), **26 John Chrysostom** biblical homily and commentary
+     series (`ogc*`, Genesis through Hebrews, `kind="chrysostom"`), **6 First1KGreek
+     Fathers** (Cyril of Alexandria, Methodius, Eusebius, Clement of Alexandria,
+     *Vitae Prophetarum* / Hesychius), and **9 *Patrologia Graeca* commentary
+     volumes** (`PG071`, `PG073` Cyril on John; `PG087_1` Procopius of Gaza;
+     `PG101` Photius; `PG118` Oecumenius; `PG123`–`PG126` Theophylact of Bulgaria).
    - `bible.word_study()` combines lexicon lookup, root tree, NT occurrence counts,
-     and morphological distribution; `bible.search_bible()` searches NT text by
-     word, lemma, morphology, or Strong's number.
+     morphological distribution, and Septuagint occurrences (`lxx_total`,
+     `lxx_by_book`, `lxx_occurrences`); `bible.search_bible(..., corpus="auto"|"nt"|"lxx"|"both")`
+     searches either or both Testaments by lemma, text, morphology, gloss, or Strong's.
 
-6. **Related Early Christian and Second Temple corpora**
-   (`aegean library install patristic`):
+6. **Related Church Fathers, Early Christian, and Second Temple corpora**
+   (`aegean library install church-fathers` and `aegean library install patristic`):
+   - `aegean.load("chrysostom")` (155 works, 3.74M tokens), `aegean.load("church-fathers-early")`
+     (432 works, 58 authors), and `aegean.load("church-fathers-late")` (280 works, 38 authors)
+     provide 867 open-licensed patristic works across John Chrysostom, the Cappadocians,
+     Athanasius, Cyril, Maximus the Confessor, John of Damascus, Photius, and Palamas.
    - `aegean.load("apostolic-fathers")`: 15 Apostolic Fathers works (64,944 tokens:
      1–2 Clement, Ignatius, Polycarp, Didache, Barnabas, Hermas, Diognetus).
    - `aegean.load("pseudepigrapha")`: 44 Greek OT Pseudepigrapha works (171,306

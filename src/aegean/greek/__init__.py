@@ -59,6 +59,13 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from . import bible
     from .bible._editions import load_nt
+    from ..scripts.greek._collections import (
+        collection_works,
+        collections,
+        load_collection,
+        load_collection_work,
+        resolve_collection_work,
+    )
     from .annotation_profiles import (
         AmbiguityDisclosure,
         AnalysisProfile,
@@ -383,6 +390,18 @@ def __getattr__(name: str) -> Any:
 
         globals()["load_nt"] = fn
         return fn
+    if name in {
+        "collections",
+        "collection_works",
+        "load_collection",
+        "load_collection_work",
+        "resolve_collection_work",
+    }:
+        from ..scripts.greek import _collections as _col_mod
+
+        val = getattr(_col_mod, name)
+        globals()[name] = val
+        return val
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
@@ -406,6 +425,11 @@ __all__ = [
     "remove_fetched_works",
     "WorkFetchResult",
     "GitHubRateLimitError",
+    "collections",
+    "collection_works",
+    "load_collection",
+    "load_collection_work",
+    "resolve_collection_work",
     "load_nt",
     "nt_books",
     "use_dodson",

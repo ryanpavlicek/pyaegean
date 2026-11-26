@@ -25,10 +25,14 @@ def test_library_lazy_export_and_summary(monkeypatch: pytest.MonkeyPatch, tmp_pa
     assert snap["downloaded_count"] == 0
     assert snap["installed_bytes"] == 0
     assert snap["categories"]["corpus"]["bundled"] == 5
-    assert snap["categories"]["bible"]["total"] >= 7
-    assert snap["categories"]["commentary"]["total"] >= 77
+    assert snap["categories"]["bible"]["total"] == 6
+    assert snap["categories"]["patristics"]["total"] == 5
+    assert snap["categories"]["classical"]["total"] == 5
+    assert snap["categories"]["byzantine"]["total"] == 2
+    assert snap["categories"]["commentary"]["total"] == 112
     assert snap["categories"]["work"]["total"] > 1500
-    assert len(snap["packs"]) == 7
+    assert snap["greek_collection_works"] == 3844
+    assert len(snap["packs"]) == 10
 
 
 def test_list_items_categories_and_statuses(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -199,14 +203,17 @@ def test_cli_library_and_bible_status(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert r_status.exit_code == 0, r_status.output
     data = json.loads(r_status.output)
     assert data["bundled_count"] == 5
-    assert len(data["packs"]) == 7
+    assert len(data["packs"]) == 10
 
     r_packs = runner.invoke(app, ["library", "packs", "--json"])
     assert r_packs.exit_code == 0, r_packs.output
     packs = json.loads(r_packs.output)
     assert {p["id"] for p in packs} == {
         "biblical",
+        "church-fathers",
         "patristic",
+        "ancient-greek",
+        "byzantine-pack",
         "aegean",
         "epigraphy",
         "literary",
@@ -355,7 +362,7 @@ def test_tui_library_screen_mounts_and_filters(
             assert isinstance(app.screen, LibraryScreen)
 
             packs_tbl = app.screen.query_one("#lib-packs-table", DataTable)
-            assert packs_tbl.row_count == 7
+            assert packs_tbl.row_count == 10
 
             installed_tbl = app.screen.query_one("#lib-installed-table", DataTable)
             assert installed_tbl.row_count == 5  # the 5 bundled corpora

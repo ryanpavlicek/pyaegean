@@ -10,9 +10,9 @@ a terminal, then return here.
 > flag on one page. This page walks through each command group with worked
 > examples.
 
-> **Available in v0.72.0.** All commands, flags, research bundle workflows,
-> multi-script workbench controls, and TUI review options on this page match the
-> current release.
+> **Available in v0.73.0.** All commands, flags, Greek library collections,
+> Septuagint parity options, research bundle workflows, multi-script workbench
+> controls, and TUI review options on this page match the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; core library stays zero-dependency
@@ -99,15 +99,15 @@ single quotes work too; on PowerShell, prefer double quotes.
 ## Command map
 
 ```bash
-aegean --version          # pyaegean 0.72.0
+aegean --version          # pyaegean 0.73.0
 ```
 
 | Group | Commands |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `find` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean library …`** | `status` `packs` `list` `search` `info` `install` `remove` (all corpora, Biblical bundles, ~1,778 Greek works, 86 patristic commentaries, lexica, models, and 7 named packs) |
-| **`aegean greek …`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse`, plus `pipeline`, `explain`, `stream`, `annotation-profiles list`/`show`, `interop export`/`import`/`report`, `gloss`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`works`/`catalog`, and `eval` |
-| **`aegean bible …`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` (9 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's + roots, 55 LXX books, 86 patristic commentaries) |
+| **`aegean library …`** | `status` `packs` `list` `search` `info` `install` `remove` (all 30 corpora, 47 datasets, 3,844 Greek collection works, ~1,778 Perseus/First1KGreek works, 112 patristic commentaries, lexica, models, and 10 named packs) |
+| **`aegean greek …`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse`, plus `pipeline`, `explain`, `stream`, `annotation-profiles list`/`show`, `interop export`/`import`/`report`, `gloss`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `collections`/`work`/`works`/`catalog`, and `eval` |
+| **`aegean bible …`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` (9 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's + roots, 56 LXX books with Masoretic numbering & auto-interlinear, 112 patristic commentaries) |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`aegean bundle …`** | `create` `inspect` `verify` `extract` `hydrate` (deterministic, SHA-256-verified, NC-safe research bundles `.zip`) |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
@@ -465,13 +465,13 @@ aegean tui --review a.csv --review b.csv --corpus nt
 
 Full-screen Textual interface with nine screens:
 
-- `h` Home (19 browsable corpora)
+- `h` Home (20 browsable corpora, including `lxx`)
 - `c` Corpus browser (inline downloads, reader with word cursor and line analysis)
 - `g` Greek workbench (Beta Code toggle, 10 meters, live pipeline/lexicon/IPA)
-- `b` Biblical Greek (9 NT editions, 13 manuscripts, Strong's word study, LXX & Patristics)
-- `l` Library manager (7 packs, installed resources, filterable catalogue)
+- `b` Biblical Greek (6 tabs: Interlinear, Editions, Manuscripts, Word Study, Septuagint, Patristics)
+- `l` Library manager (10 packs, 47 datasets, 3,844 collection works, installed resources, filterable catalogue)
 - `r` Annotation review (`ReviewScreen`: single CSVs, multi-reviewer conflict adjudication with `a`/`e`/`1`/`2`/`3`/`d`/`x`/`n`/`p`/`f`/`s`, or live corpus risk queues)
-- `w` Works library (~1,778 Greek works)
+- `w` Works library (~1,778 Perseus/First1KGreek works)
 - `d` Data store (`aegean doctor` + dataset fetch/remove)
 - `:` Command console (CLI parity with live completion)
 

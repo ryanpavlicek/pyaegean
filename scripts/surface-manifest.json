@@ -2341,7 +2341,7 @@
       "id": "biblical-catalog",
       "since": "0.64.0",
       "python_api": "aegean.greek.bible.patristic_commentaries",
-      "summary": "Offline scholarly catalogues of 9 Greek NT editions, 13 2nd–5th c. CE manuscript witnesses, 55 Swete Septuagint books, and 86 Greek patristic commentary volumes across 10 Church Fathers and traditions.",
+      "summary": "Offline scholarly catalogues of 9 Greek NT editions, 13 2nd–5th c. CE manuscript witnesses, 56 Septuagint books (Swete + Ecclesiastes), and 112 Greek patristic commentary volumes across 11 Church Fathers and traditions (including 26 John Chrysostom series).",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -2369,7 +2369,7 @@
       "id": "biblical-septuagint",
       "since": "0.64.0",
       "python_api": "aegean.greek.bible.load_lxx",
-      "summary": "Swete Septuagint (LXX) passage reader and Greek concordance search across all 55 books (fetched lxx-corpus asset + bundled offline Genesis 1 and Psalm 22 LXX sample).",
+      "summary": "Septuagint (LXX) passage reader and Greek concordance across all 56 books (including Ecclesiastes), with inline references, Masoretic Psalm numbering (numbering='mt'), automatic offline interlinear (interlinear=True), and unified search_bible()/word_study() parity (fetched lxx-corpus-v2 asset + bundled offline Genesis 1 and Psalm 22 LXX sample).",
       "surfaces": {
         "demo": {
           "status": "covered",
@@ -2396,7 +2396,7 @@
       "id": "unified-fulltext-search",
       "since": "0.70.0",
       "python_api": "aegean.search.search_text",
-      "summary": "Diacritic-insensitive SQLite FTS5 sidecar full-text search across registered corpora, Septuagint, NT editions, Patrologia Graeca volumes, and Greek works.",
+      "summary": "Diacritic-insensitive SQLite FTS5 sidecar full-text search across registered corpora, Septuagint, NT editions, Patrologia Graeca volumes, the 8 categorized Ancient/Patristic/Byzantine Greek collections (3,844 works), and Perseus/First1KGreek works.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -2422,7 +2422,7 @@
       "id": "library-status",
       "since": "0.67.0",
       "python_api": "aegean.library.summary",
-      "summary": "Read-only summary of installed vs available corpora, 7 themed packs, cached works, and local disk footprint.",
+      "summary": "Read-only summary of installed vs available corpora, 10 themed packs, 3,844 Greek collection works, cached works, and local disk footprint.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -2448,7 +2448,7 @@
       "id": "library-search",
       "since": "0.67.0",
       "python_api": "aegean.library.search",
-      "summary": "Unified offline discovery across all 39 hosted datasets, 5 bundled corpora, 1,778 Greek works, 86 patristic commentaries, 5 lexica, and neural models.",
+      "summary": "Unified offline discovery across all 47 hosted datasets, 5 bundled corpora, 3,844 categorized Greek collection works, 1,778 Perseus/First1KGreek works, 112 patristic commentaries, 5 lexica, and neural models.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -2526,12 +2526,12 @@
       "id": "biblical-commentary",
       "since": "0.65.0",
       "python_api": "aegean.greek.bible.commentary_excerpt",
-      "summary": "Reading and Greek search across 86 indexed Greek patristic biblical commentaries (Catenae, Origen, First1KGreek Fathers, and Patrologia Graeca PG071–PG126).",
+      "summary": "Reading and Greek search across 112 indexed Greek patristic biblical commentaries (Catenae, Origen, John Chrysostom ogc* homilies, First1KGreek Fathers, and Patrologia Graeca PG071–PG126).",
       "surfaces": {
         "demo": {
           "status": "excluded",
           "reason": "needs-fetch",
-          "note": "Fetches First1KGreek TEI commentary works or the 23.5 MB Patrologia Graeca archive on demand."
+          "note": "Fetches First1KGreek TEI commentary works, John Chrysostom homilies, or the 23.5 MB Patrologia Graeca archive on demand."
         },
         "mcp": {
           "status": "covered",
@@ -2540,7 +2540,7 @@
         "notebooks": {
           "status": "excluded",
           "reason": "needs-fetch",
-          "note": "Offline CI notebooks run without fetching remote First1KGreek or Patrologia Graeca commentary volumes."
+          "note": "Offline CI notebooks run without fetching remote patristic commentary archives."
         },
         "tui": {
           "status": "covered",
@@ -2573,6 +2573,33 @@
           "status": "excluded",
           "reason": "not-applicable",
           "note": "Reachable via the TUI command console (aegean bundle ...); no dedicated archive screen."
+        }
+      }
+    },
+    {
+      "id": "greek-library-collections",
+      "since": "0.73.0",
+      "python_api": "aegean.greek.collections",
+      "summary": "8 categorized open-licensed Greek text collections (3,844 works across 1,414 authors, 64.35M tokens, 8th c. BCE–1453 CE): John Chrysostom (155 works), Early & Nicene Fathers (432), Post-Nicene & Eastern Fathers (280), Archaic & Classical (684), Hellenistic & DFHG (740), Imperial (1,078), Late Antique (290), and Byzantine Literature (185), with offline bundled index, work-level loading (aegean.open('ogc...')), and FTS5 search.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "Multi-megabyte collection bundles are hosted as opt-in GitHub Release assets and fetched on demand."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Offline discovery is surfaced through library_search and full-text search through search_text, tracked by their own capability entries."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "Collection bundles are fetched on demand; offline CI notebooks run without downloading multi-megabyte archives."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "LibraryScreen & BiblicalScreen (Patristics tab)"
         }
       }
     }

@@ -1220,6 +1220,12 @@ from ._bible_data import (  # noqa: E402
     bible_lxx_and_catenae_text as bible_lxx_and_catenae_text,
 )
 from ._bible_data import (  # noqa: E402
+    bible_lxx_text as bible_lxx_text,
+)
+from ._bible_data import (  # noqa: E402
+    bible_patristics_text as bible_patristics_text,
+)
+from ._bible_data import (  # noqa: E402
     bible_read_text as bible_read_text,
 )
 from ._bible_data import (  # noqa: E402

@@ -95,8 +95,9 @@ def biblical_catalog(
     section: str | None = None,
 ) -> dict[str, Any]:
     """Offline catalogue of Biblical & Koine Greek resources: 'editions' (9 Greek NT editions),
-    'witnesses' (13 2nd–5th c. CE manuscripts), 'lxx' (55 Septuagint books), or
-    'commentaries' (86 Greek patristic volumes across 10 Church Fathers / traditions)."""
+    'witnesses' (13 2nd–5th c. CE manuscripts), 'lxx' (56 Septuagint books including
+    Ecclesiastes), or 'commentaries' (112 Greek patristic volumes across 11 Church Fathers
+    / traditions including 26 John Chrysostom commentary series)."""
     from ..greek import bible as bib
 
     k = kind.strip().lower()
@@ -124,10 +125,16 @@ def biblical_lxx(
     book: str = "Gen",
     ref: str | None = "1.1-5",
     query: str | None = None,
+    numbering: str = "lxx",
+    interlinear: bool = False,
     limit: int = 15,
 ) -> dict[str, Any]:
-    """Read or search the Greek Septuagint (Swete LXX) offline (uses cached 55-book
-    lxx-corpus when present, or the bundled Genesis 1 + Psalm 22 LXX sample)."""
+    """Read or search the Greek Septuagint (Swete LXX + Ecclesiastes, 56 books) offline.
+
+    Uses cached 56-book ``lxx-corpus`` when present, or the bundled Genesis 1 +
+    Psalm 22 LXX sample. Supports Masoretic Psalm numbering (``numbering='mt'``)
+    and automatic offline interlinear enrichment (``interlinear=True``).
+    """
     from ..data import DataNotAvailableError
     from ..greek import bible as bib
 
@@ -141,19 +148,36 @@ def biblical_lxx(
                 "count": len(hits),
                 "matches": [h.to_dict() for h in hits],
             }
-        corp = bib.load_lxx(book, ref=ref, offline=True)
+        corp = bib.load_lxx(
+            book,
+            ref=ref,
+            numbering=numbering,
+            interlinear=interlinear,
+            offline=True,
+        )
         verses: list[dict[str, Any]] = []
         for doc in corp:
-            by_ref: dict[str, list[str]] = {}
+            by_ref: dict[str, list[Any]] = {}
             for tok in doc.tokens:
                 rkey = str(tok.annotations.get("ref", f"{doc.id}.{tok.line_no or 0}"))
-                by_ref.setdefault(rkey, []).append(tok.text)
-            for rkey, words in by_ref.items():
-                verses.append({"ref": rkey, "text": " ".join(words)})
+                by_ref.setdefault(rkey, []).append(tok)
+            for rkey, toks in by_ref.items():
+                row: dict[str, Any] = {
+                    "ref": rkey,
+                    "text": " ".join(t.text for t in toks),
+                }
+                if toks and toks[0].annotations.get("mt_ref"):
+                    row["mt_ref"] = toks[0].annotations["mt_ref"]
+                if interlinear:
+                    row["tokens"] = [
+                        {"text": t.text, **t.annotations} for t in toks
+                    ]
+                verses.append(row)
         return {
             "mode": "read",
             "book": book,
             "ref": ref,
+            "numbering": numbering,
             "full_corpus_cached": bib.lxx_loaded(),
             "verses": verses,
         }
@@ -206,13 +230,14 @@ def biblical_witnesses(
 def biblical_commentary(
     book: str = "John",
     work_id: str | None = None,
+    kind: str | None = None,
     query: str | None = None,
     limit: int = 5,
 ) -> dict[str, Any]:
-    """Read or search Greek patristic biblical commentaries across 86 indexed works
-    (NT Catenae, Origen, Cyril of Alexandria, Methodius, Eusebius, Clement of Alexandria,
-    Procopius of Gaza, Photius, Oecumenius, and Theophylact of Bulgaria). Fetches the
-    requested First1KGreek work or Patrologia Graeca bundle on first use when needed."""
+    """Read or search Greek patristic biblical commentaries across 112 indexed works
+    (NT Catenae, Origen, 26 John Chrysostom commentary/homily series, Cyril of Alexandria,
+    Methodius, Eusebius, Clement of Alexandria, Procopius of Gaza, Photius, Oecumenius,
+    and Theophylact of Bulgaria). Fetches the requested work or collection on first use."""
     from ..data import DataNotAvailableError
     from ..greek import bible as bib
 
@@ -220,6 +245,7 @@ def biblical_commentary(
         rows = bib.commentary_excerpt(
             book,
             work_id=work_id,
+            kind=kind,
             query=query,
             limit=limit,
         )
@@ -228,7 +254,7 @@ def biblical_commentary(
             "work_id": work_id,
             "query": query,
             "count": len(rows),
-            "excerpts": rows,
+            "excerpts": [r.to_dict() for r in rows],
         }
     except (ValueError, DataNotAvailableError) as exc:
         return {"error": str(exc)}

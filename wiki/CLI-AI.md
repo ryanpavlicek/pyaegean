@@ -182,7 +182,7 @@ aegean info linera
 # aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (…), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
 
 aegean data fetch grc-jiont
-# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 39)
+# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 47)
 ```
 
 Use the suggested name or inspect valid names with `aegean data list` or

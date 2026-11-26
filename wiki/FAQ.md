@@ -81,7 +81,7 @@ Additional options:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a release** for reproducibility: `pip install pyaegean==0.72.0`.
+- **Pin a release** for reproducibility: `pip install pyaegean==0.73.0`.
 - **Cached datasets persist across upgrades.** Downloaded assets live in your
   cache directory (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored))
@@ -121,19 +121,24 @@ corpora by ID:
   `cyprominoan` (sample), plus bundled NT (`John 1`, `Phlm 1`) and Swete LXX
   (`Gen 1:1–5`, `Ps 22:1–6`) samples.
 - **On-demand hosted corpora (SHA-256-pinned):** Aegean (`damos`, `sigla`),
-  seven Greek epigraphic corpora and documentary papyri (`isicily`, `iip`,
-  `iospe`, `igcyr`, `aphrodisias`, `crete`, `edh`, `ddbdp`), Biblical &
-  Patristic (`nt`, `apostolic-fathers`, `pseudepigrapha`, `patrologia`, plus
-  `aegean.greek.bible` for 9 NT editions, 13 manuscripts, 55 LXX books, and 86
-  commentaries), and literary/scholia (`byzantine`, `homer-scholia`).
+  **8 categorized Ancient, Classical, Patristic, and Byzantine Greek
+  collections** (`chrysostom`, `church-fathers-early`, `church-fathers-late`,
+  `classical-greek`, `hellenistic-greek`, `imperial-greek`,
+  `late-antique-greek`, `byzantine-lit`: 3,844 works across 1,414 authors,
+  64.35M tokens), seven Greek epigraphic corpora and documentary papyri
+  (`isicily`, `iip`, `iospe`, `igcyr`, `aphrodisias`, `crete`, `edh`, `ddbdp`),
+  Biblical & Patristic (`nt`, `lxx`, `apostolic-fathers`, `pseudepigrapha`,
+  `patrologia`, plus `aegean.greek.bible` for 9 NT editions, 13 manuscripts, 56
+  LXX books including Ecclesiastes, and 112 commentaries), and literary/scholia
+  (`byzantine`, `homer-scholia`).
 
 Inspect local status and install named packs with `aegean library` (the primary
-resource manager) or inspect the 39 raw remote pins with `aegean data`:
+resource manager) or inspect the 47 raw remote pins with `aegean data`:
 
 ```bash
 aegean library status     # installed vs available assets and disk usage
 aegean library list       # status of bundled corpora and hosted resources
-aegean library packs      # 7 packs: biblical, patristic, aegean, epigraphy, literary, lexica, neural
+aegean library packs      # 10 packs: biblical, church-fathers, patristic, ancient-greek, byzantine-pack, …
 ```
 
 ```python
@@ -144,7 +149,7 @@ aegean.registered_scripts()
 # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
-See [Data & Provenance](Data-and-Provenance) for all 39 hosted datasets with
+See [Data & Provenance](Data-and-Provenance) for all 47 hosted datasets with
 sizes and licenses.
 
 ### How do I find which Greek works and books I can load?
@@ -493,7 +498,7 @@ aegean library status       # installed packs, corpora, works, models, disk usag
 aegean library install PACK # download a themed pack (or individual target)
 aegean library remove NAME  # delete cached datasets, works, or packs
 aegean data store           # cache path and per-entry sizes
-aegean data list            # all 39 remote datasets with download state and sizes
+aegean data list            # all 47 remote datasets with download state and sizes
 aegean data remove NAME     # delete one raw dataset (--all clears all datasets)
 aegean data versions        # reproducibility manifest (version + sha256 per dataset)
 ```

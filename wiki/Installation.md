@@ -129,7 +129,7 @@ installation:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.72.0
+# pyaegean 0.73.0
 ```
 
 ## Verify
@@ -138,7 +138,7 @@ Run this offline check against the bundled data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.72.0
+print(aegean.__version__)                 # 0.73.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; full works
@@ -155,7 +155,7 @@ With `[cli]` installed:
 
 ```bash
 aegean --version
-# pyaegean 0.72.0
+# pyaegean 0.73.0
 
 aegean info lineara
 ```
@@ -179,19 +179,22 @@ machine-readable output. See
 **Bundled inside the wheel (offline immediately):** the Linear A corpus and sign
 inventories, the Cypriot IG XV 1 corpus (178 inscriptions + 2 samples), the
 Linear B / Cypro-Minoan / Greek seed samples, bundled NT and Swete LXX samples,
-the 1,778-work Greek discovery catalogue (`greek.catalog()`), the Dodson Koine
+the 1,778-work Perseus/First1KGreek catalogue (`greek.catalog()`), the 3,844-work
+Greek library collections index (`greek.collections()`), the Dodson Koine
 lexicon, and all phonology, metre, and analysis code.
 
 **Fetched on demand into a user cache** (never bundled in the Apache-2.0 wheel;
-SHA-256-verified on download and cached for offline reuse): 39 hosted assets
-covering Biblical & Koine Greek (9 NT editions, 13 early manuscripts, 55 LXX
-books, Extended Strong's), Patristic & Second Temple texts (*Patrologia Graeca*,
-Open Apostolic Fathers, Old Testament Pseudepigrapha), seven Greek epigraphic
-corpora and DDbDP documentary papyri (I.Sicily, IIP, IOSPE, IGCyr/GVCyr,
-Aphrodisias, Crete, EDH, DDbDP), Byzantine vernacular Greek, Homer Multitext
-*Iliad* & *scholia*, DAMOS Linear B, SigLA Linear A, five prebuilt lexica,
-AGDT/neural models, facsimile imagery, and the local multi-script browser
-workbench (`workbench-app-v2.1.0`).
+SHA-256-verified on download and cached for offline reuse): 47 hosted assets
+covering **8 categorized Ancient, Classical, Patristic, and Byzantine Greek
+collections** (3,844 works across 1,414 authors, 64.35M tokens, including the
+complete open Greek corpus of John Chrysostom), Biblical & Koine Greek (9 NT
+editions, 13 early manuscripts, 56 LXX books including Ecclesiastes, Extended
+Strong's), Patristic & Second Temple texts (*Patrologia Graeca*, Open Apostolic
+Fathers, Old Testament Pseudepigrapha), seven Greek epigraphic corpora and DDbDP
+documentary papyri (I.Sicily, IIP, IOSPE, IGCyr/GVCyr, Aphrodisias, Crete, EDH,
+DDbDP), Byzantine vernacular Greek, Homer Multitext *Iliad* & *scholia*, DAMOS
+Linear B, SigLA Linear A, five prebuilt lexica, AGDT/neural models, facsimile
+imagery, and the local multi-script browser workbench (`workbench-app-v2.1.0`).
 
 Use `aegean library` (or the TUI Library Manager via `l`) as the primary
 resource manager, with `aegean data` available for low-level dataset cache
@@ -199,10 +202,10 @@ operations:
 
 ```bash
 aegean library status                 # installed vs available assets and disk usage
-aegean library packs                  # 7 named packs: biblical, patristic, aegean, epigraphy, literary, lexica, neural
+aegean library packs                  # 10 named packs: biblical, church-fathers, patristic, ancient-greek, byzantine-pack, …
 aegean library install biblical       # download a pack in one command
 aegean library remove <name>          # remove cached datasets, works, or packs
-aegean data list                      # live table of all 39 remote datasets
+aegean data list                      # live table of all 47 remote datasets
 ```
 
 To package corpora (or retrieval pointers for non-commercial datasets),

@@ -554,19 +554,162 @@ _REMOTE: dict[str, DataSpec] = {
         name="lxx-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "lxx-corpus-v1/lxx-corpus.json.gz"
+            "lxx-corpus-v2/lxx-corpus.json.gz"
         ),
-        sha256="23d9398e70c56bd0fa660cfb2591e09bb29dfcaf5274f271649c0c39902470ee",
+        sha256="8efd72c79511c64338051a8a0ba576526134f543b8d6f800a36e3ebd90847931",
         license=(
-            "CC BY-SA 4.0 (Open Greek and Latin / First1KGreek TEI digitization; "
-            "Henry Barclay Swete 1887–1894 Public Domain Greek base text); fetched, never bundled"
+            "CC BY-SA 4.0 (Open Greek and Latin / First1KGreek TEI digitization & "
+            "Greek Wikisource Ecclesiastes via Open Greek Corpus; Henry Barclay Swete "
+            "1887–1894 Public Domain Greek base text); fetched, never bundled"
         ),
         note=(
-            "Swete Septuagint (LXX) corpus (~1.65 MB gzip): all 55 Greek Septuagint books "
-            "(29,248 verses, NFC-normalized). Used by aegean.greek.bible.load_lxx() / search_lxx()."
+            "Swete Septuagint (LXX) corpus v2 (~1.7 MB gzip): all 56 Greek Septuagint books "
+            "including Ecclesiastes (29,470 verses, NFC-normalized). Load via aegean.load('lxx') "
+            "or aegean.greek.bible.load_lxx()."
         ),
         extract=False,
         on_disk=("lxx-corpus.json.gz",),
+    ),
+    # ── Categorized Ancient, Classical, Patristic & Byzantine Greek Library (3,844 works) ──
+    # Built reproducibly by scripts/build_greek_collections.py from commit-pinned
+    # open-greek/open-greek-corpus (corpus-2026-11-26, commit ea39ee6024e1a68b4dfd285f06c5863523fcb686).
+    # Verified Public Domain, CC BY 4.0, and CC BY-SA 4.0 texts only (zero NonCommercial
+    # or proprietary texts); per-work license, edition, source, and OCR status travel inside
+    # each work's _info record. Fetched on demand, never bundled.
+    "chrysostom-corpus": DataSpec(
+        name="chrysostom-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "chrysostom-corpus-v1/chrysostom-corpus.json.gz"
+        ),
+        sha256="9491b3c6311c491838d131251ce24b509d4dc3fda7361d8f0f0300efcd5d7069",
+        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus: PTA/BBAW, First1KGreek, Calfa PG, PD OCR); fetched, never bundled",
+        note=(
+            "John Chrysostom (& Ps.-Chrysostom) complete open Greek corpus (~12.3 MB gzip): "
+            "155 works, homilies, sermons, letters & commentaries (3.74M tokens). "
+            "Load via aegean.load('chrysostom') or aegean.open('ogc002060')."
+        ),
+        extract=False,
+        on_disk=("chrysostom-corpus.json.gz",),
+    ),
+    "church-fathers-early-corpus": DataSpec(
+        name="church-fathers-early-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "church-fathers-early-corpus-v1/church-fathers-early-corpus.json.gz"
+        ),
+        sha256="45ed12a88599bf8850a128359408afc6d34e51c6783951cc038177402681b34b",
+        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus: PTA/BBAW, First1KGreek, Calfa PG, PD OCR); fetched, never bundled",
+        note=(
+            "Early & Nicene Church Fathers Greek corpus (~21.0 MB gzip): 432 works by 58 authors "
+            "(2nd–4th c. CE: Athanasius, Basil, Gregory Nazianzen, Gregory of Nyssa, Eusebius, "
+            "Origen, Clement of Alexandria, Justin, Irenaeus; 6.22M tokens). Load via aegean.load('church-fathers-early')."
+        ),
+        extract=False,
+        on_disk=("church-fathers-early-corpus.json.gz",),
+    ),
+    "church-fathers-late-corpus": DataSpec(
+        name="church-fathers-late-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "church-fathers-late-corpus-v1/church-fathers-late-corpus.json.gz"
+        ),
+        sha256="bcb5f416dc43d7c51af80134baab6f6bd9dafd52eaff01f0134285221466a58d",
+        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus: PTA/BBAW, First1KGreek, Calfa PG, PD OCR); fetched, never bundled",
+        note=(
+            "Post-Nicene, Eastern Fathers, Saints & Councils Greek corpus (~26.7 MB gzip): 280 works "
+            "by 38 authors (5th–15th c. CE: Cyril of Alexandria, Theodoret, John of Damascus, Maximus "
+            "the Confessor, Pseudo-Dionysius, Romanos, Photius, Symeon, Gregory Palamas; 7.96M tokens). "
+            "Load via aegean.load('church-fathers-late')."
+        ),
+        extract=False,
+        on_disk=("church-fathers-late-corpus.json.gz",),
+    ),
+    "classical-greek-corpus": DataSpec(
+        name="classical-greek-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "classical-greek-corpus-v1/classical-greek-corpus.json.gz"
+        ),
+        sha256="e6c08989e83d72219e66f7546ffdf2e6fca2cf02e17e04d7ccf25b644aa367ea",
+        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus: Perseus, First1KGreek, DFHG, GLAUx, PD OCR); fetched, never bundled",
+        note=(
+            "Archaic & Classical Greek literature (~17.3 MB gzip): 684 works by 246 authors "
+            "(8th–4th c. BCE: Homer, Hesiod, Pindar, Aeschylus, Sophocles, Euripides, Aristophanes, "
+            "Herodotus, Thucydides, Xenophon, Plato, Aristotle, Hippocrates, Attic Orators; 5.09M tokens). "
+            "Load via aegean.load('classical-greek')."
+        ),
+        extract=False,
+        on_disk=("classical-greek-corpus.json.gz",),
+    ),
+    "hellenistic-greek-corpus": DataSpec(
+        name="hellenistic-greek-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "hellenistic-greek-corpus-v1/hellenistic-greek-corpus.json.gz"
+        ),
+        sha256="c121d49875b03d58d74f9b147ccffea05ffab37274472362db6d8de737d332b3",
+        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus: Perseus, First1KGreek, DFHG Leipzig, PD OCR); fetched, never bundled",
+        note=(
+            "Hellenistic, Jewish-Greek & Fragmentary Historians corpus (~16.3 MB gzip): 740 works "
+            "by 587 authors (3rd–1st c. BCE: Polybius, Diodorus Siculus, Strabo, Dionysius of "
+            "Halicarnassus, Philo of Alexandria, Euclid, Archimedes, Apollonius, Callimachus, "
+            "Theocritus, Menander, DFHG historians; 4.67M tokens). Load via aegean.load('hellenistic-greek')."
+        ),
+        extract=False,
+        on_disk=("hellenistic-greek-corpus.json.gz",),
+    ),
+    "imperial-greek-corpus": DataSpec(
+        name="imperial-greek-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "imperial-greek-corpus-v1/imperial-greek-corpus.json.gz"
+        ),
+        sha256="70323cc3a7aede40b5e0cd521c29173d178afd894a1cc2c6fc6a3bebc13fced9",
+        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus: Perseus, First1KGreek, Galenus Verbatim, PD OCR); fetched, never bundled",
+        note=(
+            "Imperial Greek literature, philosophy & medicine (~50.2 MB gzip): 1,078 works by 373 "
+            "authors (1st–3rd c. CE: Plutarch, Galen, Lucian, Josephus, Epictetus, Marcus Aurelius, "
+            "Cassius Dio, Athenaeus, Pausanias, Ptolemy, Sextus Empiricus, Plotinus, Porphyry, "
+            "Diogenes Laertius, Appian, Arrian; 14.66M tokens). Load via aegean.load('imperial-greek')."
+        ),
+        extract=False,
+        on_disk=("imperial-greek-corpus.json.gz",),
+    ),
+    "late-antique-greek-corpus": DataSpec(
+        name="late-antique-greek-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "late-antique-greek-corpus-v1/late-antique-greek-corpus.json.gz"
+        ),
+        sha256="b999bf318770c43688eb99bde0441d793c20118cbce6485a5fb3bfc3cc28d61e",
+        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus: First1KGreek, Perseus, SAWS, PD OCR); fetched, never bundled",
+        note=(
+            "Late Antique Greek philosophy, rhetoric & scholia (~38.9 MB gzip): 290 works by 82 "
+            "authors (4th–6th c. CE: Proclus, Simplicius, John Philoponus, Libanius, Julian, "
+            "Themistius, Iamblichus, Nonnus, Quintus Smyrnaeus, Stobaeus, classical scholiasts; "
+            "11.33M tokens). Load via aegean.load('late-antique-greek')."
+        ),
+        extract=False,
+        on_disk=("late-antique-greek-corpus.json.gz",),
+    ),
+    "byzantine-lit-corpus": DataSpec(
+        name="byzantine-lit-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "byzantine-lit-corpus-v1/byzantine-lit-corpus.json.gz"
+        ),
+        sha256="a061a5167c0e617e9c076258e4f775009ac584dd4d34dbffd790da3255f31ef3",
+        license="CC BY-SA 4.0 / CC BY 4.0 / Public Domain (Open Greek Corpus: First1KGreek, Calfa PG, Wikisource, PD OCR); fetched, never bundled",
+        note=(
+            "Byzantine history, literature & lexicography (~38.3 MB gzip): 185 works by 94 authors "
+            "(6th–15th c. CE up to 1453: Procopius, Anna Comnena, Michael Psellus, Eustathius of "
+            "Thessalonica, Photius Bibliotheca, Suda, Hesychius, John Malalas, Theophanes, "
+            "Constantine VII, Choniates, Pachymeres, Gregoras, Sphrantzes; 10.68M tokens). "
+            "Load via aegean.load('byzantine-lit')."
+        ),
+        extract=False,
+        on_disk=("byzantine-lit-corpus.json.gz",),
     ),
     # Calfa-GREgORI Patrologia Graeca (CGPG, LREC 2026, CC BY 4.0): 33 digitized Migne PG
     # volumes (~6.79M Greek words, automated OCR of 19th-century prints), including 9 major
@@ -1076,6 +1219,17 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
                 "nt-editions-v1/nt-editions.json.gz"
             ),
             sha256="c538c2f5561da2e2a51d8c173e5db0b56b5d06cb75e6bd6f786709c0168a810d",
+            superseded="v2",
+        ),
+    ],
+    "lxx-corpus": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "lxx-corpus-v1/lxx-corpus.json.gz"
+            ),
+            sha256="23d9398e70c56bd0fa660cfb2591e09bb29dfcaf5274f271649c0c39902470ee",
             superseded="v2",
         ),
     ],

@@ -82,11 +82,11 @@ Greek.
 
 | Tool | Arguments | Purpose |
 | --- | --- | --- |
-| `list_corpora` | (none) | List all 21 registered corpora loadable by name (5 bundled offline; 16 hosted on demand). |
+| `list_corpora` | (none) | List all 30 registered corpora loadable by name (5 bundled offline; 25 hosted on demand, including `lxx` and 8 categorized Ancient/Patristic/Byzantine Greek collections). |
 | `corpus_info` | `corpus` | Corpus summary: script, document count, source, license, and citation. |
 | `show_document` | `corpus`, `doc_id` | One document's metadata and text line by line (`doc_id` matching is case- and space-forgiving: `ht13`, `py ta 641`). |
 | `search_signs` | `corpus`, `pattern`, `limit=50`, `offset=0` | Words matching a wildcard sign pattern such as `KU-*-RO`, with frequencies and pagination (`total`, `has_more`, `next_offset`). |
-| `search_text` | `query`, `target="nt"`, `book=None`, `edition=None`, `limit=20`, `exact=False` | Diacritic-insensitive SQLite FTS5 full-text search across any cached corpus, `lxx`, `nt-editions`, *Patrologia Graeca* volume (`PG073`), or CTS work ID (names/IDs only, never filesystem paths; offline-only). |
+| `search_text` | `query`, `target="nt"`, `book=None`, `edition=None`, `limit=20`, `exact=False` | Diacritic-insensitive SQLite FTS5 full-text search across any cached corpus, `lxx`, `nt-editions`, the 8 Greek library collections (`chrysostom`, `ogc002060`, …), *Patrologia Graeca* volume (`PG073`), or CTS work ID (names/IDs only, never filesystem paths; offline-only). |
 | `balance_accounts` | `corpus`, `doc_id=None`, `exact=False`, `tolerance=0.10` | Accounting reconciliation with optional rational equality and intact-account eligibility tolerance. |
 | `query_corpus` | `corpus`, `where`, `output_kind="inscriptions"`, `limit=50`, `offset=0`, `view=None`, `count_unit="document"`, `statuses=None` | Compound query engine with explicit word view, counting population, pagination metadata, and citation. |
 | `cite_corpus` | `corpus`, `style="plain"`, `site`, `period`, `scribe`, `support` | Cite a corpus or filtered subset as plain text, BibTeX, or APA. |
@@ -98,8 +98,8 @@ Greek.
 
 | Tool | Arguments | Purpose |
 | --- | --- | --- |
-| `library_status` | (none) | Read-only summary of all 5 bundled corpora, 39 hosted datasets, 7 themed packs (`biblical`, `patristic`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`), cached works, and disk footprint. |
-| `library_search` | `query`, `category=None`, `installed_only=False`, `limit=25` | Offline read-only search across all corpora, Biblical bundles, 1,778 Greek literary works, 86 patristic commentaries, lexica, and neural models. |
+| `library_status` | (none) | Read-only summary of all 5 bundled corpora, 47 hosted datasets, 10 themed packs (`biblical`, `church-fathers`, `patristic`, `ancient-greek`, `byzantine-pack`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`), 3,844 Greek collection works, cached works, and disk footprint. |
+| `library_search` | `query`, `category=None`, `installed_only=False`, `limit=25` | Offline read-only search across all corpora, Biblical bundles, 3,844 categorized Greek collection works, 1,778 Perseus/First1KGreek works, 112 patristic commentaries, lexica, and neural models. |
 
 `query_corpus` accepts a list of `where` rows. Each row is
 `{"field": ..., "value": ...}` with optional `"connector"` (`and`/`or`, default
@@ -134,14 +134,14 @@ metadata. See [Analysis](Analysis) for the full query engine specification.
 | Tool | Arguments | Purpose |
 | --- | --- | --- |
 | `biblical_strongs` | `query`, `roots=False`, `search=False`, `limit=15` | Look up or search Strong's & Extended Strong's Greek Lexicon entries (offline Dodson fallback or cached 11,142-entry `strongs-greek`, with optional recursive root tree). |
-| `biblical_word_study` | `query`, `book=None`, `limit=15` | Koine Greek word study (Strong's entry, roots, NT distribution, Robinson morphology, and verse concordance over cached `nt-corpus` or bundled sample). |
+| `biblical_word_study` | `query`, `book=None`, `limit=15` | Koine Greek word study (Strong's entry, roots, NT + LXX distribution, Robinson morphology, and verse concordance over cached corpora or bundled samples). |
 | `biblical_psalm` | `psalm`, `system="mt"` | Convert Psalm numbers between Masoretic (`mt`, 1–150) and Septuagint (`lxx`, 1–151). |
 | `biblical_nomina_sacra` | `text` | Expand early Greek NT manuscript *nomina sacra* contractions (`θς` → `Θεός`, `ις` → `Ἰησοῦς`, `χς` → `Χριστός`, `πνα` → `Πνεῦμα`) with expansion notes. |
-| `biblical_catalog` | `kind="editions"`, `book=None`, `section=None` | Offline catalogues of `editions` (9 Greek NT editions), `witnesses` (13 2nd–5th c. CE manuscripts), `lxx` (55 Septuagint books), and `commentaries` (86 Greek patristic volumes across 10 Church Fathers/traditions). |
-| `biblical_lxx` | `book="Gen"`, `ref="1.1-5"`, `query=None`, `limit=15` | Read or search the Swete Greek Septuagint offline (uses cached 55-book `lxx-corpus` when present, or the bundled Genesis 1 + LXX Psalm 22 sample). |
+| `biblical_catalog` | `kind="editions"`, `book=None`, `section=None` | Offline catalogues of `editions` (9 Greek NT editions), `witnesses` (13 2nd–5th c. CE manuscripts), `lxx` (56 Septuagint books, Swete + Ecclesiastes), and `commentaries` (112 Greek patristic volumes across 11 Church Fathers/traditions, including 26 John Chrysostom series). |
+| `biblical_lxx` | `book="Gen"`, `ref="1.1-5"`, `query=None`, `numbering="lxx"`, `interlinear=False`, `limit=15` | Read or search the Greek Septuagint offline across all 56 books (`lxx-corpus-v2` when cached, or bundled Genesis 1 + LXX Psalm 22 sample), with optional Masoretic Psalm numbering (`numbering="mt"`) and automatic offline interlinear (`interlinear=True`). |
 | `biblical_compare_editions` | `book`, `ref="1.18"`, `editions=None` | Collate up to 9 Greek NT editions (`nestle1904`, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`) with word-level textual diffs (uses cached `nt-editions`). |
 | `biblical_witnesses` | `book`, `ref="1.18"`, `sigla=None`, `hand="original"` | Compare extant 2nd–5th c. CE Greek NT manuscript witnesses (`01`, `02`, `03`, `04`, `05`, `032`, `P45`–`P75`) with *nomina sacra* expansions and scribal corrections (uses cached `nt-witnesses`). |
-| `biblical_commentary` | `book="John"`, `work_id=None`, `query=None`, `limit=5` | Read or search Greek patristic biblical commentaries across 86 indexed works (*Catenae*, Origen, First1KGreek Fathers, and *Patrologia Graeca* `PG071`–`PG126`). |
+| `biblical_commentary` | `book="John"`, `work_id=None`, `kind=None`, `query=None`, `limit=5` | Read or search Greek patristic biblical commentaries across 112 indexed works (*Catenae*, Origen, 26 John Chrysostom `ogc*` series, First1KGreek Fathers, and *Patrologia Graeca* `PG071`–`PG126`). |
 
 `greek_pipeline` and `balance_accounts` return the shared row mappings from
 `aegean._view` used by `aegean greek pipeline` and `aegean balance`.

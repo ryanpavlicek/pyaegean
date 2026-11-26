@@ -14,20 +14,22 @@ Back to [CLI Overview](CLI) · [CLI Cheatsheet](CLI-Cheatsheet) · [CLI: Greek N
 ## Library manager (`aegean library …`)
 
 `aegean library` manages all local and downloadable resources in one command
-group: 5 bundled corpora, 39 hosted datasets across Aegean scripts, Greek
-epigraphy, Biblical, Patristic, and literary corpora, ~1,778 Perseus and
-First1KGreek works, 86 Greek patristic commentaries, hosted lexica, and neural
-models.
+group: 5 bundled corpora, 47 hosted datasets across Aegean scripts, Greek
+epigraphy, Biblical, Patristic, Classical, Hellenistic, Imperial, Late Antique,
+and Byzantine corpora, 3,844 categorized Greek collection works, ~1,778 Perseus
+and First1KGreek works, 112 Greek patristic commentaries, hosted lexica, and
+neural models.
 
 ```bash
 aegean library                              # status overview: installed counts, disk usage, packs
-aegean library packs                        # list all 7 packs
+aegean library packs                        # list all 10 packs
 aegean library list --installed             # everything currently cached on disk
-aegean library list bible                   # filter by category (corpus, bible, work, commentary, lexicon, model, other)
-aegean library search Plato                 # search across corpora, works, commentaries, lexica, models
-aegean library info nt-editions             # metadata, license, aliases, status, install commands
+aegean library list patristics              # filter by category (corpus, bible, patristics, classical, byzantine, work, commentary, lexicon, model, other)
+aegean library search Chrysostom            # search across corpora, 3,844 collection works, Perseus works, commentaries, lexica, models
+aegean library info chrysostom-corpus       # metadata, license, aliases, status, install commands
 aegean library install biblical             # download all 5 Biblical & Koine Greek bundles (~27 MB)
-aegean library install damos Iliad          # install by alias, title, TLG ID, or author:<name>
+aegean library install church-fathers       # John Chrysostom (155) + Early/Late Fathers (712) + Apostolic Fathers (15)
+aegean library install damos Iliad          # install by alias, title, TLG/OGC ID, or author:<name>
 aegean library install author:Homer         # download every catalogued work by Homer
 aegean library remove damos                 # delete cached files and report reclaimed space
 aegean library remove biblical              # remove all datasets in a pack (bundled corpora stay intact)
@@ -36,10 +38,13 @@ aegean library remove biblical              # remove all datasets in a pack (bun
 | Pack | Aliases | Contents | Size |
 |---|---|---|---|
 | `biblical` | `bible`, `koine`, `nt-all` | `nt-corpus`, `nt-editions`, `nt-witnesses`, `strongs-greek`, `lxx-corpus` | ~27 MB |
-| `patristic` | `fathers`, `church-fathers`, `second-temple` | `apostolic-fathers-corpus`, `pseudepigrapha-corpus`, `patrologia-graeca-corpus` | ~27.2 MB |
+| `church-fathers` | `fathers`, `patristics-full`, `saints` | `chrysostom-corpus`, `church-fathers-early-corpus`, `church-fathers-late-corpus`, `apostolic-fathers-corpus` (882 works, 17.98M tokens) | ~61 MB |
+| `patristic` | `second-temple` | `apostolic-fathers-corpus`, `pseudepigrapha-corpus`, `patrologia-graeca-corpus` | ~27.2 MB |
+| `ancient-greek` | `classical-pack`, `ancient-library` | `classical-greek-corpus`, `hellenistic-greek-corpus`, `imperial-greek-corpus`, `late-antique-greek-corpus` (2,792 works, 35.76M tokens) | ~123 MB |
+| `byzantine-pack` | `byzantine-all`, `medieval-greek` | `byzantine-lit-corpus`, `byzantine-corpus` (197 works, 10.87M tokens) | ~41 MB |
 | `aegean` | `scripts`, `linear` | `damos-corpus`, `sigla-corpus` | ~4.3 MB |
 | `epigraphy` | `inscriptions` | `isicily-corpus`, `iip-corpus`, `iospe-corpus`, `igcyr-corpus`, `aphrodisias-corpus`, `crete-corpus`, `edh-corpus` | ~9.1 MB |
-| `literary` | `epic`, `scholia`, `byzantine-lit` | `homer-scholia-corpus`, `byzantine-corpus` | ~8.0 MB |
+| `literary` | `epic`, `scholia` | `homer-scholia-corpus`, `byzantine-corpus` | ~8.0 MB |
 | `lexica` | `dictionaries`, `lexicons` | `lsj-index`, `middle-liddell-index`, `cunliffe-index`, `autenrieth-index`, `abbott-smith-index` | ~19.3 MB |
 | `neural` | `models`, `nlp` | `grc-joint`, `grc-paradigms` | ~173 MB |
 
@@ -50,49 +55,58 @@ In Python, `aegean.library` exposes `summary()`, `list_packs()`, `list_items()`,
 
 ## Corpus commands (top level)
 
-Every corpus command takes a **corpus** as its first argument. There are 21
+Every corpus command takes a **corpus** as its first argument. There are 30
 registered corpora:
 
 - **5 bundled offline:** `lineara`, `linearb`, `cypriot`, `cyprominoan`,
   `greek`.
-- **16 hosted on demand:** `damos` (~5,900 Linear B tablets), `sigla` (Linear A
-  dataset), `nt` (Greek New Testament), `apostolic-fathers` (15 works),
-  `pseudepigrapha` (44 works), seven Greek inscription corpora (`isicily`,
-  `iip`, `iospe`, `igcyr`, `aphrodisias`, `crete`, `edh`), `byzantine` (12
-  vernacular Greek works), `homer-scholia` (Venetus A Iliad + scholia),
-  `patrologia` (33 *Patrologia Graeca* volumes, 6.79M words), and `ddbdp`
-  (57,331 documentary papyri, ~4.4M tokens).
+- **25 hosted on demand:** `damos` (~5,900 Linear B tablets), `sigla` (Linear A
+  dataset), `nt` (Greek New Testament), `lxx` (56-book Septuagint), **8
+  categorized Greek library collections** (`chrysostom`, `church-fathers-early`,
+  `church-fathers-late`, `classical-greek`, `hellenistic-greek`,
+  `imperial-greek`, `late-antique-greek`, `byzantine-lit` — 3,844 works,
+  64.35M tokens), `apostolic-fathers` (15 works), `pseudepigrapha` (44 works),
+  seven Greek inscription corpora (`isicily`, `iip`, `iospe`, `igcyr`,
+  `aphrodisias`, `crete`, `edh`), `byzantine` (12 vernacular Greek works),
+  `homer-scholia` (Venetus A Iliad + scholia), `patrologia` (33 *Patrologia
+  Graeca* volumes, 6.79M words), and `ddbdp` (57,331 documentary papyri, ~4.4M
+  tokens).
 
-Because `ddbdp` and `patrologia` are multi-million-word archives, prefer
-`aegean db search ddbdp "βασιλέως"`, `aegean find λόγος patrologia`, or
-volume-scoped `PG073` over loading the entire archive into RAM (`aegean.db.stream(ddbdp_db())`
-in Python).
+Because `ddbdp`, `patrologia`, and the 8 categorized Greek collections are
+multi-million-word archives, prefer `aegean db search ddbdp "βασιλέως"`,
+`aegean find ἀγάπη chrysostom`, or work-scoped specifiers (`ogc002060`,
+`chrysostom:In Matthaeum`, `PG073`) over loading an entire multi-million-token
+archive into RAM (`aegean.db.stream(ddbdp_db())` or
+`aegean.greek.load_collection_work("ogc002060")` in Python).
 
 Registered ids match case-insensitively (`aegean info LINEARA` loads `lineara`).
 Unknown ids fail with the full registered list and nearest suggestions:
 
 ```bash
 aegean info bogus
-# aegean: unknown corpus 'bogus'; expected a registered id (aphrodisias, apostolic-fathers, byzantine, crete, cypriot, cyprominoan, damos, ddbdp, edh, greek, homer-scholia, igcyr, iip, iospe, isicily, lineara, linearb, nt, patrologia, pseudepigrapha, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
+# aegean: unknown corpus 'bogus'; expected a registered id (aphrodisias, apostolic-fathers, byzantine, byzantine-lit, chrysostom, church-fathers-early, church-fathers-late, classical-greek, crete, cypriot, cyprominoan, damos, ddbdp, edh, greek, hellenistic-greek, homer-scholia, igcyr, iip, imperial-greek, iospe, isicily, late-antique-greek, lineara, linearb, lxx, nt, patrologia, pseudepigrapha, sigla), a Greek work id like tlg0012.tlg001 or ogc002060, a path to a .json or .db corpus, or '-' for JSON on stdin
 aegean load linera
 # aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (…), …
 ```
 
 > **Accepted corpus specifiers:** Anywhere a command accepts a corpus (and in
 > Python via `aegean.open()` / `aegean.read_corpus()`), you can pass a
-> registered id (`lineara`), a *Patrologia Graeca* volume (`PG073`), a Greek
-> work id (`tlg0012.tlg001`), a saved corpus path (`.json`, `.json.gz`, or
-> `.db`), or `-` for corpus JSON on stdin:
+> registered id (`lineara`, `lxx`), an Open Greek Corpus work id (`ogc002060` or
+> `chrysostom:In Matthaeum`), a *Patrologia Graeca* volume (`PG073`), a
+> Perseus/First1KGreek CTS work id (`tlg0012.tlg001`), a Biblical passage
+> (`John 1:1-5`, `Gen 1:1-5`, `MT Ps 23`), a saved corpus path (`.json`,
+> `.json.gz`, or `.db`), or `-` for corpus JSON on stdin:
 >
 > ```bash
 > aegean db build tlg0012.tlg001 -o iliad.db        # build a DB from a work id
+> aegean stats ogc002060                            # run stats on Chrysostom on Matthew
 > aegean stats iliad.json                           # run stats on a saved corpus
 > aegean export tlg0012.tlg002 -f csv -o odyssey.csv
 > ```
 
-For document ids (`HT13`) and CTS work ids (`tlg0012.tlg001`), see
-[Greek Works and Books](Greek-Works-and-Books), [Linear A](Linear-A), and
-[Linear B](Linear-B).
+For document ids (`HT13`), OGC collection work ids (`ogc002060`), and CTS work
+ids (`tlg0012.tlg001`), see [Greek Works and Books](Greek-Works-and-Books),
+[Linear A](Linear-A), and [Linear B](Linear-B).
 
 ### `info` — corpus overview
 
@@ -634,7 +648,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.72.0                    │
+│ OK │ pyaegean │ 0.73.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -859,7 +873,7 @@ aegean data list        # downloaded again with on-disk size:
 # │ nt-corpus         │ yes (15.8 MB)  │ Greek New          │ CC0-1.0           │
 ```
 
-`aegean data list` shows the full live registry (currently 39 entries), with
+`aegean data list` shows the full live registry (currently 47 entries), with
 on-disk sizes for cached datasets. Datasets download on demand and are never
 bundled in the Apache-2.0 wheel.
 

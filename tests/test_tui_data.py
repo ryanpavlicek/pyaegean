@@ -18,7 +18,7 @@ from aegean.tui import data as adapter
 def test_list_corpora_returns_the_registered_ids() -> None:
     entries = adapter.list_corpora()
     assert [e.id for e in entries] == list(adapter.CORPUS_IDS)
-    assert len(adapter.CORPUS_IDS) == 19
+    assert len(adapter.CORPUS_IDS) == 20
     # the Greek-inscription corpora (epigraphic Greek)
     assert {"isicily", "iip", "iospe", "igcyr", "edh"} <= set(adapter.CORPUS_IDS)
     # every listed id is a real registered loader (the adapter must not drift by

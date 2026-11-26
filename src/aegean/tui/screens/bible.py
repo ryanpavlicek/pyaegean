@@ -14,11 +14,14 @@ terminal workspace with inline one-click downloads when an optional dataset
   (Sinaiticus, Vaticanus, Alexandrinus, Ephraemi, Bezae, Washingtonianus,
   P45–P75) with *nomina sacra* expansions and scribal corrections;
 - **Word Study**: Strong's / Extended Strong's lookup, etymological root tree,
-  NT book and morphology distribution, and concordance verses;
-- **LXX & Patristics**: filterable catalogue of all 55 Swete Septuagint books
-  and 86 Greek patristic commentaries (10 Church Fathers / traditions including
-  *Patrologia Graeca* volumes ``PG071``–``PG126``), inline LXX/PG reading and
-  FTS5 search, plus LXX ↔ Masoretic Psalm numbering conversion.
+  NT + LXX book and morphology distribution, and concordance verses;
+- **Septuagint (LXX)**: filterable catalogue of all 56 Septuagint books (Swete
+  + Ecclesiastes), inline MT ↔ LXX Psalm conversion, passage reading with
+  automatic offline interlinear, and Greek concordance search;
+- **Patristics**: filterable catalogue of 112 Greek patristic commentaries
+  (11 Church Fathers / traditions including 26 John Chrysostom ``ogc*`` series
+  and *Patrologia Graeca* volumes ``PG071``–``PG126``), inline reading, and
+  FTS5 search.
 """
 
 from __future__ import annotations
@@ -67,6 +70,7 @@ _TAB_TO_KIND: dict[str, str] = {
     "tab-bible-witnesses": "witnesses",
     "tab-bible-study": "study",
     "tab-bible-lxx": "lxx",
+    "tab-bible-patristics": "patristics",
 }
 
 
@@ -136,7 +140,7 @@ class BiblicalScreen(Screen[None]):
         with Horizontal(id="bible-bar"):
             yield Input(
                 value="John 1.1-5",
-                placeholder="Passage (e.g. John 1.1-5, John 1.18, Rom 8.28, Gen 1.1-5)",
+                placeholder="Passage (e.g. John 1.1-5, Gen 1.1-5, MT Ps 23, Eccl 1.1-4)",
                 id="bible-passage",
             )
             yield Select(_EDITIONS, value="nestle1904", allow_blank=False, id="bible-edition")
@@ -166,15 +170,24 @@ class BiblicalScreen(Screen[None]):
                     )
                 with VerticalScroll(classes="bible-scroll"):
                     yield Static("", id="bible-study", markup=False)
-            with TabPane("LXX & Patristics", id="tab-bible-lxx"):
+            with TabPane("Septuagint (LXX)", id="tab-bible-lxx"):
                 with Horizontal(classes="bible-subbar"):
                     yield Input(
                         value="",
-                        placeholder="Filter LXX/Patristics, read (Gen 1.1-5 / PG073), search (φῶς / PG073 λόγος), or Psalm (23)",
+                        placeholder="Read (Gen 1.1-5, MT Ps 23, Eccl 1.1-4), search Greek (φῶς), convert Psalm (23), or filter 56 books",
                         id="bible-lxx-filter",
                     )
                 with VerticalScroll(classes="bible-scroll"):
                     yield Static("", id="bible-lxx", markup=False)
+            with TabPane("Patristics", id="tab-bible-patristics"):
+                with Horizontal(classes="bible-subbar"):
+                    yield Input(
+                        value="",
+                        placeholder="Filter 112 commentaries (Chrysostom, Origen, Cyril, John) or read/search (ogc002060 ἀγάπη, PG073 λόγος)",
+                        id="bible-patristics-filter",
+                    )
+                with VerticalScroll(classes="bible-scroll"):
+                    yield Static("", id="bible-patristics", markup=False)
         yield Footer()
 
     def on_mount(self) -> None:
@@ -203,6 +216,7 @@ class BiblicalScreen(Screen[None]):
         self._refresh_passage_views()
         self._refresh_study()
         self._refresh_lxx()
+        self._refresh_patristics()
         self._update_fetch_bar()
 
     def _refresh_passage_views(self) -> None:
@@ -227,7 +241,12 @@ class BiblicalScreen(Screen[None]):
 
     def _refresh_lxx(self) -> None:
         flt = self.query_one("#bible-lxx-filter", Input).value
-        self.query_one("#bible-lxx", Static).update(adapter.bible_lxx_and_catenae_text(flt))
+        self.query_one("#bible-lxx", Static).update(adapter.bible_lxx_text(flt))
+        self._update_fetch_bar()
+
+    def _refresh_patristics(self) -> None:
+        flt = self.query_one("#bible-patristics-filter", Input).value
+        self.query_one("#bible-patristics", Static).update(adapter.bible_patristics_text(flt))
         self._update_fetch_bar()
 
     def _update_fetch_bar(self) -> None:
@@ -365,10 +384,14 @@ class BiblicalScreen(Screen[None]):
             self._refresh_study()
         elif event.input.id == "bible-lxx-filter":
             self._refresh_lxx()
+        elif event.input.id == "bible-patristics-filter":
+            self._refresh_patristics()
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "bible-lxx-filter":
             self._refresh_lxx()
+        elif event.input.id == "bible-patristics-filter":
+            self._refresh_patristics()
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id in ("bible-edition", "bible-hand"):

@@ -46,10 +46,10 @@ L7  interfaces            cli (aegean CLI & REPL) · tui (aegean tui, including
 L6  ai (aegean.ai)        provider-agnostic LLM clients + grounded capabilities
 L5  translate             hybrid: lexicon/morphology grounding -> LLM
 L5  greek (aegean.greek)  Greek NLP pipeline + aegean.greek.bible (9 NT editions,
-                          13 early witnesses, Strong's, 55 LXX books, 86 commentaries)
+                          13 early witnesses, Strong's, 56 LXX books, 112 commentaries)
 L4  io · bundle · geo     aegean.io (text/CSV/EpiDoc/CoNLL-U/interop) ·
     · viz · data · cache  aegean.bundle (zero-dep portable research bundles) ·
-    · db                  aegean.geo · aegean.viz · aegean.data (39 pinned remote
+    · db                  aegean.geo · aegean.viz · aegean.data (47 pinned remote
                           assets) · aegean.cache · aegean.db (SQLite + resumable jobs)
 L3  analysis              distance · align · morphology · collocation · patterns
                           · query · accounting · structure

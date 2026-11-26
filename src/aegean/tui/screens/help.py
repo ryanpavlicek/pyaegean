@@ -32,12 +32,13 @@ _HELP = """[b]aegean — keys[/b]
   risk queue · a accept · e edit fields · 1/2/3 pick conflict option · d defer ·
   x reject · n/p next/prev unresolved · f cycle filter · s save CSV
 
-[b]Biblical Greek study (b)[/b]  interlinear NT · 5-edition comparison · 2nd–5th c.
-  manuscript witnesses · Strong's word study · LXX (55 books) & NT Catenae ·
+[b]Biblical Greek study (b)[/b]  interlinear NT & LXX · 9-edition comparison · 2nd–5th c.
+  manuscript witnesses · Strong's word study · Septuagint (56 books) · Patristics (112) ·
   f downloads any missing text for the active tab/edition directly inline
 
-[b]Library manager (l)[/b]  unified view of packs (biblical, aegean, epigraphy,
-  lexica, neural), installed texts, corpora, works, commentaries, and models ·
+[b]Library manager (l)[/b]  unified view of 10 packs (biblical, church-fathers, patristic,
+  ancient-greek, byzantine-pack, aegean, epigraphy, literary, lexica, neural),
+  installed texts, corpora, works, commentaries, and models ·
   / filter · f download · o open · x remove
 
 [b]Command console (:)[/b]  type any command without the 'aegean' prefix

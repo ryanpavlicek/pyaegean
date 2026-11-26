@@ -26,6 +26,7 @@ if TYPE_CHECKING:  # type-only: keep this module import-clean
 # registered id (none contain a dot) and is matched before falling through to file paths.
 _WORK_ID_RE = re.compile(r"^(?:tlg|stoa)\d+\.(?:tlg|stoa)\d+$", re.IGNORECASE)
 _PG_ID_RE = re.compile(r"^PG\d+(?:_\d+)?$", re.IGNORECASE)
+_OGC_ID_RE = re.compile(r"^ogc\d{4,}$", re.IGNORECASE)
 
 _DB_SUFFIXES = (".db", ".sqlite", ".sqlite3")
 
@@ -179,7 +180,7 @@ def read_corpus(spec: str) -> "Corpus":
     if spec in _LOADERS:
         return Corpus.load(spec)
 
-    # 3. Greek work id or Patrologia Graeca volume id
+    # 3. Greek work id, Patrologia Graeca volume id, or Greek collection work id
     if _WORK_ID_RE.match(spec):
         from ..greek import load_work
 
@@ -189,6 +190,18 @@ def read_corpus(spec: str) -> "Corpus":
 
         result: Corpus = load_patrologia(spec)
         return result
+    if _OGC_ID_RE.match(spec):
+        from ..scripts.greek._collections import load_collection_work
+
+        ogc_res: Corpus = load_collection_work(spec)
+        return ogc_res
+    if ":" in spec:
+        from ..scripts.greek._collections import COLLECTION_IDS, load_collection_work
+
+        head = spec.partition(":")[0].strip().lower().removesuffix("-corpus")
+        if head in COLLECTION_IDS:
+            col_res: Corpus = load_collection_work(spec)
+            return col_res
 
     # 4. file by extension (.json, .json.gz, .db/.sqlite/.sqlite3)
     p = Path(spec)
@@ -222,8 +235,26 @@ def read_corpus(spec: str) -> "Corpus":
         lead += "; "
     raise CorpusNotFound(
         lead + f"expected a registered id ({ids}), a Greek work id like "
-        f"tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin" + hint
+        f"tlg0012.tlg001 or ogc002060, a path to a .json or .db corpus, or '-' for JSON on stdin" + hint
     )
+
+
+def _split_inline_bible_ref(raw: str, ref: str | None) -> tuple[str, str | None]:
+    """Split ``'Gen 1:1-5'`` or ``'1 Cor 13:1-3'`` into ``(book, ref)`` when ``ref is None``."""
+    if ref is not None:
+        return raw, ref
+    parts = raw.split()
+    if len(parts) < 2:
+        return raw, None
+    # Handle numbered book prefixes like "1 Cor 13:1-3" or "1 Kgdms 1:1"
+    if parts[0].isdigit() and len(parts) >= 3:
+        tail = " ".join(parts[2:])
+        if any(ch.isdigit() for ch in tail) or tail.lower() in ("prologue", "praef"):
+            return f"{parts[0]} {parts[1]}", tail
+    tail = " ".join(parts[1:])
+    if any(ch.isdigit() for ch in tail) or tail.lower() in ("prologue", "praef"):
+        return parts[0], tail
+    return raw, None
 
 
 def open_corpus(
@@ -237,14 +268,17 @@ def open_corpus(
 
     Resolves in order:
 
-    1. Registered corpus IDs (``"lineara"``, ``"isicily"``, ``"nt"``, ``"patrologia"``, ...).
+    1. Registered corpus IDs (``"lineara"``, ``"isicily"``, ``"nt"``, ``"lxx"``,
+       ``"chrysostom"``, ``"classical-greek"``, ``"byzantine-lit"``, ``"patrologia"``, ...).
     2. *Patrologia Graeca* volume IDs (``"PG073"``, ``"PG123"``, ...).
-    3. Perseus / First1KGreek CTS work IDs (``"tlg0012.tlg001"``), passing ``ref`` and ``edition``.
-    4. Greek New Testament book names (``"John"``, ``"Rom"``, ``"1Cor"``) via
+    3. Open Greek Corpus work IDs (``"ogc002060"``) and ``<collection>:<work>``
+       specs (``"chrysostom:In Matthaeum"``, ``"byzantine-lit:Alexias"``).
+    4. Perseus / First1KGreek CTS work IDs (``"tlg0012.tlg001"``), passing ``ref`` and ``edition``.
+    5. Greek New Testament book names or passages (``"John"``, ``"John 1:1-5"``, ``"Rom"``) via
        :func:`aegean.greek.bible.load_nt`, passing ``ref``, ``edition``, and ``offline``.
-    5. Swete Septuagint (LXX) book names (``"Gen"``, ``"Ps"``, ``"Isa"``) via
+    6. Swete Septuagint (LXX) book names or passages (``"Gen"``, ``"Gen 1:1-5"``, ``"Eccl"``) via
        :func:`aegean.greek.bible.load_lxx`, passing ``ref`` and ``offline``.
-    6. Local files: ``.json`` / ``.json.gz``, ``.db`` / ``.sqlite`` / ``.sqlite3``,
+    7. Local files: ``.json`` / ``.json.gz``, ``.db`` / ``.sqlite`` / ``.sqlite3``,
        or EpiDoc ``.xml``, plus ``"-"`` for inline JSON on stdin.
     """
     raw = str(spec).strip()
@@ -276,21 +310,37 @@ def open_corpus(
         pg_corp: Corpus = load_patrologia(raw)
         return pg_corp
 
+    # Open Greek Corpus work id or <collection>:<work> spec
+    if _OGC_ID_RE.match(raw):
+        from ..scripts.greek._collections import load_collection_work
+
+        ogc_corp: Corpus = load_collection_work(raw, offline=offline)
+        return ogc_corp
+    if ":" in raw:
+        from ..scripts.greek._collections import COLLECTION_IDS, load_collection_work
+
+        head = raw.partition(":")[0].strip().lower().removesuffix("-corpus")
+        if head in COLLECTION_IDS:
+            col_corp: Corpus = load_collection_work(raw, offline=offline)
+            return col_corp
+
     # Registered corpus id, stdin, inline JSON, or .json/.json.gz/.db file
     try:
         return read_corpus(raw)
     except CorpusNotFound:
         pass
 
-    # Greek NT book name (e.g. "John", "Rom", "1Cor")
+    bk_part, ref_part = _split_inline_bible_ref(raw, ref)
+
+    # Greek NT book name or inline passage (e.g. "John", "John 1:1-5", "1Cor")
     try:
         from ..greek.bible import load_nt
         from ..scripts.greek.nt import _resolve_book
 
-        osis = _resolve_book(raw)
+        osis = _resolve_book(bk_part)
         nt_corp: Corpus = load_nt(
             osis,
-            ref=ref,
+            ref=ref_part,
             edition=edition or "nestle1904",
             offline=offline,
         )
@@ -298,12 +348,12 @@ def open_corpus(
     except ValueError:
         pass
 
-    # Septuagint (LXX) book name (e.g. "Gen", "Ps", "Isa")
+    # Septuagint (LXX) book name or inline passage (e.g. "Gen", "Gen 1:1-5", "Eccl", "Ps 22")
     try:
         from ..greek.bible import load_lxx, resolve_lxx_book
 
-        lxx_book = resolve_lxx_book(raw)
-        lxx_corp: Corpus = load_lxx(lxx_book.name, ref=ref, offline=offline)
+        lxx_book = resolve_lxx_book(bk_part)
+        lxx_corp: Corpus = load_lxx(lxx_book.name, ref=ref_part, offline=offline)
         return lxx_corp
     except ValueError:
         pass

@@ -32,17 +32,38 @@ def bible_read_text(passage: str, *, edition: str = "nestle1904", offline: bool 
     """Render an interlinear + verse view of a Greek NT or Septuagint (LXX) passage. Never raises."""
     import aegean.greek.bible as bib
 
-    book, ref = _parse_passage_spec(passage)
-    try:
-        corp = bib.load_nt(book, ref=ref, edition=edition, offline=offline)
-    except Exception as nt_exc:
+    raw_spec = passage.strip()
+    mt_mode = raw_spec.upper().startswith("MT ")
+    if mt_mode:
+        raw_spec = raw_spec[3:].strip()
+    book, ref = _parse_passage_spec(raw_spec)
+    is_lxx = mt_mode
+    if not is_lxx:
         try:
-            bib.resolve_lxx_book(book)
-            corp = bib.load_lxx(book, ref=ref, offline=offline)
-        except Exception:
+            corp = bib.load_nt(book, ref=ref, edition=edition, offline=offline)
+        except Exception as nt_exc:
+            try:
+                bib.resolve_lxx_book(book)
+                is_lxx = True
+            except Exception:
+                return (
+                    f"Could not load {passage!r} ({edition}): {nt_exc}\n"
+                    "Press f (or click Download above) to install the missing text right here, "
+                    "or press l to open the Library Manager."
+                )
+    if is_lxx:
+        try:
+            corp = bib.load_lxx(
+                book,
+                ref=ref,
+                numbering="mt" if mt_mode else "lxx",
+                interlinear=True,
+                offline=offline,
+            )
+        except Exception as lxx_exc:
             return (
-                f"Could not load {passage!r} ({edition}): {nt_exc}\n"
-                "Press f (or click Download above) to install the missing text right here, "
+                f"Could not load Septuagint passage {passage!r}: {lxx_exc}\n"
+                "Press f (or click Download above) to install `lxx-corpus` (~1.7 MB, 56 books), "
                 "or press l to open the Library Manager."
             )
 
@@ -50,6 +71,8 @@ def bible_read_text(passage: str, *, edition: str = "nestle1904", offline: bool 
     cit = getattr(getattr(corp, "provenance", None), "citation", "")
     if cit:
         lines.append(cit)
+        if is_lxx:
+            lines.append("(LXX interlinear: automatic offline lemmatizer + Dodson/Strong's lexicon)")
         lines.append("")
     for doc in corp:
         by_v: dict[str, list[Any]] = {}
@@ -58,7 +81,8 @@ def bible_read_text(passage: str, *, edition: str = "nestle1904", offline: bool 
             by_v.setdefault(vkey, []).append(tok)
         for vkey, toks in by_v.items():
             vlabel = vkey.rpartition(".")[2] if "." in vkey else vkey
-            lines.append(f"[{doc.id}:{vlabel}]  {' '.join(t.text for t in toks)}")
+            mt_tag = f" / {toks[0].annotations['mt_ref']}" if toks and toks[0].annotations.get("mt_ref") else ""
+            lines.append(f"[{doc.id}:{vlabel}{mt_tag}]  {' '.join(t.text for t in toks)}")
             for t in toks:
                 ann = t.annotations
                 lem = ann.get("lemma", "")
@@ -132,7 +156,7 @@ def bible_witnesses_text(passage: str, *, hand: str = "original", offline: bool 
 
 
 def bible_word_study_text(query: str, *, offline: bool = True) -> str:
-    """Render a Strong's + NT word study report. Never raises."""
+    """Render a Strong's + NT + Septuagint word study report. Never raises."""
     import aegean.greek.bible as bib
 
     q = query.strip()
@@ -165,21 +189,122 @@ def bible_word_study_text(query: str, *, offline: bool = True) -> str:
             out.append(f"  └─ {child.get('strongs', '')} {child.get('lemma', '')} — {child.get('gloss', '')}")
 
     out.append("")
-    out.append(f"Occurrences in scope: {ws.total_occurrences}")
+    out.append(f"NT Occurrences in scope: {ws.total_occurrences}")
     if ws.by_book:
         out.append("  By book:    " + ", ".join(f"{k} ({v})" for k, v in list(ws.by_book.items())[:10]))
     if ws.by_morph:
         out.append("  Morphology: " + ", ".join(f"{k} ({v})" for k, v in list(ws.by_morph.items())[:8]))
     if ws.occurrences:
         out.append("")
-        out.append("Sample concordance:")
+        out.append("Sample NT concordance:")
         for hit in ws.occurrences[:10]:
             out.append(f"  {hit.ref:<12} [{hit.morph}]  {hit.verse_text[:110]}")
+
+    if ws.lxx_total > 0:
+        out.append("")
+        out.append(f"Septuagint (LXX) Occurrences: {ws.lxx_total}  ({ws.lxx_scope})")
+        if ws.lxx_by_book:
+            out.append("  LXX books:  " + ", ".join(f"{k} ({v})" for k, v in list(ws.lxx_by_book.items())[:10]))
+        for lhit in ws.lxx_occurrences[:8]:
+            out.append(f"  {lhit.ref:<12} {lhit.verse_text[:110]}")
     return "\n".join(out)
 
 
-def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
-    """Render searchable LXX + 86 Patristic Commentaries catalogue, LXX/PG passage/search, and Psalm hint. Never raises."""
+def bible_lxx_text(filter_text: str = "") -> str:
+    """Dedicated Septuagint (LXX) tab view: 56-book catalogue, passage reader (incl. MT Psalms), and Greek concordance."""
+    import aegean.greek.bible as bib
+
+    q = filter_text.strip()
+    out: list[str] = []
+
+    # 1. Psalm number conversion ("23", "ps 23", "mt 23")
+    digits = q.lower().removeprefix("mt").strip().removeprefix("psalm").removeprefix("ps").strip()
+    if digits.isdigit():
+        num = int(digits)
+        if 1 <= num <= 150:
+            lxx_n = ", ".join(str(x) for x in bib.psalm_mt_to_lxx(num))
+            out.append(f"Psalm Numbering: MT/English Psalm {num} ↔ LXX Psalm {lxx_n}")
+        if 1 <= num <= 151:
+            mt_t = bib.psalm_lxx_to_mt(num)
+            mt_n = ", ".join(str(x) for x in mt_t) if mt_t else "(LXX-only, not in MT)"
+            out.append(f"Psalm Numbering: LXX Psalm {num} ↔ MT/English Psalm {mt_n}")
+        if out:
+            out.append("")
+
+    # 2. Greek concordance search ("φῶς", "κύριος", "ματαιότης")
+    has_greek = any("\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff" for ch in q)
+    if has_greek:
+        try:
+            hits = bib.search_lxx(q, limit=18, offline=True)
+            scope_note = (
+                "all 56 books"
+                if bib.lxx_loaded()
+                else "offline sample (Gen 1, Ps 22; press f to install `lxx-corpus` for all 56 books)"
+            )
+            out.append(f"── Septuagint (LXX) Concordance: {q!r} ({len(hits)} hit(s) in {scope_note}) ──")
+            for lxx_hit in hits:
+                out.append(f"  {lxx_hit.ref:<11} {lxx_hit.verse_text}")
+            if not hits:
+                out.append("  No Septuagint matches in current scope.")
+            out.append("")
+        except Exception as exc:
+            out.append(f"Septuagint search error: {exc}\n")
+
+    # 3. Passage reader ("Gen 1.1-5", "Ps 22.1-6", "MT Ps 23", "Eccl 1:1-5")
+    if not has_greek and " " in q:
+        mt_mode = q.upper().startswith("MT ")
+        spec_str = q[3:].strip() if mt_mode else q
+        bk_cand, ref_cand = _parse_passage_spec(spec_str)
+        if ref_cand:
+            try:
+                corp = bib.load_lxx(
+                    bk_cand,
+                    ref=ref_cand,
+                    numbering="mt" if mt_mode else "lxx",
+                    offline=True,
+                )
+                sys_lbl = "MT numbering -> Swete LXX" if mt_mode else "Swete LXX"
+                out.append(f"── Septuagint Passage: {q} ({sys_lbl}) ──")
+                for doc in corp:
+                    by_ref: dict[str, list[str]] = {}
+                    for tok in doc.tokens:
+                        rkey = str(tok.annotations.get("ref", f"{doc.id}.{tok.line_no or 0}"))
+                        by_ref.setdefault(rkey, []).append(tok.text)
+                    for rkey, words in by_ref.items():
+                        rlabel = rkey.replace(".", " ", 1).replace(".", ":")
+                        out.append(f"  {rlabel:<11} {' '.join(words)}")
+                out.append("")
+            except Exception as exc:
+                try:
+                    bib.resolve_lxx_book(bk_cand)
+                    out.append(f"Septuagint passage {q!r} unavailable locally: {exc}")
+                    out.append("Press f (or click Download above) to install `lxx-corpus` (~1.7 MB, all 56 books).\n")
+                except Exception:
+                    pass
+
+    ql = q.lower()
+    lxx = [
+        b
+        for b in bib.lxx_books()
+        if not ql
+        or has_greek
+        or ql in b["name"].lower()
+        or ql in b["title"].lower()
+        or ql in b["section"].lower()
+    ]
+    lxx_status = (
+        "all 56 books cached"
+        if bib.lxx_loaded()
+        else "offline sample Gen 1 & Ps 22; press f to install `lxx-corpus` (~1.7 MB) for all 56 books"
+    )
+    out.append(f"── Septuagint (LXX) — {len(lxx)} matching book(s) ({lxx_status}) ──")
+    for b in lxx:
+        out.append(f"  {b['name']:<8} {b['title']:<36} [{b['section']}]  {b['work_id']}")
+    return "\n".join(out)
+
+
+def bible_patristics_text(filter_text: str = "") -> str:
+    """Dedicated Patristics tab view: 112 commentaries (incl. 26 John Chrysostom series) + inline PG & OGC reading/search."""
     import re
 
     import aegean.greek.bible as bib
@@ -187,8 +312,7 @@ def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
     q = filter_text.strip()
     out: list[str] = []
 
-    # 0. If the user typed a Patrologia Graeca volume ID (e.g. "PG073" or "PG073 λόγος"),
-    #    search or excerpt it inline from the cached Patrologia Graeca archive.
+    # 1. Patrologia Graeca inline reader/search ("PG073" or "PG073 λόγος")
     pg_match = re.match(r"^(PG\d+(?:_\d+)?)(?:\s+(.+))?$", q, re.IGNORECASE)
     if pg_match:
         vol_id = pg_match.group(1).upper()
@@ -215,86 +339,67 @@ def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
         except Exception as exc:
             out.append(
                 f"Patrologia Graeca {vol_id} unavailable locally: {exc}\n"
-                "Install the `patristic` pack (or `patrologia-graeca-corpus`, ~23.5 MB) in Library Manager (l).\n"
+                "Press f or install `patrologia-graeca-corpus` (~23.5 MB) in Library Manager (l).\n"
             )
 
-    # 1. If the user typed a Psalm number like "23" or "ps 23", convert LXX <-> MT inline.
-    digits = q.lower().removeprefix("psalm").removeprefix("ps").strip()
-    if digits.isdigit():
-        num = int(digits)
-        if 1 <= num <= 150:
-            lxx_n = ", ".join(str(x) for x in bib.psalm_mt_to_lxx(num))
-            out.append(f"Psalm Numbering: MT/English Psalm {num} ↔ LXX Psalm {lxx_n}")
-        if 1 <= num <= 151:
-            mt_t = bib.psalm_lxx_to_mt(num)
-            mt_n = ", ".join(str(x) for x in mt_t) if mt_t else "(LXX-only, not in MT)"
-            out.append(f"Psalm Numbering: LXX Psalm {num} ↔ MT/English Psalm {mt_n}")
-        if out:
-            out.append("")
-
-    # 2. If the user typed Greek characters (e.g. κύριος, φῶς), search the Septuagint inline.
-    has_greek = (not pg_match) and any("\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff" for ch in q)
-    if has_greek:
+    # 2. Open Greek Corpus / Chrysostom inline reader/search ("ogc002060" or "ogc002060 ἀγάπη")
+    ogc_match = re.match(r"^(ogc\d{4,})(?:\s+(.+))?$", q, re.IGNORECASE)
+    if ogc_match:
+        wid = ogc_match.group(1).lower()
+        term = (ogc_match.group(2) or "").strip()
         try:
-            hits = bib.search_lxx(q, limit=12, offline=True)
-            scope_note = "all 55 books" if bib.lxx_loaded() else "offline sample (Gen 1, Ps 22; fetch `lxx-corpus` for all 55 books)"
-            out.append(f"── Septuagint (LXX) Concordance: {q!r} ({len(hits)} hit(s) in {scope_note}) ──")
-            for lxx_hit in hits:
-                out.append(f"  {lxx_hit.ref:<11} {lxx_hit.verse_text}")
-            if not hits:
-                out.append("  No Septuagint matches in current scope.")
+            if term:
+                from aegean.search import search_text
+
+                ogc_hits = search_text(term, wid, limit=8, offline=True)
+                out.append(f"── Patristic Work {wid} Search: {term!r} ({len(ogc_hits)} hit(s)) ──")
+                for h in ogc_hits:
+                    out.append(f"  [{h.ref}]  {h.snippet}")
+                if not ogc_hits:
+                    out.append(f"  No matches for {term!r} in {wid}.")
+            else:
+                from aegean.scripts.greek._collections import load_collection_work
+
+                corp = load_collection_work(wid, offline=True)
+                doc = corp.documents[0]
+                out.append(f"── {doc.meta.name or wid} ({len(doc.tokens):,} tokens) ──")
+                preview = " ".join(t.text for t in doc.tokens[:120])
+                out.append(f"  {preview} …")
             out.append("")
         except Exception as exc:
-            out.append(f"Septuagint search error: {exc}\n")
-
-    # 3. If the user typed an LXX passage reference (e.g. "Gen 1.1-5" or "Ps 22.1-6"), read it inline.
-    if not has_greek and not pg_match and " " in q:
-        bk_cand, ref_cand = _parse_passage_spec(q)
-        if ref_cand:
-            try:
-                corp = bib.load_lxx(bk_cand, ref=ref_cand, offline=True)
-                out.append(f"── Septuagint Passage: {bk_cand} {ref_cand} (Swete LXX) ──")
-                for doc in corp:
-                    by_ref: dict[str, list[str]] = {}
-                    for tok in doc.tokens:
-                        rkey = str(tok.annotations.get("ref", f"{doc.id}.{tok.line_no or 0}"))
-                        by_ref.setdefault(rkey, []).append(tok.text)
-                    for rkey, words in by_ref.items():
-                        rlabel = rkey.replace(".", " ", 1).replace(".", ":")
-                        out.append(f"  {rlabel:<11} {' '.join(words)}")
-                out.append("")
-            except Exception:
-                pass
+            out.append(
+                f"Patristic work {wid} unavailable locally: {exc}\n"
+                "Press f or install `chrysostom-corpus` (~12.3 MB) / `church-fathers` pack in Library Manager (l).\n"
+            )
 
     ql = q.lower()
-    lxx = [
-        b for b in bib.lxx_books()
-        if not ql or has_greek or ql in b["name"].lower() or ql in b["title"].lower() or ql in b["section"].lower()
-    ]
+    has_prefix = bool(pg_match or ogc_match)
     comms = [
-        c for c in bib.patristic_commentaries()
+        c
+        for c in bib.patristic_commentaries()
         if not ql
-        or has_greek
+        or has_prefix
         or ql in c["book"].lower()
         or ql in c["work_id"].lower()
         or ql in c["title"].lower()
         or ql in c["author"].lower()
         or ql in c.get("kind", "").lower()
     ]
-    lxx_status = "cached" if bib.lxx_loaded() else "offline sample Gen 1 & Ps 22; fetch `lxx-corpus` (~1.7 MB) in Library (l) for all 55 books"
-    out.append(f"── Septuagint (LXX) — {len(lxx)} matching book(s) ({lxx_status}) ──")
-    for b in lxx[:24]:
-        out.append(f"  {b['name']:<8} {b['title']:<36} [{b['section']}]  {b['work_id']}")
-    if len(lxx) > 24:
-        out.append(f"  … and {len(lxx) - 24} more (try `Gen 1.1-5`, `Ps 22.1-6`, or a Greek word like `φῶς`)")
-    out.append("")
     out.append(
         f"── Greek Patristic Commentaries — {len(comms)} matching volume(s) "
-        "(10 Fathers / traditions: Catenae, Origen, Cyril, Theophylact, PG071–PG126) ──"
+        "(11 Fathers / traditions: 26 John Chrysostom series, Catenae, Origen, Cyril, Theophylact, PG071–PG126) ──"
     )
-    for c in comms[:28]:
-        out.append(f"  {c['book']:<7} {c['work_id']:<15} {c['author']:<20} {c['title']}")
-    if len(comms) > 28:
-        out.append(f"  … and {len(comms) - 28} more (try `PG073`, `PG073 λόγος`, `Cyril`, `Theophylact`, or `John`)")
+    for c in comms[:45]:
+        out.append(f"  {c['book']:<7} {c['work_id']:<15} {c['author']:<22} {c['title']}")
+    if len(comms) > 45:
+        out.append(
+            f"  … and {len(comms) - 45} more (filter by `Chrysostom`, `Origen`, `Cyril`, `John`, `Gen`, "
+            "or read/search `ogc002060 ἀγάπη` / `PG073 λόγος`)"
+        )
     return "\n".join(out)
+
+
+def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
+    """Combined LXX + Patristics view (compatibility wrapper over bible_lxx_text & bible_patristics_text). Never raises."""
+    return bible_lxx_text(filter_text) + "\n\n" + bible_patristics_text(filter_text)
 
