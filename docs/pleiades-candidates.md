@@ -2,7 +2,7 @@
 
 The find-site gazetteer (`src/aegean/data/bundled/geo/site_coordinates.json`)
 aligns each site to a [Pleiades](https://pleiades.stoa.org/) place id for
-linked-open-data work. **78 of 94** entries are aligned. The weekly
+linked-open-data work. **128 of 144** entries are aligned. The weekly
 `scripts/check_gazetteer.py` check measures coordinate agreement; it cannot establish
 archaeological identity. A point and its identifier can agree while referring to
 the wrong site. Title, period, description, and archaeological references require
@@ -10,10 +10,23 @@ separate examination.
 
 ## Current coverage
 
-The 94-entry gazetteer covers nine regions: Crete (40), the Levant (14), Sicily
-(13), mainland Greece (7), the Aegean (5), Cyrenaica (5), the Pontic region
-(5), Anatolia (4), and the contested remote entry Margiana (1). Sixteen entries
-remain unaligned and are listed below.
+The 144-entry gazetteer covers nine regions: Crete (62), Sicily (22), mainland
+Greece and the Balkans (18), the Levant and Cyprus (17), Anatolia (7), the
+Aegean (6), Cyrenaica (6), the Pontic region (5), and the contested remote entry
+Margiana (1). Sixteen entries remain unaligned and are listed below.
+
+## 2026-11-26 verified epigraphy & Aegean expansion (+50 sites)
+
+Fifty missing corpus find-places across Aphrodisias (`aphrodisias`), Cretan
+Institutional Inscriptions (`crete`), Cypriot IG XV 1 (`cypriot`: Amathous,
+Marion, Kourion), DAMOS Linear B (Thebes, Midea, and inscribed stirrup-jar
+findspots), SigLA aliases, I.Sicily, IGCyr (Berenike), and EDH (Philippopolis,
+Salona, Beroia, Larissa, Delphi) were verified directly against each place's
+live Pleiades JSON record (title, description, coordinates, and SHA-256 digest
+recorded in `scripts/gazetteer_pins.json`). Every entry also carries explicit
+`precision` (`"monument"`, `"site"`, or `"region"`) and `location_role`
+(`"findspot"` / `"origin"`) metadata, and `aegean.geo.unmapped_sites(corpus)`
+reports any remaining omitted find-places with counts.
 
 ## Earlier trust pass (2026-06-29)
 

@@ -416,3 +416,25 @@ def test_aeolic_lines_constant() -> None:
     # every advertised line type is dispatchable through scan_line
     for name in AEOLIC_LINES:
         assert callable(__import__("aegean.greek.meter", fromlist=["_SCANNERS"])._SCANNERS[name])
+
+
+def test_score_scansion_reports_structure_and_lexical_provenance() -> None:
+    from aegean.greek import ScansionScore, score_scansion
+
+    il1 = score_scansion("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος", "hexameter")
+    assert isinstance(il1, ScansionScore)
+    assert il1.scans is True and il1.scansion is not None
+    assert il1.canonical_caesura is True and il1.scansion.caesura == "penthemimeral"
+    assert il1.dactyl_ratio == 0.75 and il1.spondaic_fifth is False
+    assert il1.synizesis_used == ("Πηληϊάδεω",)
+
+    il3 = score_scansion("πολλὰς δ’ ἰφθίμους ψυχὰς Ἄϊδι προΐαψεν", "hexameter")
+    assert il3.scans is True and "ψυχὰς" in il3.long_by_nature_used
+
+    il18 = score_scansion("ὑμῖν μὲν θεοὶ δοῖεν Ὀλύμπια δώματ’ ἔχοντες", "hexameter")
+    assert il18.scans is True and "θεοὶ" in il18.synizesis_used
+
+    bad = score_scansion("τοῦτο πεζός ἐστι λόγος", "hexameter")
+    assert bad.scans is False and bad.scansion is None and bad.error is not None
+    assert bad.syllable_count > 0
+

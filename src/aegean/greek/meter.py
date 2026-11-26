@@ -938,3 +938,108 @@ def syllable_options(line: str) -> list[tuple[str, list[str]]]:
         (s.text, sorted(s.options))
         for s in _analyze(line)
     ]
+
+
+@dataclass(frozen=True, slots=True)
+class ScansionScore:
+    """Quantitative diagnostic profile for one metrical scansion attempt.
+
+    Separates structural fit (``scans``, ``ambiguous``, ``canonical_caesura``),
+    quantitative realization (``dactyl_ratio``, ``spondaic_fifth``,
+    ``resolved_count``), and explicit lexical-override provenance
+    (``synizesis_used``, ``long_by_nature_used``). Never raises ``ScansionError``
+    for non-fitting lines (returns ``scans=False`` with ``error`` populated).
+    """
+
+    line: str
+    meter: str
+    scans: bool
+    scansion: LineScansion | None
+    syllable_count: int
+    ambiguous: bool
+    canonical_caesura: bool
+    dactyl_ratio: float | None
+    spondaic_fifth: bool
+    resolved_count: int
+    synizesis_used: tuple[str, ...]
+    long_by_nature_used: tuple[str, ...]
+    error: str | None = None
+
+
+def score_scansion(line: str, meter: str = "hexameter") -> ScansionScore:
+    """Score and diagnose a verse line against ``meter`` without raising on mismatch.
+
+    Unknown meter names still raise :class:`ScansionError`. Non-fitting lines return
+    ``ScansionScore(scans=False, ...)`` carrying the natural syllable count, any
+    lexical overrides inspected, and the diagnostic failure reason.
+    """
+    if meter not in _SCANNERS:
+        raise ScansionError(
+            f"unknown meter {meter!r}; available: {', '.join(sorted(_SCANNERS))}"
+        )
+
+    words = _word_texts(line)
+    synizesis_hits: list[str] = []
+    long_hits: list[str] = []
+    for w in words:
+        key = _strip_combining(w).lower()
+        if key in _SYNIZESIS or (meter == "hexameter" and key in _OPTIONAL_HEXAMETER_SYNIZESIS):
+            synizesis_hits.append(w)
+        if key in _LONG_BY_NATURE:
+            long_hits.append(w)
+
+    try:
+        sc = scan_line(line, meter=meter)
+    except ScansionError as exc:
+        natural_syls = len(_analyze(line))
+        return ScansionScore(
+            line=line,
+            meter=meter,
+            scans=False,
+            scansion=None,
+            syllable_count=natural_syls,
+            ambiguous=False,
+            canonical_caesura=False,
+            dactyl_ratio=None,
+            spondaic_fifth=False,
+            resolved_count=0,
+            synizesis_used=tuple(synizesis_hits),
+            long_by_nature_used=tuple(long_hits),
+            error=str(exc),
+        )
+
+    dactyl_ratio: float | None = None
+    spondaic_fifth = False
+    resolved_count = 0
+    if meter == "hexameter" and len(sc.feet) >= 5:
+        flex_feet = sc.feet[:4]
+        dactyl_ratio = round(sum(1 for f in flex_feet if f.name == "dactyl") / 4.0, 3)
+        spondaic_fifth = sc.feet[4].name == "spondee"
+    elif meter == "trimeter":
+        resolved_count = sum(max(0, len(f.syllables) - 4) for f in sc.feet)
+
+    canonical_caesura = sc.caesura is not None
+    # Restrict optional-synizesis attribution to words actually coalesced in sc.syllables
+    actual_syn = tuple(
+        w
+        for w in synizesis_hits
+        if _strip_combining(w).lower() in _SYNIZESIS
+        or any(_strip_combining(s).lower() == _strip_combining(w).lower() for s in sc.syllables)
+    )
+
+    return ScansionScore(
+        line=line,
+        meter=meter,
+        scans=True,
+        scansion=sc,
+        syllable_count=len(sc.syllables),
+        ambiguous=sc.ambiguous,
+        canonical_caesura=canonical_caesura,
+        dactyl_ratio=dactyl_ratio,
+        spondaic_fifth=spondaic_fifth,
+        resolved_count=resolved_count,
+        synizesis_used=actual_syn,
+        long_by_nature_used=tuple(long_hits),
+        error=None,
+    )
+

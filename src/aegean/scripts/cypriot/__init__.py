@@ -6,11 +6,19 @@ from ...core.model import SignInventory, Token
 from ...core.script import Script, register
 from . import loader  # noqa: F401 — registers the Corpus loader on import
 from .inventory import cypriot_inventory
-from .lexicon import gloss, greek_reading
+from .lexicon import CypriotLexEntry, gloss, greek_reading, lexicon_entries, lexicon_entry
 from .loader import classify
 from .phonetic import word_to_phonetic
 
-__all__ = ["Cypriot", "gloss", "greek_reading", "word_to_phonetic"]
+__all__ = [
+    "Cypriot",
+    "CypriotLexEntry",
+    "gloss",
+    "greek_reading",
+    "lexicon_entries",
+    "lexicon_entry",
+    "word_to_phonetic",
+]
 
 
 class Cypriot(Script):

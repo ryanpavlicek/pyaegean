@@ -313,13 +313,13 @@ def test_bridge_coverage_over_query_results_reads_only_the_subset() -> None:
     subset = bridge_coverage(amathus)
     assert subset == bridge_coverage(amathus.inscriptions)
     # Known answer: the Amathus texts are the Eteocypriot core of IG XV 1, so the
-    # Greek bridge reads none of their 193 words; Marion's Greek reads 21 of 239.
+    # Greek bridge reads none of their 193 words; Marion's Greek reads 67 of 239.
     assert (subset.word_tokens, subset.read_tokens, subset.coverage_pct) == (193, 0, 0.0)
     at_marion = bridge_coverage(marion)
-    assert (at_marion.word_tokens, at_marion.read_tokens) == (239, 21)
-    assert [(r.form, r.count) for r in at_marion.readings[:2]] == [("e-mi", 15), ("pa-i-se", 3)]
+    assert (at_marion.word_tokens, at_marion.read_tokens) == (239, 67)
+    assert [(r.form, r.count) for r in at_marion.readings[:2]] == [("e-mi", 15), ("e-mi.", 15)]
     whole = bridge_coverage(corpus)
-    assert (whole.word_tokens, whole.read_tokens) == (572, 33)
+    assert (whole.word_tokens, whole.read_tokens) == (572, 100)
 
 
 # ── variant_groups reports a script, and says so ─────────────────────────────

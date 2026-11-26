@@ -230,9 +230,9 @@ site-level points (~1 km) drawn from standard archaeological references.
 from aegean import geo
 
 coords = geo.site_coordinates()
-len(coords)                       # 94
+len(coords)                       # 144
 coords["Haghia Triada"]
-# SiteCoord(name='Haghia Triada', lat=35.06, lon=24.79, region='crete', pleiades=589672, contested=None)
+# SiteCoord(name='Haghia Triada', lat=35.06, lon=24.79, region='crete', pleiades=589672, contested=None, precision='site', location_role='findspot')
 ```
 
 ### `SiteCoord`
@@ -249,6 +249,10 @@ coords["Haghia Triada"]
 | `pleiades_uri` | property → str \| None | `https://pleiades.stoa.org/places/<id>`, or `None` |
 | `contested` | str \| None | Reason string if provenance is disputed (default `None`); see [Contested find-spots](#contested-find-spots) |
 | `is_contested` | property → bool | `True` when `contested` is set |
+| `precision` | str | Spatial granularity (`"monument"`, `"site"`, or `"region"`, default `"site"`) |
+| `location_role` | str | Archaeological role (`"findspot"` or `"origin"`, default `"findspot"`) |
+
+Use `geo.unmapped_sites(corpus)` (no `[geo]` extra required) to list any `(site_label, count)` pairs omitted from the gazetteer.
 
 ```python
 sc = coords["Haghia Triada"]
@@ -263,18 +267,18 @@ coords["Margiana"].is_contested  # True (disputed provenance)
 
 ### Regions
 
-`region` is a controlled vocabulary of nine values. The breakdown of the 94 gazetteer sites:
+`region` is a controlled vocabulary of nine values. The breakdown of the 144 gazetteer sites:
 
 | Region | Sites | Coverage |
 | --- | --- | --- |
-| `crete` | 40 | Crete (bulk of Linear A) |
-| `aegean` | 5 | Aegean islands (Thera, Kea, Milos, Kythera, Samothrace) |
-| `mainland` | 7 | Greek mainland |
-| `anatolia` | 4 | Anatolian coast |
-| `levant` | 14 | Cyprus and the Levantine coast |
-| `cyrenaica` | 5 | Cyrenaica |
-| `pontic` | 5 | Northern Black Sea |
-| `sicily` | 13 | Sicily |
+| `crete` | 62 | Crete (Linear A, DAMOS/SigLA, and Cretan Institutional Inscriptions) |
+| `sicily` | 22 | Sicily (I.Sicily) |
+| `mainland` | 18 | Greek mainland and Balkans (Linear B, EDH) |
+| `levant` | 17 | Cyprus (IG XV 1, Enkomi) and the Levantine coast (IIP, Ugarit, Tel Haror) |
+| `anatolia` | 7 | Anatolia (Aphrodisias, Miletus, Troy, Sardis, Heraclea Pontica, Teos, Mylasa) |
+| `aegean` | 6 | Aegean islands (Thera, Kea, Milos/Melos, Kythera, Samothrace) |
+| `cyrenaica` | 6 | Cyrenaica (IGCyr) |
+| `pontic` | 5 | Northern Black Sea (IOSPE) |
 | `remote` | 1 | Outliers (Margiana, Turkmenistan; [contested](#contested-find-spots)) |
 
 ### Contested find-spots
@@ -297,7 +301,7 @@ m.contested               # 'Disputed: no Linear A inscription is accepted from 
 
 ## Pleiades alignment
 
-**78 of the 94** find-sites are aligned to [Pleiades](https://pleiades.stoa.org/)
+**128 of the 144** find-sites are aligned to [Pleiades](https://pleiades.stoa.org/)
 place IDs. Each match is verified against the Pleiades representative
 coordinates and place description, and `scripts/check_gazetteer.py` re-verifies
 every link against live Pleiades data weekly. Aligned IDs live on

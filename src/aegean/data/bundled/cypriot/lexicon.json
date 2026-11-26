@@ -1,70 +1,470 @@
 {
  "A-KA-TA": {
   "lemma": "ἀγαθός",
-  "gloss": "good"
+  "gloss": "good",
+  "greek_form": "ἀγαθᾷ",
+  "attestation": "ICS 217 (Idalion); standard Cypriot formula",
+  "site": "Idalion",
+  "citation": "Masson, ICS (1983)",
+  "license": "public domain"
+ },
+ "A-NE-TE-KE": {
+  "lemma": "ἀνατίθημι",
+  "gloss": "dedicated (aor. 3sg. ἀνέθηκε)",
+  "greek_form": "ἀνέθηκε",
+  "attestation": "IG XV 1, 95",
+  "site": "Kurion",
+  "citation": "IG XV 1, 95 (BBAW); Masson, ICS 182",
+  "license": "CC BY 4.0"
  },
  "A-NE-U": {
   "lemma": "ἄνευ",
-  "gloss": "without"
+  "gloss": "without",
+  "greek_form": "ἄνευ",
+  "attestation": "ICS 217 (Idalion Bronze Tablet)",
+  "site": "Idalion",
+  "citation": "Masson, ICS 217",
+  "license": "public domain"
  },
  "A-PO-LO-NI": {
   "lemma": "Ἀπόλλων",
-  "gloss": "to Apollo (dative)"
+  "gloss": "to Apollo (dative)",
+  "greek_form": "Ἀπόλλωνι",
+  "attestation": "ICS 215, 216 (Tamassos); standard Cypriot dedications",
+  "site": "Tamassos / Kurion",
+  "citation": "Masson, ICS 215-216",
+  "license": "public domain"
  },
  "A-RA-KU-RO": {
   "lemma": "ἄργυρος",
-  "gloss": "silver"
+  "gloss": "silver",
+  "greek_form": "ἀργύρω",
+  "attestation": "ICS 217 (Idalion Bronze Tablet)",
+  "site": "Idalion",
+  "citation": "Masson, ICS 217",
+  "license": "public domain"
  },
  "A-TO-RO-PO-SE": {
   "lemma": "ἄνθρωπος",
-  "gloss": "human, man"
+  "gloss": "human, man",
+  "greek_form": "ἄνθρωπος",
+  "attestation": "ICS 264 (Golgoi)",
+  "site": "Golgoi",
+  "citation": "Masson, ICS 264",
+  "license": "public domain"
  },
  "E-MI": {
   "lemma": "εἰμί",
-  "gloss": "I am"
+  "gloss": "I am",
+  "greek_form": "ἠμί",
+  "attestation": "IG XV 1, 120, 123, 186, 187, 197, 205 (passim)",
+  "site": "Kurion / Marion",
+  "citation": "IG XV 1 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "E-PE-SE-TA-SA": {
+  "lemma": "ἐφίστημι",
+  "gloss": "I set up, erected (aor. 1sg. ἐπέστασα)",
+  "greek_form": "ἐπέστασα",
+  "attestation": "IG XV 1, 199",
+  "site": "Marion",
+  "citation": "IG XV 1, 199 (BBAW); Masson, ICS 135",
+  "license": "CC BY 4.0"
+ },
+ "E-PE-SE-TA-SA-NE": {
+  "lemma": "ἐφίστημι",
+  "gloss": "they set up, erected (aor. 3pl. ἐπέστασαν)",
+  "greek_form": "ἐπέστασαν",
+  "attestation": "IG XV 1, 204",
+  "site": "Marion",
+  "citation": "IG XV 1, 204 (BBAW); Masson, ICS 154b",
+  "license": "CC BY 4.0"
+ },
+ "E-PE-SE-TA-SE": {
+  "lemma": "ἐφίστημι",
+  "gloss": "set up, erected (aor. 3sg. ἐπέστασε)",
+  "greek_form": "ἐπέστασε",
+  "attestation": "IG XV 1, 196, 205, 209, 232",
+  "site": "Marion",
+  "citation": "IG XV 1, 196/205/209/232 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "E-PI": {
+  "lemma": "ἐπί",
+  "gloss": "upon, over",
+  "greek_form": "ἐπί",
+  "attestation": "IG XV 1, 227",
+  "site": "Marion",
+  "citation": "IG XV 1, 227 (BBAW); Masson, ICS 94",
+  "license": "CC BY 4.0"
+ },
+ "E-U-KA-SA-ME-NO-SE": {
+  "lemma": "εὔχομαι",
+  "gloss": "having vowed (aor. mid. ptcp. εὐξάμενος)",
+  "greek_form": "εὐξάμενος",
+  "attestation": "IG XV 1, 94",
+  "site": "Kurion",
+  "citation": "IG XV 1, 94 (BBAW); Masson, ICS 181",
+  "license": "CC BY 4.0"
+ },
+ "I-E-RE-WO-SE": {
+  "lemma": "ἱερεύς",
+  "gloss": "of the priest (gen. sg. ἱερῆϝος)",
+  "greek_form": "ἱερῆϝος",
+  "attestation": "IG XV 1, 127",
+  "site": "Kurion",
+  "citation": "IG XV 1, 127 (BBAW); Masson, ICS 183a",
+  "license": "CC BY 4.0"
  },
  "I-JA-SA-TA-I": {
   "lemma": "ἰάομαι",
-  "gloss": "to heal (infinitive ἰᾶσθαι)"
+  "gloss": "to heal (infinitive ἰᾶσθαι)",
+  "greek_form": "ἰᾶσθαι",
+  "attestation": "ICS 217 (Idalion Bronze Tablet)",
+  "site": "Idalion",
+  "citation": "Masson, ICS 217",
+  "license": "public domain"
+ },
+ "KA-KE-O-SE": {
+  "lemma": "χαλκεύς",
+  "gloss": "of the bronzesmith (gen. sg. χαλκῆος)",
+  "greek_form": "χαλκῆος",
+  "attestation": "IG XV 1, 188",
+  "site": "Marion",
+  "citation": "IG XV 1, 188 (BBAW); Masson, ICS 118",
+  "license": "CC BY 4.0"
  },
  "KA-SE": {
   "lemma": "καί",
-  "gloss": "and (Arcado-Cypriot κάς)"
+  "gloss": "and (Arcado-Cypriot κάς)",
+  "greek_form": "κάς",
+  "attestation": "IG XV 1, 95, 204; ICS 217 (Idalion)",
+  "site": "Kurion / Marion / Idalion",
+  "citation": "IG XV 1, 95/204 (BBAW); Masson, ICS 217",
+  "license": "CC BY 4.0"
  },
  "KA-SI-KE-NE-TO-SE": {
   "lemma": "κασίγνητος",
-  "gloss": "brother"
+  "gloss": "brother",
+  "greek_form": "κασίγνητος",
+  "attestation": "ICS 217 (Idalion Bronze Tablet)",
+  "site": "Idalion",
+  "citation": "Masson, ICS 217",
+  "license": "public domain"
+ },
+ "KA-SI-NE-TA-I": {
+  "lemma": "κασιγνήτη",
+  "gloss": "to the sister (dat. sg. κασιγνήτᾳ)",
+  "greek_form": "κασιγνήτᾳ",
+  "attestation": "IG XV 1, 204",
+  "site": "Marion",
+  "citation": "IG XV 1, 204 (BBAW); Masson, ICS 154b",
+  "license": "CC BY 4.0"
+ },
+ "KA-TE-SE-TA-SE": {
+  "lemma": "καθίστημι",
+  "gloss": "set up, established (aor. 3sg. κατέστασε)",
+  "greek_form": "κατέστασε",
+  "attestation": "IG XV 1, 200",
+  "site": "Marion",
+  "citation": "IG XV 1, 200 (BBAW); Masson, ICS 154a",
+  "license": "CC BY 4.0"
+ },
+ "KA-TE-TI-SA-NE": {
+  "lemma": "κατατίθημι",
+  "gloss": "they placed, buried (aor. 3pl. κατέθισαν)",
+  "greek_form": "κατέθισαν",
+  "attestation": "IG XV 1, 227",
+  "site": "Marion",
+  "citation": "IG XV 1, 227 (BBAW); Masson, ICS 94",
+  "license": "CC BY 4.0"
+ },
+ "KE-NE-U-WO-NE": {
+  "lemma": "κενεών",
+  "gloss": "cenotaph, empty tomb (Cypriot κενευϝῶν)",
+  "greek_form": "κενευϝῶν",
+  "attestation": "IG XV 1, 227",
+  "site": "Marion",
+  "citation": "IG XV 1, 227 (BBAW); Masson, ICS 94",
+  "license": "CC BY 4.0"
+ },
+ "KO-RA-I": {
+  "lemma": "Κόρη",
+  "gloss": "to Kore / Persephone (dat. sg. Κόρᾳ)",
+  "greek_form": "Κόρᾳ",
+  "attestation": "IG XV 1, 95",
+  "site": "Kurion",
+  "citation": "IG XV 1, 95 (BBAW); Masson, ICS 182",
+  "license": "CC BY 4.0"
+ },
+ "KO-RI-O": {
+  "lemma": "Κούριον",
+  "gloss": "of Kourion (gen. sg. Κουρίω)",
+  "greek_form": "Κουρίω",
+  "attestation": "IG XV 1, 93",
+  "site": "Kurion",
+  "citation": "IG XV 1, 93 (BBAW); Masson, ICS 180",
+  "license": "CC BY 4.0"
+ },
+ "KU-NA": {
+  "lemma": "γυνή",
+  "gloss": "wife, woman (Cypriot γυνά)",
+  "greek_form": "γυνά",
+  "attestation": "IG XV 1, 201, 231",
+  "site": "Marion",
+  "citation": "IG XV 1, 201/231 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "KU-NA-I-KI": {
+  "lemma": "γυνή",
+  "gloss": "to the wife/woman (dat. sg. γυναικί)",
+  "greek_form": "γυναικί",
+  "attestation": "IG XV 1, 200",
+  "site": "Marion",
+  "citation": "IG XV 1, 200 (BBAW); Masson, ICS 154a",
+  "license": "CC BY 4.0"
+ },
+ "KU-NA-I-KO-SE": {
+  "lemma": "γυνή",
+  "gloss": "of the wife/woman (gen. sg. γυναικός)",
+  "greek_form": "γυναικός",
+  "attestation": "IG XV 1, 205",
+  "site": "Marion",
+  "citation": "IG XV 1, 205 (BBAW); Masson, ICS 166",
+  "license": "CC BY 4.0"
  },
  "MA-KA-I": {
   "lemma": "μάχη",
-  "gloss": "battle (dative: in the battle)"
+  "gloss": "battle (dative: in the battle)",
+  "greek_form": "μάχᾳ",
+  "attestation": "ICS 217 (Idalion Bronze Tablet)",
+  "site": "Idalion",
+  "citation": "Masson, ICS 217",
+  "license": "public domain"
+ },
+ "MA-TI-RI": {
+  "lemma": "μήτηρ",
+  "gloss": "to the mother (dat. sg. ματρί)",
+  "greek_form": "ματρί",
+  "attestation": "IG XV 1, 217, 232",
+  "site": "Marion",
+  "citation": "IG XV 1, 217/232 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
  },
  "O-NA-SI-LO-SE": {
   "lemma": "Ὀνάσιλος",
-  "gloss": "Onasilos (personal name, Idalion tablet)"
+  "gloss": "Onasilos (personal name, Idalion tablet)",
+  "greek_form": "Ὀνάσιλος",
+  "attestation": "ICS 217 (Idalion Bronze Tablet)",
+  "site": "Idalion",
+  "citation": "Masson, ICS 217",
+  "license": "public domain"
  },
  "PA-I-SE": {
   "lemma": "παῖς",
-  "gloss": "child"
+  "gloss": "child",
+  "greek_form": "παῖς",
+  "attestation": "IG XV 1, 184, 193, 205",
+  "site": "Marion",
+  "citation": "IG XV 1, 184/193/205 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "PA-I-TI": {
+  "lemma": "παῖς",
+  "gloss": "for the child (dat. sg. παιδί)",
+  "greek_form": "παιδί",
+  "attestation": "IG XV 1, 94, 180",
+  "site": "Kurion / Marion",
+  "citation": "IG XV 1, 94/180 (BBAW); Masson, ICS 181",
+  "license": "CC BY 4.0"
+ },
+ "PA-I-TO-SE": {
+  "lemma": "παῖς",
+  "gloss": "of the child (gen. sg. παιδός)",
+  "greek_form": "παιδός",
+  "attestation": "IG XV 1, 186, 191, 211",
+  "site": "Marion",
+  "citation": "IG XV 1, 186/191/211 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "PA-PO": {
+  "lemma": "Πάφος",
+  "gloss": "of Paphos (gen. sg. Πάφω)",
+  "greek_form": "Πάφω",
+  "attestation": "IG XV 1, 120, 121, 122",
+  "site": "Kurion",
+  "citation": "IG XV 1, 120-122 (BBAW); Masson, ICS 176-177",
+  "license": "CC BY 4.0"
  },
  "PA-SI-LE-U-SE": {
   "lemma": "βασιλεύς",
-  "gloss": "king"
+  "gloss": "king",
+  "greek_form": "βασιλεύς",
+  "attestation": "IG XV 1, 93; ICS 217 (Idalion)",
+  "site": "Kurion / Idalion",
+  "citation": "IG XV 1, 93 (BBAW); Masson, ICS 180/217",
+  "license": "CC BY 4.0"
+ },
+ "PA-SI-LE-WO-SE": {
+  "lemma": "βασιλεύς",
+  "gloss": "of the king (gen. sg. βασιλῆϝος)",
+  "greek_form": "βασιλῆϝος",
+  "attestation": "IG XV 1, 120, 121, 122, 238",
+  "site": "Kurion / Marion",
+  "citation": "IG XV 1, 120-122/238 (BBAW); Masson, ICS 176-177",
+  "license": "CC BY 4.0"
+ },
+ "PA-TI-RI": {
+  "lemma": "πατήρ",
+  "gloss": "to the father (dat. sg. πατρί)",
+  "greek_form": "πατρί",
+  "attestation": "IG XV 1, 199, 232",
+  "site": "Marion",
+  "citation": "IG XV 1, 199/232 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "PE-RI": {
+  "lemma": "περί",
+  "gloss": "concerning, for",
+  "greek_form": "περί",
+  "attestation": "IG XV 1, 94",
+  "site": "Kurion",
+  "citation": "IG XV 1, 94 (BBAW); Masson, ICS 181",
+  "license": "CC BY 4.0"
+ },
+ "PI-A-LA": {
+  "lemma": "φιάλη",
+  "gloss": "libation bowl, phiale (Cypriot φιάλα)",
+  "greek_form": "φιάλα",
+  "attestation": "IG XV 1, 123",
+  "site": "Kurion",
+  "citation": "IG XV 1, 123 (BBAW); Masson, ICS 177a",
+  "license": "CC BY 4.0"
+ },
+ "SA-MA": {
+  "lemma": "σῆμα",
+  "gloss": "tomb, grave monument (Cypriot σᾶμα)",
+  "greek_form": "σᾶμα",
+  "attestation": "IG XV 1, 197",
+  "site": "Marion",
+  "citation": "IG XV 1, 197 (BBAW); Masson, ICS 122",
+  "license": "CC BY 4.0"
+ },
+ "SE-LA-MI-NI-JA": {
+  "lemma": "Σαλαμίνιος",
+  "gloss": "Salaminian (fem. nom. sg. Σαλαμινία)",
+  "greek_form": "Σαλαμινία",
+  "attestation": "IG XV 1, 233",
+  "site": "Marion",
+  "citation": "IG XV 1, 233 (BBAW); Masson, ICS 162",
+  "license": "CC BY 4.0"
+ },
+ "TA-I": {
+  "lemma": "ὁ",
+  "gloss": "the (fem. dat. sg. τᾷ)",
+  "greek_form": "τᾷ",
+  "attestation": "IG XV 1, 200, 204, 217",
+  "site": "Marion",
+  "citation": "IG XV 1, 200/204/217 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "TA-MA-TI-RI": {
+  "lemma": "Δημήτηρ",
+  "gloss": "to Demeter (dat. sg. Δαματρί)",
+  "greek_form": "Δαματρί",
+  "attestation": "IG XV 1, 95",
+  "site": "Kurion",
+  "citation": "IG XV 1, 95 (BBAW); Masson, ICS 182",
+  "license": "CC BY 4.0"
+ },
+ "TA-SE": {
+  "lemma": "ὁ",
+  "gloss": "the (fem. gen. sg. τᾶς)",
+  "greek_form": "τᾶς",
+  "attestation": "IG XV 1, 181, 186, 191, 205",
+  "site": "Marion",
+  "citation": "IG XV 1, 181/186/191/205 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "TA-TE": {
+  "lemma": "ὅδε",
+  "gloss": "this (fem. acc. sg. τάνδε)",
+  "greek_form": "τάνδε",
+  "attestation": "IG XV 1, 93",
+  "site": "Kurion",
+  "citation": "IG XV 1, 93 (BBAW); Masson, ICS 180",
+  "license": "CC BY 4.0"
+ },
+ "TE-O": {
+  "lemma": "θεός",
+  "gloss": "of the god (gen. sg. θεῶ)",
+  "greek_form": "θεῶ",
+  "attestation": "IG XV 1, 126, 128",
+  "site": "Kurion",
+  "citation": "IG XV 1, 126/128 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
  },
  "TE-O-SE": {
   "lemma": "θεός",
-  "gloss": "god"
+  "gloss": "god",
+  "greek_form": "θεός",
+  "attestation": "ICS 264 (Golgoi); standard Cypriot Greek",
+  "site": "Golgoi",
+  "citation": "Masson, ICS 264",
+  "license": "public domain"
  },
  "TO-I": {
   "lemma": "ὁ",
-  "gloss": "the (dative τῷ)"
+  "gloss": "the (dative τῷ)",
+  "greek_form": "τῷ",
+  "attestation": "IG XV 1, 94, 196, 199; ICS 217",
+  "site": "Kurion / Marion / Idalion",
+  "citation": "IG XV 1, 94/196/199 (BBAW); Masson, ICS",
+  "license": "CC BY 4.0"
+ },
+ "TO-TE": {
+  "lemma": "ὅδε",
+  "gloss": "this (neut. τόδε)",
+  "greek_form": "τόδε",
+  "attestation": "IG XV 1, 108",
+  "site": "Kurion",
+  "citation": "IG XV 1, 108 (BBAW)",
+  "license": "CC BY 4.0"
  },
  "TU-KA": {
   "lemma": "τύχη",
-  "gloss": "fortune (Cypriot τύχα)"
+  "gloss": "fortune (Cypriot τύχα)",
+  "greek_form": "τύχα",
+  "attestation": "ICS (passim, dedicatory formula)",
+  "site": "Idalion / Golgoi",
+  "citation": "Masson, ICS (1983)",
+  "license": "public domain"
+ },
+ "TU-KA-I": {
+  "lemma": "τύχη",
+  "gloss": "with fortune (dat. sg. τύχᾳ)",
+  "greek_form": "τύχᾳ",
+  "attestation": "IG XV 1, 95",
+  "site": "Kurion",
+  "citation": "IG XV 1, 95 (BBAW); Masson, ICS 182",
+  "license": "CC BY 4.0"
+ },
+ "U-NE-TE-KE": {
+  "lemma": "ἀνατίθημι",
+  "gloss": "dedicated (Cypriot aor. 3sg. ὐνέθηκε)",
+  "greek_form": "ὐνέθηκε",
+  "attestation": "IG XV 1, 94",
+  "site": "Kurion",
+  "citation": "IG XV 1, 94 (BBAW); Masson, ICS 181",
+  "license": "CC BY 4.0"
  },
  "WA-NA-SA": {
   "lemma": "ἄνασσα",
-  "gloss": "queen, lady (the Paphian goddess)"
+  "gloss": "queen, lady (the Paphian goddess)",
+  "greek_form": "ϝάνασσα",
+  "attestation": "ICS 1, 4, 6, 16, 17 (Paphos)",
+  "site": "Paphos",
+  "citation": "Masson, ICS (Paphos royal dedications)",
+  "license": "public domain"
  }
 }

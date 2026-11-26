@@ -4,14 +4,17 @@ Maps each inscription's find-site to coordinates from a bundled gazetteer and ex
 a GeoDataFrame for spatial analysis and plotting. A whole corpus, the `aegean.analysis.QueryResults`
 `Corpus.query` returns, or a plain list of documents are all accepted wherever a corpus is, so
 "query, then map the result" is one step. The gazetteer covers the Aegean scripts' find-sites
-and the openly-licensed Greek-epigraphy corpora's ancient find-places (I.Sicily, IIP, IOSPE, IGCyr,
-EDH). The coordinates are **approximate** (site-level, ~1 km); for the epigraphy find-places they are
-the site's Pleiades representative point, verified against the corpus's own coordinate where it
-carries one. Where a site aligns to a Pleiades place, its stable id travels with it
+(Linear A, Linear B / DAMOS, Cypriot IG XV 1, Cypro-Minoan) and all seven openly-licensed
+Greek-epigraphy corpora's ancient find-places (I.Sicily, IIP, IOSPE, IGCyr, Aphrodisias, Crete,
+EDH). The coordinates are **approximate** (site-level, ~1 km; monument/sanctuary-level and
+region-level placeholders carry explicit ``SiteCoord.precision``); for the epigraphy find-places
+they are the site's Pleiades representative point, verified against the corpus's own coordinate
+where it carries one. Where a site aligns to a Pleiades place, its stable id travels with it
 (``SiteCoord.pleiades`` / ``pleiades_uri``) for linked-open-data work — the major sites are aligned,
 minor findspots/peak sanctuaries mostly are not. Find-site labels are matched with their internal
 whitespace collapsed, so a corpus label split across lines (``"Beth\\n  Shearim"``) still resolves.
-Sites not in the gazetteer are dropped; see `site_coordinates` for coverage.
+Sites not in the gazetteer are omitted from GeoDataFrames; call `unmapped_sites` to audit omitted
+find-places and their document counts explicitly.
 A few entries are flagged ``contested`` (Margiana): present because the upstream corpus carries them
 but not accepted as Linear A find-spots. The flag (``SiteCoord.contested`` / ``is_contested``, and a
 ``contested`` column on the GeoDataFrames) travels with the site so it is never silently mapped as a
@@ -33,7 +36,7 @@ from ..data import load_bundled_json
 if TYPE_CHECKING:
     from ..core.corpus import Corpus
 
-__all__ = ["SiteCoord", "site_coordinates", "to_geodataframe", "word_distribution"]
+__all__ = ["SiteCoord", "site_coordinates", "to_geodataframe", "unmapped_sites", "word_distribution"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +54,8 @@ class SiteCoord:
     # The string is the reason; ``None`` for ordinary sites. Carried through the
     # GeoDataFrames so it is never silently mapped as a genuine provenance.
     contested: str | None = None
+    precision: str = "site"            # monument | site | region
+    location_role: str = "findspot"    # findspot | origin
 
     @property
     def pleiades_uri(self) -> str | None:
@@ -67,6 +72,23 @@ def site_coordinates() -> dict[str, SiteCoord]:
     """The bundled site→coordinate gazetteer, keyed by the corpus's ``meta.site`` label."""
     raw = load_bundled_json("geo", "site_coordinates.json")
     return {key: SiteCoord(**val) for key, val in raw.items()}
+
+
+def unmapped_sites(corpus: Corpus) -> list[tuple[str, int]]:
+    """Return ``(site_label, document_count)`` pairs omitted from the gazetteer, most frequent first.
+
+    Works on the zero-dependency core install (does not require ``[geo]``). Documents with an
+    empty or missing ``meta.site`` are reported under ``""`` so callers can separate missing
+    metadata from unaligned place names.
+    """
+    documents = _documents_of(corpus)
+    keys = _key_index(site_coordinates())
+    counts: Counter[str] = Counter()
+    for d in documents:
+        norm = _normalize_site(d.meta.site or "")
+        if not norm or norm not in keys:
+            counts[norm] += 1
+    return counts.most_common()
 
 
 def _normalize_site(label: str) -> str:

@@ -68,15 +68,15 @@ def test_bridge_coverage_totals() -> None:
     cov = bridge_coverage(_cypriot())
     assert isinstance(cov, BridgeCoverage)
     assert cov.word_tokens == 572
-    assert cov.read_tokens == 33
-    assert cov.coverage_pct == pytest.approx(100 * 33 / 572)
+    assert cov.read_tokens == 100
+    assert cov.coverage_pct == pytest.approx(100 * 100 / 572)
     assert cov.distinct_forms == 384
-    assert cov.distinct_read_forms == 10        # 10 of 384 forms are in the lexicon
+    assert cov.distinct_read_forms == 45        # 45 of 384 forms are in the source-cited lexicon
 
 
 def test_bridge_coverage_by_status() -> None:
     cov = bridge_coverage(_cypriot())
-    assert cov.read_by_status == {"certain": 26, "unclear": 4, "restored": 3}
+    assert cov.read_by_status == {"certain": 64, "unclear": 24, "restored": 12}
     assert cov.words_by_status == {"certain": 345, "unclear": 178, "restored": 49}
     # read tokens never exceed the word tokens of the same status
     for status, n in cov.read_by_status.items():
@@ -95,7 +95,7 @@ def test_bridge_coverage_readings_sorted_and_correct() -> None:
 
 
 def test_bridge_coverage_defaults_to_bundled_corpus() -> None:
-    assert bridge_coverage().read_tokens == bridge_coverage(_cypriot()).read_tokens == 33
+    assert bridge_coverage().read_tokens == bridge_coverage(_cypriot()).read_tokens == 100
 
 
 def test_bridge_coverage_empty_corpus() -> None:
@@ -139,5 +139,5 @@ def test_cli_syllabary_json() -> None:
 def test_cli_bridge_json() -> None:
     data = json.loads(_run(["analyze", "bridge", "cypriot", "--json"]))
     assert data["word_tokens"] == 572
-    assert data["read_tokens"] == 33
-    assert data["read_by_status"] == {"certain": 26, "unclear": 4, "restored": 3}
+    assert data["read_tokens"] == 100
+    assert data["read_by_status"] == {"certain": 64, "unclear": 24, "restored": 12}

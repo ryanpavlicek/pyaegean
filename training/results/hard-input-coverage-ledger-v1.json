@@ -1,0 +1,634 @@
+{
+  "schema_version": "1",
+  "name": "pyaegean-hard-input-coverage-ledger-v1",
+  "description": "Deterministic offline scholarly coverage ledger across OCR/lunate text, Leiden epigraphic apparatus, orthographic variation/crasis, long periods, dialectal genres, and quantitative metrical scansion. Separates attested references, constructed controls, and explicitly unevaluated gaps; uses no locked NLP test folds.",
+  "locked_folds_used": false,
+  "summary": {
+    "ocr_cases": 4,
+    "cypriot_bridge_read_tokens": 100,
+    "cypriot_bridge_word_tokens": 572,
+    "sandhi_resolved": 3,
+    "sandhi_total": 4,
+    "dialect_cohorts": 5,
+    "attested_verse_scanned": 7,
+    "attested_verse_total": 7,
+    "prose_negative_control_rejected": true
+  },
+  "cohorts": {
+    "ocr_and_lunate": [
+      {
+        "id": "ocr_latin_and_betacode_repair",
+        "evidence_kind": "constructed",
+        "source": "OCR-degraded Greek with Latin lookalikes (o/v) and Beta-Code accent remnant",
+        "lenient": true,
+        "repair_warnings": [
+          "lenient normalize: repaired 2 Latin letter(s) in Greek words (o→ο, v→υ)",
+          "lenient normalize: converted 1 Beta-Code remnant diacritic(s) to combining marks"
+        ],
+        "normalized": "Ἐν ἀρχῇ ἦν ὁ Λόγος, βασιλευς",
+        "folded": "εν αρχη ην ο λογοσ, βασιλευσ",
+        "token_count": 7,
+        "lemmas": [
+          "ἐν",
+          "ἀρχή",
+          "εἰμί",
+          "ὁ",
+          "λόγος",
+          "βασιλευς"
+        ],
+        "upos": [
+          "ADP",
+          "NOUN",
+          "VERB",
+          "DET",
+          "NOUN",
+          "NOUN"
+        ]
+      },
+      {
+        "id": "ocr_lunate_koine",
+        "evidence_kind": "constructed",
+        "source": "John 1:1 with lunate sigma (U+03F2/U+03F9) & NFD combining marks (honest preservation)",
+        "lenient": false,
+        "repair_warnings": [],
+        "normalized": "Ἐν ἀρχῇ ἦν ὁ Λόγοϲ, καὶ ὁ Λόγοϲ ἦν πρὸϲ τὸν Θεόν.",
+        "folded": "εν αρχη ην ο λογοϲ, και ο λογοϲ ην προϲ τον θεον.",
+        "token_count": 14,
+        "lemmas": [
+          "ἐν",
+          "ἀρχή",
+          "εἰμί",
+          "ὁ",
+          "Λόγοϲ",
+          "καί",
+          "ὁ",
+          "Λόγοϲ",
+          "εἰμί",
+          "πρὸϲ",
+          "ὁ",
+          "θεός"
+        ],
+        "upos": [
+          "ADP",
+          "NOUN",
+          "VERB",
+          "DET",
+          "NOUN",
+          "CCONJ",
+          "DET",
+          "NOUN",
+          "VERB",
+          "NOUN",
+          "DET",
+          "NOUN"
+        ]
+      },
+      {
+        "id": "ocr_unaccented_uppercase",
+        "evidence_kind": "attested",
+        "source": "Swete Septuagint Genesis 1:1 style uppercase unaccented opening",
+        "lenient": false,
+        "repair_warnings": [],
+        "normalized": "ΕΝ ΑΡΧΗ ΕΠΟΙΗΣΕΝ Ο ΘΕΟΣ ΤΟΝ ΟΥΡΑΝΟΝ ΚΑΙ ΤΗΝ ΓΗΝ",
+        "folded": "εν αρχη εποιησεν ο θεοσ τον ουρανον και την γην",
+        "token_count": 10,
+        "lemmas": [
+          "ΕΝ",
+          "ΑΡΧΗ",
+          "ΕΠΟΙΗΣΕΝ",
+          "Ο",
+          "ΘΕΟΣ",
+          "ΤΟΝ",
+          "ουρανος",
+          "ΚΑΙ",
+          "ΤΗΝ",
+          "ΓΗΝ"
+        ],
+        "upos": [
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN"
+        ]
+      },
+      {
+        "id": "ocr_pg_noisy_diacritics",
+        "evidence_kind": "constructed",
+        "source": "Patrologia Graeca CGPG-style OCR noise (missing breathing + diacritics)",
+        "lenient": false,
+        "repair_warnings": [],
+        "normalized": "Εν αρχη ην ο λογος και ο λογος ην προς τον θεον",
+        "folded": "εν αρχη ην ο λογοσ και ο λογοσ ην προσ τον θεον",
+        "token_count": 12,
+        "lemmas": [
+          "Εν",
+          "αρχη",
+          "ην",
+          "ο",
+          "λογος",
+          "και",
+          "ο",
+          "λογος",
+          "ην",
+          "προς",
+          "τον",
+          "θεος"
+        ],
+        "upos": [
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN"
+        ]
+      }
+    ],
+    "leiden_damage_restoration": {
+      "cypriot_ig_xv1_attested": {
+        "evidence_kind": "attested",
+        "source": "Inscriptiones Graecae XV 1 (BBAW, CC BY 4.0) bundled corpus",
+        "documents": 180,
+        "word_tokens": 572,
+        "read_tokens": 100,
+        "coverage_pct": 17.48,
+        "distinct_read_forms": 45,
+        "read_by_status": {
+          "certain": 64,
+          "unclear": 24,
+          "restored": 12
+        },
+        "ig_95_sample_lemmas": [
+          "Δημήτηρ",
+          "καί",
+          "Κόρη",
+          "ἀνατίθημι",
+          "τύχη"
+        ],
+        "ig_192_restored_tokens": [
+          {
+            "text": "e-mi",
+            "status": "unclear",
+            "leiden": "ẹ-ṃị"
+          },
+          {
+            "text": "ta",
+            "status": "restored",
+            "leiden": "[ta]"
+          },
+          {
+            "text": "ti-mo-wo-se.",
+            "status": "unclear",
+            "leiden": "ṭị-ṃọ-ẉọ-ṣẹ."
+          }
+        ]
+      },
+      "greek_leiden_constructed_control": {
+        "evidence_kind": "constructed",
+        "source": "Standard Attic decree formula with Leiden [], <>, {}, (), [---] marks",
+        "raw": "ἔδοξεν [τῇ βουλ]ῇ καὶ τῷ δήμῳ· Αὐρ(ήλιος) ⟨Θεό⟩δωρος {τὸν} [---] ἀνέθηκεν.",
+        "word_count": 13,
+        "words": [
+          "ἔδοξεν",
+          "τῇ",
+          "βουλ",
+          "ῇ",
+          "καὶ",
+          "τῷ",
+          "δήμῳ",
+          "Αὐρ",
+          "ήλιος",
+          "Θεό",
+          "δωρος",
+          "τὸν",
+          "ἀνέθηκεν"
+        ]
+      },
+      "epidoc_xml_apparatus_control": {
+        "evidence_kind": "constructed",
+        "source": "Minimal TEI/EpiDoc XML with <w>, <supplied>, <unclear>, and <gap>",
+        "tokens": [
+          {
+            "text": "ἔδοξεν",
+            "kind": "word",
+            "status": "certain"
+          },
+          {
+            "text": "τῇ",
+            "kind": "word",
+            "status": "restored"
+          },
+          {
+            "text": "βουλῇ",
+            "kind": "word",
+            "status": "restored"
+          },
+          {
+            "text": "καὶ",
+            "kind": "word",
+            "status": "unclear"
+          },
+          {
+            "text": "τῷ",
+            "kind": "word",
+            "status": "certain"
+          },
+          {
+            "text": "δήμῳ",
+            "kind": "word",
+            "status": "certain"
+          }
+        ]
+      }
+    },
+    "spelling_variation_and_crasis": {
+      "crasis": [
+        {
+          "form": "κἀγὼ",
+          "evidence_kind": "attested",
+          "source": "Attic/Koine crasis with grave accent (καί + ἐγώ)",
+          "resolved": [
+            "καί",
+            "ἐγώ"
+          ],
+          "kind": "crasis",
+          "uncertain": false
+        },
+        {
+          "form": "ἁνήρ",
+          "evidence_kind": "attested",
+          "source": "Attic crasis with rough breathing (ὁ + ἀνήρ)",
+          "resolved": [
+            "ὁ",
+            "ἀνήρ"
+          ],
+          "kind": "crasis",
+          "uncertain": false
+        },
+        {
+          "form": "τἀληθῆ",
+          "evidence_kind": "attested",
+          "source": "Attic crasis in curated lexicon (τά + ἀληθῆ)",
+          "resolved": [
+            "τὰ",
+            "ἀληθῆ"
+          ],
+          "kind": "crasis",
+          "uncertain": false
+        },
+        {
+          "form": "τἀγαθά",
+          "evidence_kind": "attested",
+          "source": "Attic crasis outside curated lexicon (conservative abstention control)",
+          "resolved": [],
+          "kind": "crasis",
+          "uncertain": true
+        }
+      ],
+      "iota_subscript_safety": {
+        "evidence_kind": "attested",
+        "source": "Dative sg. ἐκκλησίᾳ vs. nominative pl. ἐκκλησίαι",
+        "dat_sg": "ἐκκλησίᾳ",
+        "nom_pl": "ἐκκλησίαι",
+        "exact_lower_distinct": true,
+        "stripped_distinct": true
+      }
+    },
+    "ellipsis_and_long_periods": {
+      "herodotus_proem_attested": {
+        "evidence_kind": "attested",
+        "source": "Herodotus, Histories 1.1.0 (Ionic periodic proem, bundled sample)",
+        "word_count": 39,
+        "sentence_count": 1,
+        "sample_lemmas": [
+          "Ἡροδότος",
+          "Ἁλικαρνησσέος",
+          "ἱστορία",
+          "ἀπόδεξις",
+          "ὅδε",
+          "ὡς",
+          "μήτε"
+        ]
+      },
+      "policy_segmentation_matrix": {
+        "evidence_kind": "attested",
+        "source": "Gospel of John 1:1-3 (Nestle 1904 punctuation incl. raised dot ·)",
+        "sentence_counts_by_policy": {
+          "default": 3,
+          "prose": 3,
+          "verse": 3,
+          "inscription": 2,
+          "papyrus": 2
+        }
+      }
+    },
+    "dialect_and_genre_coverage": [
+      {
+        "id": "epic_homer",
+        "evidence_kind": "attested",
+        "source": "Homer, Iliad 1.1 (Epic)",
+        "word_count": 5,
+        "lemmas": [
+          "μῆνις",
+          "ἀείδω",
+          "θεά",
+          "Πηληϊάδεω",
+          "Ἀχιλῆος"
+        ],
+        "upos": [
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "VERB",
+          "NOUN"
+        ]
+      },
+      {
+        "id": "aeolic_sappho",
+        "evidence_kind": "attested",
+        "source": "Sappho fr. 1.1 (Aeolic)",
+        "word_count": 3,
+        "lemmas": [
+          "ποικιλόθρον’",
+          "ἀθανάτ’",
+          "Ἀφρόδιτα"
+        ],
+        "upos": [
+          "NOUN",
+          "NOUN",
+          "NOUN"
+        ]
+      },
+      {
+        "id": "attic_tragedy",
+        "evidence_kind": "attested",
+        "source": "Sophocles, Antigone 1 (Attic trimeter, non-locked)",
+        "word_count": 5,
+        "lemmas": [
+          "ὦ",
+          "κοινός",
+          "αὐτάδελφος",
+          "Ἰσμήνης",
+          "κάρα"
+        ],
+        "upos": [
+          "VERB",
+          "NOUN",
+          "NOUN",
+          "NOUN",
+          "NOUN"
+        ]
+      },
+      {
+        "id": "koine_nt",
+        "evidence_kind": "attested",
+        "source": "John 1:1 (Koine NT)",
+        "word_count": 12,
+        "lemmas": [
+          "ἐν",
+          "ἀρχή",
+          "εἰμί",
+          "ὁ",
+          "λόγος",
+          "καί",
+          "ὁ",
+          "λόγος",
+          "εἰμί",
+          "πρός",
+          "ὁ",
+          "θεός"
+        ],
+        "upos": [
+          "ADP",
+          "NOUN",
+          "VERB",
+          "DET",
+          "NOUN",
+          "CCONJ",
+          "DET",
+          "NOUN",
+          "VERB",
+          "ADP",
+          "DET",
+          "NOUN"
+        ]
+      },
+      {
+        "id": "lxx_genesis",
+        "evidence_kind": "attested",
+        "source": "Septuagint Genesis 1:1 (Swete LXX)",
+        "word_count": 10,
+        "lemmas": [
+          "ἐν",
+          "ἀρχή",
+          "ἐποίησεν",
+          "ὁ",
+          "θεός",
+          "ὁ",
+          "οὐρανός",
+          "καί",
+          "ὁ",
+          "γῆν"
+        ],
+        "upos": [
+          "ADP",
+          "NOUN",
+          "NOUN",
+          "DET",
+          "NOUN",
+          "DET",
+          "NOUN",
+          "CCONJ",
+          "DET",
+          "NOUN"
+        ]
+      }
+    ],
+    "metrical_scansion_dossier": [
+      {
+        "id": "iliad_1_1",
+        "evidence_kind": "attested",
+        "source": "Homer, Iliad 1.1",
+        "meter": "hexameter",
+        "scans": true,
+        "pattern": "—⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×",
+        "syllable_count": 16,
+        "caesura": "penthemimeral",
+        "canonical_caesura": true,
+        "ambiguous": false,
+        "dactyl_ratio": 0.75,
+        "spondaic_fifth": false,
+        "resolved_count": 0,
+        "synizesis_used": [
+          "Πηληϊάδεω"
+        ],
+        "long_by_nature_used": [],
+        "error": null
+      },
+      {
+        "id": "iliad_1_3",
+        "evidence_kind": "attested",
+        "source": "Homer, Iliad 1.3",
+        "meter": "hexameter",
+        "scans": true,
+        "pattern": "——|——|——|—⏑⏑|—⏑⏑|—×",
+        "syllable_count": 14,
+        "caesura": "penthemimeral",
+        "canonical_caesura": true,
+        "ambiguous": false,
+        "dactyl_ratio": 0.25,
+        "spondaic_fifth": false,
+        "resolved_count": 0,
+        "synizesis_used": [],
+        "long_by_nature_used": [
+          "ψυχὰς"
+        ],
+        "error": null
+      },
+      {
+        "id": "iliad_1_18",
+        "evidence_kind": "attested",
+        "source": "Homer, Iliad 1.18 (optional synizesis θεοὶ)",
+        "meter": "hexameter",
+        "scans": true,
+        "pattern": "——|——|—⏑⏑|—⏑⏑|—⏑⏑|—×",
+        "syllable_count": 15,
+        "caesura": "trochaic",
+        "canonical_caesura": true,
+        "ambiguous": false,
+        "dactyl_ratio": 0.5,
+        "spondaic_fifth": false,
+        "resolved_count": 0,
+        "synizesis_used": [
+          "θεοὶ"
+        ],
+        "long_by_nature_used": [],
+        "error": null
+      },
+      {
+        "id": "odyssey_1_1",
+        "evidence_kind": "attested",
+        "source": "Homer, Odyssey 1.1",
+        "meter": "hexameter",
+        "scans": true,
+        "pattern": "—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×",
+        "syllable_count": 17,
+        "caesura": "trochaic",
+        "canonical_caesura": true,
+        "ambiguous": false,
+        "dactyl_ratio": 1.0,
+        "spondaic_fifth": false,
+        "resolved_count": 0,
+        "synizesis_used": [],
+        "long_by_nature_used": [],
+        "error": null
+      },
+      {
+        "id": "antigone_1",
+        "evidence_kind": "attested",
+        "source": "Sophocles, Antigone 1 (non-locked)",
+        "meter": "trimeter",
+        "scans": true,
+        "pattern": "×—⏑—|×—⏑—|×—⏑×",
+        "syllable_count": 12,
+        "caesura": "hephthemimeral",
+        "canonical_caesura": true,
+        "ambiguous": false,
+        "dactyl_ratio": null,
+        "spondaic_fifth": false,
+        "resolved_count": 0,
+        "synizesis_used": [],
+        "long_by_nature_used": [],
+        "error": null
+      },
+      {
+        "id": "sappho_31_1",
+        "evidence_kind": "attested",
+        "source": "Sappho fr. 31.1",
+        "meter": "sapphic_hendecasyllable",
+        "scans": true,
+        "pattern": "—⏑—×—⏑⏑—⏑—×",
+        "syllable_count": 11,
+        "caesura": null,
+        "canonical_caesura": false,
+        "ambiguous": false,
+        "dactyl_ratio": null,
+        "spondaic_fifth": false,
+        "resolved_count": 0,
+        "synizesis_used": [],
+        "long_by_nature_used": [],
+        "error": null
+      },
+      {
+        "id": "alcaeus_326_1",
+        "evidence_kind": "attested",
+        "source": "Alcaeus fr. 326.1",
+        "meter": "alcaic_hendecasyllable",
+        "scans": true,
+        "pattern": "×—⏑—×—⏑⏑—⏑×",
+        "syllable_count": 11,
+        "caesura": null,
+        "canonical_caesura": false,
+        "ambiguous": false,
+        "dactyl_ratio": null,
+        "spondaic_fifth": false,
+        "resolved_count": 0,
+        "synizesis_used": [],
+        "long_by_nature_used": [],
+        "error": null
+      },
+      {
+        "id": "prose_negative_control",
+        "evidence_kind": "constructed",
+        "source": "Constructed prose negative control",
+        "meter": "hexameter",
+        "scans": false,
+        "pattern": null,
+        "syllable_count": 8,
+        "caesura": null,
+        "canonical_caesura": false,
+        "ambiguous": false,
+        "dactyl_ratio": null,
+        "spondaic_fifth": false,
+        "resolved_count": 0,
+        "synizesis_used": [],
+        "long_by_nature_used": [],
+        "error": "line does not scan as dactylic hexameter (8 syllables in natural reading): 'τοῦτο πεζός ἐστι λόγος'"
+      }
+    ]
+  },
+  "unevaluated_gaps": [
+    {
+      "area": "Multi-work adjudicated Greek tragedy syntax & lemmas beyond Bacchae",
+      "status": "unevaluated",
+      "reason": "Awaits external human two-reader adjudication of archived Daphne Philoctetes & Iphigenia in Tauris packets."
+    },
+    {
+      "area": "Raw Patrologia Graeca CGPG OCR word-error-rate vs. manual collation",
+      "status": "unevaluated",
+      "reason": "No aligned manual gold collation exists in-repo for CGPG OCR volumes (edition_fidelity='ocr' remains explicitly labeled)."
+    },
+    {
+      "area": "Dactylo-epitrite and free astrophic choral lyric scansion",
+      "status": "unevaluated",
+      "reason": "Outside the fixed-template meter family (hexameter, pentameter, trimeter, aeolic) currently implemented in aegean.greek.meter."
+    },
+    {
+      "area": "Neural translation fidelity on unseen passage families",
+      "status": "unevaluated",
+      "reason": "Requires live provider API evaluation and human/rubric grading outside offline deterministic checks."
+    }
+  ]
+}

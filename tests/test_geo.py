@@ -122,3 +122,25 @@ def test_contested_surfaces_in_geodataframe() -> None:
     marg = gdf[gdf["site"] == "Margiana"]
     assert len(marg) >= 1 and marg["contested"].notna().all()
     assert gdf[gdf["site"] == "Haghia Triada"]["contested"].isna().all()
+
+
+def test_expanded_epigraphy_cypriot_and_spatial_metadata() -> None:
+    coords = site_coordinates()
+    assert len(coords) >= 140
+    # Newly verified Cypriot IG XV 1, Aphrodisias, Crete, and Linear B sites
+    assert coords["Aphrodisias"].pleiades == 638753
+    assert coords["Amathus"].pleiades == 707462
+    assert coords["Marion"].pleiades == 707574
+    assert coords["Kurion"].pleiades == 707549
+    assert coords["Gortyna"].pleiades == 589796
+    assert coords["Thebes"].pleiades == 541138
+    assert coords["Agrigentum"].pleiades == 462086
+    # Spatial granularity & location role metadata
+    assert coords["Crete"].precision == "region"
+    assert coords["Teos, tempio di Dioniso"].precision == "monument"
+    assert coords["Knossos"].precision == "site"
+    assert coords["Knossos"].location_role == "findspot"
+    # Zero-dependency unmapped_sites() audit: Cypriot now maps 179/180 (only 'unbekannt' omitted)
+    missing = aegean.geo.unmapped_sites(aegean.load("cypriot"))
+    assert missing == [("unbekannt", 1)]
+

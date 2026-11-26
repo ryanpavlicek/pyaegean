@@ -51,3 +51,24 @@ def test_ig_corpus_present_and_attributed() -> None:
     assert any("telota.bbaw.de" in n for n in doc.meta.notes)  # CC-BY link-back per inscription
     prov = corpus.provenance
     assert "CC BY 4.0" in prov.license and "telota.bbaw.de" in prov.url
+
+
+def test_source_cited_lexicon_entries_and_trailing_period() -> None:
+    from aegean.scripts.cypriot import CypriotLexEntry, lexicon_entries, lexicon_entry
+
+    entries = lexicon_entries()
+    assert len(entries) >= 50
+    for form, entry in entries.items():
+        assert isinstance(entry, CypriotLexEntry)
+        assert entry.form == form and entry.lemma and entry.gloss
+        assert entry.citation and entry.attestation and entry.license
+    # Sentence-final period stripped (Marion IG XV 1 epitaphs end in 'e-mi.')
+    assert greek_reading("e-mi.") == ("εἰμί", "I am")
+    # Kurion & Marion attested entries carry explicit IG XV 1 / Masson ICS citations
+    stele = lexicon_entry("e-pe-se-ta-se")
+    assert stele is not None and stele.lemma == "ἐφίστημι" and "IG XV 1" in stele.citation
+    phiale = lexicon_entry("pi-a-la")
+    assert phiale is not None and phiale.lemma == "φιάλη" and phiale.site == "Kurion"
+    demeter = lexicon_entry("ta-ma-ti-ri")
+    assert demeter is not None and demeter.lemma == "Δημήτηρ" and "95" in demeter.attestation
+

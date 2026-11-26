@@ -380,3 +380,47 @@ def test_cross_reference_is_preserved_without_guessing_target(monkeypatch):
     assert _fragments(item) == ["v. χράω (B) C."]
     assert item.provenance["headword"] == "χράομαι"
     assert summary.provenance["lookups"] == 1
+
+
+def test_combined_voice_and_case_cluster_outranks_earlier_single_case_match(monkeypatch):
+    body = (
+        "A. Act. c. dat. deliver over to another; "
+        + "active citation; " * 90
+        + "B. Med. c. dat. make terms with, consult; "
+        + "trailing material; " * 90
+    )
+    _install(monkeypatch, _index("example", {"συμβάλλω": body}))
+    records = [
+        _record("συμβάλλω", head=0, feats="Voice=Mid|Tense=Pres"),
+        _record("πόλις", 2, head=1, feats="Case=Dat|Number=Sing"),
+    ]
+    item, _summary = contextual_lexical_evidence(records, entry_budget=600, total_budget=20000)
+    assert item.provenance["matched_cue"] == "Case=Dat+Voice=Mid"
+    assert any("B. Med. c. dat. make terms with, consult" in part for part in _fragments(item))
+    assert item.provenance["contextual_sense_verified"] is False
+    _assert_offsets(item, body)
+
+
+def test_supplementary_participle_and_subjunctive_conjunction_cues(monkeypatch):
+    part_body = "I. hit a mark; " + "citation; " * 110 + "II. c. part. happen to be doing; " + "tail; " * 90
+    sub_body = "I. adv. where; " + "citation; " * 110 + "II. c. conj. in order that; " + "tail; " * 90
+    _install(monkeypatch, _index("example", {"τυγχάνω": part_body, "ἵνα": sub_body}))
+
+    part_recs = [
+        _record("τυγχάνω", head=0),
+        _record("λέγω", 2, head=1, feats="VerbForm=Part|Case=Nom"),
+    ]
+    item_p, _ = contextual_lexical_evidence(part_recs, total_budget=20000)
+    assert item_p.provenance["matched_cue"] == "VerbForm=Part"
+    assert any("c. part. happen to be doing" in f for f in _fragments(item_p))
+    _assert_offsets(item_p, part_body)
+
+    sub_recs = [
+        replace(_record("ἵνα", index=1, head=2), upos="SCONJ"),
+        _record("λέγω", index=2, head=0, feats="Mood=Sub|VerbForm=Fin"),
+    ]
+    item_s, _ = contextual_lexical_evidence(sub_recs, total_budget=20000)
+    assert item_s.provenance["matched_cue"] == "Mood=Sub"
+    assert any("c. conj. in order that" in f for f in _fragments(item_s))
+    _assert_offsets(item_s, sub_body)
+

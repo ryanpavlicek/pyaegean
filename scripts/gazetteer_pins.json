@@ -1,6 +1,6 @@
 {
   "_about": "Pinned Pleiades representative points [lat, lon] for the Greek-epigraphy find-places added to the gazetteer (I.Sicily, IGCyr, IOSPE, IIP, EDH). Each was verified against the live Pleiades JSON endpoint on the date below (name correspondence + region sanity, and distance < 6 km from the corpus's own coordinate where one is carried). 'scripts/check_gazetteer.py --offline' checks the stored gazetteer coordinate against these pins with the same >6 km drift rule, so a later edit that moves a coordinate away from its verified point fails offline in CI; the default (network) run re-fetches these points from Pleiades weekly. Chersonesos and Cherson are the same physical site (Pleiades 226564), so they share one pin.",
-  "verified": "2026-07-11",
+  "verified": "2026-11-26",
   "additional_verifications": {
     "156116232": {
       "verified": "2026-10-11",
@@ -8,46 +8,600 @@
       "url": "https://pleiades.stoa.org/places/156116232/json",
       "source_sha256": "c712c6a61f74280d915968499fb97dac752b226c0a085e1e85cbf018fa7fd16e",
       "identity": "Mycenaean palace at Epano Englianos; distinct from Classical Pylos/Koryphasion (570640)."
+    },
+    "638753": {
+      "verified": "2026-11-26",
+      "title": "Aphrodisias",
+      "url": "https://pleiades.stoa.org/places/638753/json",
+      "source_sha256": "accfccf5c2f51a9f5194a7026e5fc7c243aa7673a49c1220bfbcae233a285bb2"
+    },
+    "707462": {
+      "verified": "2026-11-26",
+      "title": "Amathous",
+      "url": "https://pleiades.stoa.org/places/707462/json",
+      "source_sha256": "a778a2392e384f2786676ecd53e3cb553e621760c330ac59a202ba27e17d8606"
+    },
+    "707574": {
+      "verified": "2026-11-26",
+      "title": "Marion",
+      "url": "https://pleiades.stoa.org/places/707574/json",
+      "source_sha256": "80af821cc144f57f66c7cb1dec8f017edc67e667d9f50cbf8481db5d62056929"
+    },
+    "707549": {
+      "verified": "2026-11-26",
+      "title": "Kourion",
+      "url": "https://pleiades.stoa.org/places/707549/json",
+      "source_sha256": "7c7bd47bdbf2e034ae336141100582b4c9e200e5c6272183c1fb1bca378edd2d"
+    },
+    "589796": {
+      "verified": "2026-11-26",
+      "title": "Gortyn(a)",
+      "url": "https://pleiades.stoa.org/places/589796/json",
+      "source_sha256": "b67d15b309e078618606cae0a982dbc1927e3490239dd8f61a0c2bbfcb199669"
+    },
+    "589900": {
+      "verified": "2026-11-26",
+      "title": "Lato pros Kamara",
+      "url": "https://pleiades.stoa.org/places/589900/json",
+      "source_sha256": "6ed7c8f21756dd34cce804f57b1470eb03bcaa67991f06b78f4a8335a69007c9"
+    },
+    "589807": {
+      "verified": "2026-11-26",
+      "title": "Hierapytna",
+      "url": "https://pleiades.stoa.org/places/589807/json",
+      "source_sha256": "7e67b023bb017d2738c4b8ad4d60968f87fbb1243113c17280a1e69b12a7b046"
+    },
+    "590095": {
+      "verified": "2026-11-26",
+      "title": "(W)Axos",
+      "url": "https://pleiades.stoa.org/places/590095/json",
+      "source_sha256": "14bd6db72b951db39a4c0ce7f7b3722f4519312e2887ef2fd173839b5c6f868f"
+    },
+    "589772": {
+      "verified": "2026-11-26",
+      "title": "Eleutherna",
+      "url": "https://pleiades.stoa.org/places/589772/json",
+      "source_sha256": "abc52f48f489dec90c30423a9fca968b731ff6a5b5c8eaeba77f09f347914a02"
+    },
+    "589824": {
+      "verified": "2026-11-26",
+      "title": "Itanos",
+      "url": "https://pleiades.stoa.org/places/589824/json",
+      "source_sha256": "b914b8ecdf2ffee9a3ebd8a4265e731853bd388bfcc82c103de21ba89f324e1d"
+    },
+    "589959": {
+      "verified": "2026-11-26",
+      "title": "Olous",
+      "url": "https://pleiades.stoa.org/places/589959/json",
+      "source_sha256": "04fc7084bfe53b44b5d879a867abfe9649a493fc1f1864226b66ac1375d3cf70"
+    },
+    "589918": {
+      "verified": "2026-11-26",
+      "title": "Lyktos",
+      "url": "https://pleiades.stoa.org/places/589918/json",
+      "source_sha256": "0a4216290068e073a29dc25a3bcf59803d2c6c8a6ae1b92806ed08dcbaacd063"
+    },
+    "589767": {
+      "verified": "2026-11-26",
+      "title": "Dreros",
+      "url": "https://pleiades.stoa.org/places/589767/json",
+      "source_sha256": "735f75b3538f67c70cf4da80d1af71f9ab453c482a9ff991554996b77117131d"
+    },
+    "589704": {
+      "verified": "2026-11-26",
+      "title": "Aptera",
+      "url": "https://pleiades.stoa.org/places/589704/json",
+      "source_sha256": "681cb0759f94af7f2f1ba0e27ff98ed36bae2fc89f80f9ea7a9ebdcc7a2ee28c"
+    },
+    "590003": {
+      "verified": "2026-11-26",
+      "title": "Polyrrenia",
+      "url": "https://pleiades.stoa.org/places/590003/json",
+      "source_sha256": "142675ebafe13a17e89035532f003b5a1bbc6d8538e4558ddfb8fc79137ea03a"
+    },
+    "590011": {
+      "verified": "2026-11-26",
+      "title": "Praisos",
+      "url": "https://pleiades.stoa.org/places/590011/json",
+      "source_sha256": "733f4cd745d74a192c1e283457e16a7bb3fc06d26535bd4f1a5ce87eb924e43d"
+    },
+    "319662579": {
+      "verified": "2026-11-26",
+      "title": "Temple of Dionysos at Teos",
+      "url": "https://pleiades.stoa.org/places/319662579/json",
+      "source_sha256": "68e676014369b803eb3fa22ec8e0961f8515ebcd0e1a57f6617c4db0de7c22d4"
+    },
+    "599809": {
+      "verified": "2026-11-26",
+      "title": "Mylasa",
+      "url": "https://pleiades.stoa.org/places/599809/json",
+      "source_sha256": "1b06e6bf2e949704109b38736c6779bf5576ce5bb6f7f3779c30088af62bb3db"
+    },
+    "541138": {
+      "verified": "2026-11-26",
+      "title": "Thebai/Thebae",
+      "url": "https://pleiades.stoa.org/places/541138/json",
+      "source_sha256": "1e66d4033259b631ea9f996f4b15f73f4c391d93336586e32fad38b1710d8acb"
+    },
+    "589886": {
+      "verified": "2026-11-26",
+      "title": "Kydonia",
+      "url": "https://pleiades.stoa.org/places/589886/json",
+      "source_sha256": "8c194329f5750c564405092ef8313318dc620fe4fe72776f33920a45220e12e3"
+    },
+    "570740": {
+      "verified": "2026-11-26",
+      "title": "Tiryns",
+      "url": "https://pleiades.stoa.org/places/570740/json",
+      "source_sha256": "81446a6ab05703ea4d71b2a8b186a280734106d8bb5ad08601516c7950f27cbe"
+    },
+    "570491": {
+      "verified": "2026-11-26",
+      "title": "Mycenae",
+      "url": "https://pleiades.stoa.org/places/570491/json",
+      "source_sha256": "9a8c8b7a29e46608b0661b0dc8c7b98ca4113e6d382861397ba9b42c1e00ffb2"
+    },
+    "781961476": {
+      "verified": "2026-11-26",
+      "title": "Bronze Age Settlement at Knossos",
+      "url": "https://pleiades.stoa.org/places/781961476/json",
+      "source_sha256": "635030a8e197308d0f8be4ced8ecbf6e04e2ec1d321fda8a99e5365cefb34a92"
+    },
+    "589922": {
+      "verified": "2026-11-26",
+      "title": "Mallia",
+      "url": "https://pleiades.stoa.org/places/589922/json",
+      "source_sha256": "043a1c6b2443dbc241cd22ee7441d7462c5078876b8e2e6210a33cf88aabe446"
+    },
+    "570485": {
+      "verified": "2026-11-26",
+      "title": "Midea",
+      "url": "https://pleiades.stoa.org/places/570485/json",
+      "source_sha256": "a24dfaa7d0da9a975b0a187199a8e32f91811bef9b73075587fd377d848c2fff"
+    },
+    "589657": {
+      "verified": "2026-11-26",
+      "title": "Acharna",
+      "url": "https://pleiades.stoa.org/places/589657/json",
+      "source_sha256": "d6eebff2c77f303c47ad9d01f94812c07ce7472713fde25123fccaf09324fe78"
+    },
+    "771100776": {
+      "verified": "2026-11-26",
+      "title": "Gournia",
+      "url": "https://pleiades.stoa.org/places/771100776/json",
+      "source_sha256": "0bcc53b49cd64137af865084607d18615342d3377c3a65dde19d617f8ffd4162"
+    },
+    "213924739": {
+      "verified": "2026-11-26",
+      "title": "Palaikastro, Crete",
+      "url": "https://pleiades.stoa.org/places/213924739/json",
+      "source_sha256": "1c589db95c231182cd7e36af96ea598dd88ec900c67fdc1b9f4fd776233cbc2c"
+    },
+    "570474": {
+      "verified": "2026-11-26",
+      "title": "Melos (settlement)",
+      "url": "https://pleiades.stoa.org/places/570474/json",
+      "source_sha256": "6f72ece98dbe895876004e4ca76616b66858f9e937be15097883d466244e198c"
+    },
+    "462086": {
+      "verified": "2026-11-26",
+      "title": "Akragas/Agrigentum",
+      "url": "https://pleiades.stoa.org/places/462086/json",
+      "source_sha256": "97105788b7d7ae075cc3ce2980a924e8dda3e73c926b11f5b4c32880034a19c4"
+    },
+    "462225": {
+      "verified": "2026-11-26",
+      "title": "Halaesa",
+      "url": "https://pleiades.stoa.org/places/462225/json",
+      "source_sha256": "0e6fb4856cec08667f5a4b51385d391551f6a5c68da938e0c5f6521328b8cb9f"
+    },
+    "462307": {
+      "verified": "2026-11-26",
+      "title": "Megara Hyblaia",
+      "url": "https://pleiades.stoa.org/places/462307/json",
+      "source_sha256": "f21d1e42b49f05cf5c7f0ee6a5a429743a4d5aff8c9c0d6025eb0579086279a9"
+    },
+    "462312": {
+      "verified": "2026-11-26",
+      "title": "Menai",
+      "url": "https://pleiades.stoa.org/places/462312/json",
+      "source_sha256": "222d1fd6d1e93ecb1fbaa2a632d3a0273b92305b87bf224c676e04ba0cf5486b"
+    },
+    "462062": {
+      "verified": "2026-11-26",
+      "title": "Abakainon",
+      "url": "https://pleiades.stoa.org/places/462062/json",
+      "source_sha256": "f2cb1f70d11f007ebdfe0bb173f281a01e0683d70a7ffe6eb0214fa64b430d44"
+    },
+    "462372": {
+      "verified": "2026-11-26",
+      "title": "Morgantina",
+      "url": "https://pleiades.stoa.org/places/462372/json",
+      "source_sha256": "97fa9de25c2bdeef65322a9fecdc868dad3e0dd2bb60bbbd38a517c8be564ce9"
+    },
+    "462187": {
+      "verified": "2026-11-26",
+      "title": "Drepanum",
+      "url": "https://pleiades.stoa.org/places/462187/json",
+      "source_sha256": "d02e1d1b13915cf9eb03d125b7dd13b982ac60fce6b5c8cd072f1a16b274545b"
+    },
+    "462228": {
+      "verified": "2026-11-26",
+      "title": "Haluntium",
+      "url": "https://pleiades.stoa.org/places/462228/json",
+      "source_sha256": "7c74e37855454297118db1cc473cee733f61cb1b5e199bd1b4e1fa41c1fbf628"
+    },
+    "462527": {
+      "verified": "2026-11-26",
+      "title": "Tyndaris",
+      "url": "https://pleiades.stoa.org/places/462527/json",
+      "source_sha256": "ea49305a7e1b2fe2a2399d0df88c07d695ba8853c2485a0ee6629f7b774f4917"
+    },
+    "373757": {
+      "verified": "2026-11-26",
+      "title": "Berenice",
+      "url": "https://pleiades.stoa.org/places/373757/json",
+      "source_sha256": "83d43c991b97ee039d7261f0d6f13c4276cb8a5f0dccc52de5127d1be399c800"
+    },
+    "216927": {
+      "verified": "2026-11-26",
+      "title": "Philippopolis/Trimontium",
+      "url": "https://pleiades.stoa.org/places/216927/json",
+      "source_sha256": "a3c71a178279b81fb5b920e7391a0c464c5dcab4bb361ee1a5110146b369bd77"
+    },
+    "197488": {
+      "verified": "2026-11-26",
+      "title": "Salona",
+      "url": "https://pleiades.stoa.org/places/197488/json",
+      "source_sha256": "4aec437d327149b8ae253b3bc0169cbc3b47c4bac65eecdcc6b9197b25a01edf"
+    },
+    "491546": {
+      "verified": "2026-11-26",
+      "title": "Ber(r)oia",
+      "url": "https://pleiades.stoa.org/places/491546/json",
+      "source_sha256": "99213e0152fec17d9bafe94d8c89a3cbdf4b1000de65d8a6d149da5c6c05696b"
+    },
+    "540905": {
+      "verified": "2026-11-26",
+      "title": "Larissa",
+      "url": "https://pleiades.stoa.org/places/540905/json",
+      "source_sha256": "41502ece866ec949ee44e8e3d992a58baaf220e4491b3c198c61ecb1d42e219a"
+    },
+    "540726": {
+      "verified": "2026-11-26",
+      "title": "Delphi",
+      "url": "https://pleiades.stoa.org/places/540726/json",
+      "source_sha256": "256ddb0b1d5c754bcf1402b89a6de25fc85c6e85b47939195044c7160e1430bd"
     }
   },
   "points": {
-    "156116232": [37.027137690546745, 21.69496241897444],
-    "462283": [38.4674, 14.953957],
-    "462503": [37.070079, 15.283336],
-    "462270": [37.502959, 15.088142],
-    "462126": [36.871878, 14.448323],
-    "462214": [37.063092, 14.258471],
-    "462487": [37.940316, 12.836181],
-    "462489": [37.586017, 12.828582],
-    "462068": [37.057687, 14.892454],
-    "462506": [37.852391, 15.292123],
-    "462538": [38.192251, 15.556634],
-    "462153": [37.624073, 14.740017],
-    "462513": [37.9851965, 13.696254],
-    "462281": [37.802734, 12.429665],
-    "373778": [32.818736, 21.856169],
-    "373736": [32.536399, 20.567298],
-    "373879": [32.707134, 20.95385],
-    "373732": [32.9, 21.97],
-    "373786": [32.145666, 20.096022],
-    "226564": [44.611, 33.493],
-    "226800": [46.2007555, 30.350134],
-    "854719": [45.351, 36.469],
-    "226695": [44.9422729, 34.1201889],
-    "678401": [32.5018388, 34.8924472],
-    "697768": [31.027273, 35.481818],
-    "687966": [31.592963, 34.898241],
-    "929943122": [32.7037666, 35.1292388],
-    "687928": [31.776679, 35.234156],
-    "687890": [31.097, 34.655],
-    "678131": [32.684043, 35.665625],
-    "687968": [31.316, 35.354],
-    "678378": [32.504, 35.503],
-    "678387": [32.753, 35.279],
-    "491741": [40.628342, 22.952885],
-    "844944": [41.283255, 31.417414],
-    "579885": [37.971637, 23.723914],
-    "570479": [37.175304, 21.920048],
-    "550867": [38.488314, 28.040286]
+    "156116232": [
+      37.027137690546745,
+      21.69496241897444
+    ],
+    "462283": [
+      38.4674,
+      14.953957
+    ],
+    "462503": [
+      37.070079,
+      15.283336
+    ],
+    "462270": [
+      37.502959,
+      15.088142
+    ],
+    "462126": [
+      36.871878,
+      14.448323
+    ],
+    "462214": [
+      37.063092,
+      14.258471
+    ],
+    "462487": [
+      37.940316,
+      12.836181
+    ],
+    "462489": [
+      37.586017,
+      12.828582
+    ],
+    "462068": [
+      37.057687,
+      14.892454
+    ],
+    "462506": [
+      37.852391,
+      15.292123
+    ],
+    "462538": [
+      38.192251,
+      15.556634
+    ],
+    "462153": [
+      37.624073,
+      14.740017
+    ],
+    "462513": [
+      37.9851965,
+      13.696254
+    ],
+    "462281": [
+      37.802734,
+      12.429665
+    ],
+    "373778": [
+      32.818736,
+      21.856169
+    ],
+    "373736": [
+      32.536399,
+      20.567298
+    ],
+    "373879": [
+      32.707134,
+      20.95385
+    ],
+    "373732": [
+      32.9,
+      21.97
+    ],
+    "373786": [
+      32.145666,
+      20.096022
+    ],
+    "226564": [
+      44.611,
+      33.493
+    ],
+    "226800": [
+      46.2007555,
+      30.350134
+    ],
+    "854719": [
+      45.351,
+      36.469
+    ],
+    "226695": [
+      44.9422729,
+      34.1201889
+    ],
+    "678401": [
+      32.5018388,
+      34.8924472
+    ],
+    "697768": [
+      31.027273,
+      35.481818
+    ],
+    "687966": [
+      31.592963,
+      34.898241
+    ],
+    "929943122": [
+      32.7037666,
+      35.1292388
+    ],
+    "687928": [
+      31.776679,
+      35.234156
+    ],
+    "687890": [
+      31.097,
+      34.655
+    ],
+    "678131": [
+      32.684043,
+      35.665625
+    ],
+    "687968": [
+      31.316,
+      35.354
+    ],
+    "678378": [
+      32.504,
+      35.503
+    ],
+    "678387": [
+      32.753,
+      35.279
+    ],
+    "491741": [
+      40.628342,
+      22.952885
+    ],
+    "844944": [
+      41.283255,
+      31.417414
+    ],
+    "579885": [
+      37.971637,
+      23.723914
+    ],
+    "570479": [
+      37.175304,
+      21.920048
+    ],
+    "550867": [
+      38.488314,
+      28.040286
+    ],
+    "638753": [
+      37.708502,
+      28.723815
+    ],
+    "707462": [
+      34.712264,
+      33.137081
+    ],
+    "707574": [
+      35.038966,
+      32.425435
+    ],
+    "707549": [
+      34.665429,
+      32.88586
+    ],
+    "589796": [
+      35.062107,
+      24.946943
+    ],
+    "589900": [
+      35.190776,
+      25.71726
+    ],
+    "589807": [
+      35.009529,
+      25.738751
+    ],
+    "590095": [
+      35.308042,
+      24.844133
+    ],
+    "589772": [
+      35.333109,
+      24.672913
+    ],
+    "589824": [
+      35.263259,
+      26.262979
+    ],
+    "589959": [
+      35.257679,
+      25.738816
+    ],
+    "589918": [
+      35.2081,
+      25.3682
+    ],
+    "589767": [
+      35.257179,
+      25.627609
+    ],
+    "589704": [
+      35.462662,
+      24.141397
+    ],
+    "590003": [
+      35.458635,
+      23.656412
+    ],
+    "590011": [
+      35.123297,
+      26.09054
+    ],
+    "319662579": [
+      38.177228,
+      26.784878
+    ],
+    "599809": [
+      37.302751,
+      27.790239
+    ],
+    "541138": [
+      38.319949,
+      23.317653
+    ],
+    "589886": [
+      35.515775,
+      24.01869
+    ],
+    "570740": [
+      37.599283,
+      22.799986
+    ],
+    "570491": [
+      37.727537,
+      22.753834
+    ],
+    "781961476": [
+      35.298652,
+      25.161422
+    ],
+    "589922": [
+      35.293274,
+      25.492446
+    ],
+    "570485": [
+      37.649814,
+      22.841437
+    ],
+    "589657": [
+      35.236306,
+      25.159888
+    ],
+    "771100776": [
+      35.109317,
+      25.792665
+    ],
+    "213924739": [
+      35.197578,
+      26.254175
+    ],
+    "570474": [
+      36.743864,
+      24.423276
+    ],
+    "462086": [
+      37.290594,
+      13.585475
+    ],
+    "462225": [
+      37.99871,
+      14.262592
+    ],
+    "462307": [
+      37.203801,
+      15.182285
+    ],
+    "462312": [
+      37.266404,
+      14.69094
+    ],
+    "462062": [
+      38.049586,
+      15.099481
+    ],
+    "462372": [
+      37.428845,
+      14.476982
+    ],
+    "462187": [
+      38.017128,
+      12.51782
+    ],
+    "462228": [
+      38.071898,
+      14.700314
+    ],
+    "462527": [
+      38.142725,
+      15.044561
+    ],
+    "373757": [
+      32.12452,
+      20.06425
+    ],
+    "216927": [
+      42.145589,
+      24.749474
+    ],
+    "197488": [
+      43.539561,
+      16.483426
+    ],
+    "491546": [
+      40.522127,
+      22.201493
+    ],
+    "540905": [
+      39.634851,
+      22.42097
+    ],
+    "540726": [
+      38.482289,
+      22.501169
+    ]
   }
 }

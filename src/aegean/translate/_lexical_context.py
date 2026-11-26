@@ -42,9 +42,15 @@ _CONSTRUCTIONS = {
     "Case=Gen": r"\b(?:c\.\s*gen\.|with\s+gen(?:it)?\.|with\s+(?:the\s+)?genitive\b)",
     "Case=Acc": r"\b(?:c\.\s*acc\.|with\s+acc\.|with\s+(?:the\s+)?accusative\b)",
     "VerbForm=Inf": r"\b(?:c\.\s*inf\.|with\s+inf(?:in)?\.|with\s+(?:the\s+)?infinitive\b)",
+    "VerbForm=Part": r"\b(?:c\.\s*part\.|with\s+part\.|with\s+(?:a\s+|the\s+)?participle\b)",
+    "Mood=Sub": r"\b(?:c\.\s*(?:conj|subj)\.|with\s+(?:conj|subj)\.|with\s+(?:the\s+)?subjunctive\b)",
+    "Mood=Opt": r"\b(?:c\.\s*opt\.|with\s+opt\.|with\s+(?:the\s+)?optative\b)",
     "Voice=Mid": r"\b(?:med\.|mid\.|middle\b)",
     "Voice=Pass": r"\b(?:pass\.|passive\b)",
 }
+
+_SENSE_HEADING = re.compile(r"(?:^|[;\n]\s*|\s)(?:[IVX]{1,4}|[A-C])\.\s")
+_COOCCUR_WINDOW = 180
 
 
 @dataclass(frozen=True)
@@ -117,6 +123,53 @@ def _greek(word: str) -> bool:
     return any("\u0370" <= char <= "\u03ff" or "\u1f00" <= char <= "\u1fff" for char in word)
 
 
+def _best_construction_match(constructions: set[str], body: str) -> tuple[int, str] | None:
+    """Select the construction marker (or co-occurring marker cluster) best matching ``constructions``.
+
+    When multiple supplied morphological/syntactic features match within a local window
+    (e.g. ``Voice=Mid`` + ``Case=Dat`` in ``B. Med. c. dat.``), prefer the highest-overlap
+    cluster over an earlier single-feature match in an unrelated voice/section.
+    """
+    if not constructions:
+        return None
+    matches_by_feat: dict[str, list[int]] = {}
+    for feature in sorted(constructions):
+        positions = [
+            m.start()
+            for m in re.finditer(_CONSTRUCTIONS[feature], body, flags=re.IGNORECASE)
+        ]
+        if positions:
+            matches_by_feat[feature] = positions[:32]
+    if not matches_by_feat:
+        return None
+    if len(matches_by_feat) == 1:
+        feat, positions = next(iter(matches_by_feat.items()))
+        return positions[0], feat
+
+    # Evaluate every anchor occurrence for how many distinct supplied features
+    # co-occur within _COOCCUR_WINDOW characters; break ties by earliest offset,
+    # then deterministic sorted feature name.
+    best_key: tuple[int, int, str] | None = None
+    best_result: tuple[int, str] | None = None
+    for feat, positions in matches_by_feat.items():
+        for pos in positions:
+            matched_feats = [feat]
+            anchor = pos
+            for other_feat, other_positions in matches_by_feat.items():
+                if other_feat == feat:
+                    continue
+                nearby = [p for p in other_positions if abs(p - pos) <= _COOCCUR_WINDOW]
+                if nearby:
+                    matched_feats.append(other_feat)
+                    anchor = min(anchor, min(nearby))
+            label = "+".join(sorted(matched_feats))
+            key = (-len(matched_feats), anchor, label)
+            if best_key is None or key < best_key:
+                best_key = key
+                best_result = (anchor, label)
+    return best_result
+
+
 def _match(candidate: _Candidate, body: str) -> tuple[int | None, str, str | None]:
     record = candidate.record
     excluded = {_norm(record.text), _norm(record.lemma), _norm(candidate.entry.headword)}
@@ -146,23 +199,29 @@ def _match(candidate: _Candidate, body: str) -> tuple[int | None, str, str | Non
     if hits:
         _weight, _length, offset, cue = min(hits, key=lambda hit: (-hit[0], -hit[1], hit[2]))
         return offset, "word-overlap-only", cue
-    for feature in sorted(constructions):
-        found = re.search(_CONSTRUCTIONS[feature], body, flags=re.IGNORECASE)
-        if found:
-            return found.start(), "construction-marker-only", feature
+    found = _best_construction_match(constructions, body)
+    if found is not None:
+        return found[0], "construction-marker-only", found[1]
     return None, "no-contextual-match", None
 
 
 def _window(body: str, offset: int, limit: int) -> tuple[int, int]:
-    """Retain a clause boundary when nearby, otherwise a marked partial clause."""
+    """Retain a clause or sense-heading boundary when nearby, otherwise a marked partial clause."""
     start = max(0, offset - limit // 3)
     # Semicolon/newline delimiters are navigation boundaries, not parsed senses.
     # Dictionary clauses often inherit their governing construction from the
-    # preceding examples. Retain up to two preceding clauses, not just the
-    # semicolon immediately before the matched word.
+    # preceding examples or section heading (e.g. 'II.' / 'B.'). Retain up to two
+    # preceding clauses or snap to an enclosing sense heading inside the window.
     boundaries = [index for index in range(start, offset) if body[index] in "\n;"]
     if boundaries:
         start = boundaries[-3] + 1 if len(boundaries) >= 3 else boundaries[0] + 1
+    else:
+        headings = [m.start() for m in _SENSE_HEADING.finditer(body, start, offset)]
+        if headings:
+            head_pos = headings[-1]
+            while head_pos < offset and body[head_pos] in " \t;\n":
+                head_pos += 1
+            start = head_pos
     end = min(len(body), start + limit)
     # A complete containing clause is preferable to stopping in a word.
     stops = [position + 1 for delimiter in (";", "\n")
