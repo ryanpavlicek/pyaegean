@@ -39,7 +39,7 @@ Verify the install:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.73.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.73.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### What `[dev]` installs
@@ -158,7 +158,7 @@ Wheel check confirming code and JSON only (no binaries):
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.73.0-py3-none-any.whl: ... KB uncompressed, ... files
+# wheel dist/pyaegean-0.73.1-py3-none-any.whl: ... KB uncompressed, ... files
 # OK  nothing-heavy-bundled
 ```
 
@@ -166,7 +166,7 @@ Metadata check for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.73.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.73.1-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail

@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.73.0 (beta).** See the
+**Latest PyPI release: v0.73.1 (beta).** See the
 [scholarly workflow](scholarly-workflow.md) for source preservation, optional review,
 counting choices, and translation evidence.
 

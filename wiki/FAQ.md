@@ -81,7 +81,7 @@ Additional options:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a release** for reproducibility: `pip install pyaegean==0.73.0`.
+- **Pin a release** for reproducibility: `pip install pyaegean==0.73.1`.
 - **Cached datasets persist across upgrades.** Downloaded assets live in your
   cache directory (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored))

@@ -4,6 +4,30 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.73.1 (2026-11-26)
+
+### Added
+
+- **Dedicated Wiki Corpus Catalog**: added a 10-page categorized Corpus Catalog section in `wiki/` listing all 30 corpora and 3,844 open-licensed Greek library works.
+
+### Changed
+
+- **Runtime, TUI, and test/CI efficiency**:
+  - Cached full-NT lemma frequency and JSON reads (`scripts/greek/nt.py`, `translate`, `ai/grounding.py`, `greek/rarity.py`: offline `translate.grounding_for()` `2.43 s → <1 ms`), added read-only NT search caching and memoized folding in `greek/bible/_study.py`, and switched `Corpus.copy()` to direct `Token`/`Sign` copying (`aegean.load("lineara")` `80 ms → 38 ms`).
+  - Accelerated pure-Python linear algebra in `analysis/{seriation,procrustes,embeddings}.py` using stdlib `math.sumprod`, contiguous Jacobi rotations, and in-place Hotelling deflation.
+  - Eliminated an `O(N²)` Textual markup stall in `CorpusList.set_corpora()` (`33.86 s → 0.21 s`), cached Click completion trees in `CommandConsoleScreen`, and added an offline cache guard for inline `PG*` previews in `BiblicalScreen`.
+  - Refactored CI and pytest harness (parallelized `pytest -n auto --dist loadgroup`, `COVERAGE_CORE=sysmon` on Python 3.12, split `quality` job, scoped `geo` job, and eliminated ~260 MB of unintended live test downloads), cutting total CI runner time by `3.28×` with unchanged `85.34%` coverage.
+
+### Fixed
+
+- **Real-data SQLite FTS5 search indexing (`aegean.search`)**:
+  - Fixed `_iter_json_rows()` to index the hosted *Patrologia Graeca* `dict`-keyed `volumes` schema (in addition to legacy `list` fixtures), restoring `aegean find` / `search_text()` across `PG073` and all 33 PG volumes.
+  - Fixed Swete Septuagint (`lxx`) indexing to unwrap nested `books[code]["verses"]` maps into individual verse rows instead of stringifying book dictionaries.
+  - Added native FTS5 indexing for DAMOS Linear B tablet `content` and SigLA Linear A sign `attestations` (reconstructing hyphen-joined words).
+  - Coerced `Path(source_path)` in `fts_index_path()` so string paths work cleanly, and bumped FTS5 sidecar `_SCHEMA_VERSION` to `"3"` so stale cached sidecars rebuild automatically.
+- **Septuagint offline interlinear POS (`aegean.greek.bible._lxx`)**:
+  - Updated `enrich_lxx_interlinear()` to prefer curated Strong's part-of-speech metadata and resolved-lemma POS over surface suffix heuristics, fixing unaccented all-caps openings (`ΕΝ → ADP`) and `-ω` preposition/adverb traps (`ἐπάνω → ADP`, `ἀόρατος → ADJ`).
+
 ## 0.73.0 (2026-11-26)
 
 ### Added
