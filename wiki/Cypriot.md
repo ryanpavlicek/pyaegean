@@ -159,16 +159,20 @@ On the CLI, romanization runs inside `aegean bridge` and
 ## The Greek bridge (`pa-si-le-u-se` → `βασιλεύς`)
 
 `greek_reading` returns a `(lemma, gloss)` tuple from the bundled Cypriot
-lexicon; `gloss` returns the English string alone. Both return `None` when a
-word is not listed. Lookups fold case, editorial brackets, and underdots.
+lexicon; `gloss` returns the English string alone. For structured provenance,
+`lexicon_entry` returns a `CypriotLexEntry` (with `lemma`, `gloss`,
+`greek_form`, `attestation`, `site`, `citation`, and `license`) and
+`lexicon_entries` lists the full table. Lookups fold case, editorial brackets,
+trailing sentence periods, and underdots, returning `None` for unlisted forms.
 
 ```python
-from aegean.scripts.cypriot import greek_reading, gloss
+from aegean.scripts.cypriot import greek_reading, gloss, lexicon_entry
 
 greek_reading("PA-SI-LE-U-SE")   # ('βασιλεύς', 'king')
 greek_reading("KA-SE")           # ('καί', 'and (Arcado-Cypriot κάς)')
 greek_reading("TU-KA")           # ('τύχη', 'fortune (Cypriot τύχα)')
 gloss("WA-NA-SA")                # 'queen, lady (the Paphian goddess)'
+lexicon_entry("KA-TE-TE-KE")     # CypriotLexEntry(lemma='κατατίθημι', ..., attestation='IG XV 1, 102')
 greek_reading("NOT-A-WORD")      # None
 ```
 
@@ -191,28 +195,33 @@ aegean bridge cypriot ZO-ZO
 
 ### Bundled lexicon
 
-The bundled lexicon holds **17** attested equations drawn primarily from the
-Idalion Bronze vocabulary (after Masson's *ICS* and Chadwick):
+The bundled lexicon holds **52** source-cited equations drawn from Masson's
+*ICS* / Idalion Bronze vocabulary and verified attestations in the bundled
+*Inscriptiones Graecae* XV 1 (Kurion and Marion, CC BY 4.0). Across the
+bundled corpus, `bridge_coverage(aegean.load("cypriot"))` reads **100 of 572
+word tokens (17.5%, 45 distinct forms)** while keeping Eteocypriot Amathus
+inscriptions at **0/193** (single-syllabogram words such as `O`, `A`, and `TO`
+are deliberately excluded to avoid false positives on undeciphered text).
 
-| Cypriot word | Greek lemma | Gloss |
-| --- | --- | --- |
-| `A-KA-TA` | ἀγαθός | good |
-| `A-NE-U` | ἄνευ | without |
-| `A-PO-LO-NI` | Ἀπόλλων | to Apollo (dative) |
-| `A-RA-KU-RO` | ἄργυρος | silver |
-| `A-TO-RO-PO-SE` | ἄνθρωπος | human, man |
-| `E-MI` | εἰμί | I am |
-| `I-JA-SA-TA-I` | ἰάομαι | to heal (infinitive ἰᾶσθαι) |
-| `KA-SE` | καί | and (Arcado-Cypriot κάς) |
-| `KA-SI-KE-NE-TO-SE` | κασίγνητος | brother |
-| `MA-KA-I` | μάχη | battle (dative: in the battle) |
-| `O-NA-SI-LO-SE` | Ὀνάσιλος | Onasilos (personal name, Idalion tablet) |
-| `PA-I-SE` | παῖς | child |
-| `PA-SI-LE-U-SE` | βασιλεύς | king |
-| `TE-O-SE` | θεός | god |
-| `TO-I` | ὁ | the (dative τῷ) |
-| `TU-KA` | τύχη | fortune (Cypriot τύχα) |
-| `WA-NA-SA` | ἄνασσα | queen, lady (the Paphian goddess) |
+Representative entries (call `lexicon_entries()` for all 52 with citations):
+
+| Cypriot word | Greek lemma | Gloss | Attestation |
+| --- | --- | --- | --- |
+| `A-KA-TA` | ἀγαθός | good | Idalion / formula |
+| `A-NE-TE-KE` | ἀνατίθημι | dedicated (aor. ἀνέθηκε) | *IG* XV 1, 95 |
+| `A-PO-LO-NI` | Ἀπόλλων | to Apollo (dative) | *IG* XV 1, 102 |
+| `E-MI` | εἰμί | I am | *IG* XV 1, 120 / Marion |
+| `KA-SE` | καί | and (Arcado-Cypriot κάς) | *IG* XV 1, 95 |
+| `KA-TE-TE-KE` | κατατίθημι | dedicated, set up | *IG* XV 1, 102 |
+| `KO-RA-I` | Κόρη | to Kore (Persephone) | *IG* XV 1, 95 |
+| `PA-I-SE` | παῖς | child | *IG* XV 1, 179 |
+| `PA-SI-LE-U-SE` | βασιλεύς | king | *IG* XV 1, 120 |
+| `PA-SI-LE-WO-SE` | βασιλεύς | of the king (genitive) | *IG* XV 1, 120 |
+| `TA-MA-TE-RI` | Δημήτηρ | to Demeter (dative) | *IG* XV 1, 95 |
+| `TE-O-I` | θεός | to the god (dative) | *IG* XV 1, 113 |
+| `TO-I` | ὁ | the (dative τῷ) | *IG* XV 1, 102 |
+| `TU-KA-I` | τύχη | with fortune (dative) | *IG* XV 1, 95 |
+| `WA-NA-SA` | ἄνασσα | queen, lady (the Paphian goddess) | Masson *ICS* |
 
 ### Full dictionary lookup
 
@@ -362,6 +371,7 @@ backup round-trips.
 | Transliteration → sound | `word_to_phonetic("PA-SI-LE-U-SE")` | via `bridge` / `analyze compare` |
 | Override sign values | `word_to_phonetic(w, overrides={...})` | — |
 | Greek reading (lemma + gloss) | `greek_reading("PA-SI-LE-U-SE")` | `aegean bridge cypriot PA-SI-LE-U-SE` |
+| Source-cited lexicon entry | `lexicon_entry("KA-TE-TE-KE")` / `lexicon_entries()` | — |
 | English gloss only | `gloss("WA-NA-SA")` | shown in `bridge` output |
 | Full dictionary entry | `aegean.greek.use_lsj()`, `greek.gloss(lemma)` | `aegean greek gloss <lemma>` |
 | Compare with Greek by sound | `aegean.analysis.phonetic_compare(w, "cypriot", g, "greek")` | `aegean analyze compare ... --script-a cypriot` |
@@ -384,8 +394,9 @@ samples. See [Data & Provenance](Data-and-Provenance) and `NOTICE`.
 - **Corpus scope.** The bundled corpus is *IG* XV 1 (178 texts + 2 samples), not
   Masson's full *ICS*, which is not openly redistributable. It includes
   Eteocypriot inscriptions whose language is undeciphered.
-- **Lexicon size.** The bundled bridge lexicon holds 17 entries and returns
-  `None` for unlisted words.
+- **Lexicon size.** The bundled bridge lexicon holds 52 source-cited entries
+  and returns `None` for unlisted words (single-syllabogram forms are omitted
+  to keep Eteocypriot Amathus texts at zero false positives).
 - **Orthographic distance.** Dummy final vowels (`…-SE`) and split clusters make
   romanized strings longer than standard Classical Greek spellings.
 - **Terminal fonts.** Displaying Cypriot codepoints (`U+10800–U+1083F`) in a

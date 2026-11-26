@@ -46,6 +46,7 @@
 - [CLI: Biblical & Koine Greek](CLI-Bible)
 - [CLI: AI & MCP](CLI-AI)
 - [TUI](TUI)
+- [Greek Visual Browser](Greek-Browser)
 - [MCP Server](MCP)
 - [AI Layer](AI-Layer)
 

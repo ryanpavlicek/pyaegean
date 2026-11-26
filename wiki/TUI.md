@@ -273,6 +273,7 @@ These keys work on every screen (when no text input has focus):
 | `r` | Annotation & conflict review (`ReviewScreen`) |
 | `w` | Works library |
 | `d` | Data store |
+| `v` | Launch local [Greek Visual Browser](Greek-Browser) (`aegean browse`) |
 | `:` | Command console (run any `aegean` command) |
 | `t` | Theme picker (live preview, persisted on `Enter`) |
 | `?` | Help overlay |
@@ -492,8 +493,9 @@ are ignored on startup.
 ## Command palette (`ctrl+p`)
 
 `ctrl+p` opens a fuzzy palette covering screen navigation (including
-`Go to Annotation review`), opening any corpus or downloaded work, jumping to
-the Library Manager to fetch datasets, switching themes, and opening help.
+`Go to Annotation review`), launching the local [Greek Visual Browser](Greek-Browser),
+opening any corpus or downloaded work, jumping to the Library Manager to fetch
+datasets, switching themes, and opening help.
 
 ---
 
@@ -522,6 +524,7 @@ reset to the default theme.
 
 ## See also
 
+- [Greek Visual Browser](Greek-Browser) — local web reader launched with `v` or `aegean browse`.
 - [The CLI](CLI) — command-line interface and scripting flags.
 - [CLI: Greek NLP & Review](CLI-Greek#review--aegean-review-) — exporting, merging, and applying review CSVs.
 - [Greek Works and Books](Greek-Works-and-Books) — the ~1,778-work catalogue and citation schemes.

@@ -65,11 +65,15 @@ doc = aegean.load("cypriot").get("IG XV 1, 120")
 ```
 
 Everything above runs offline with zero heavy dependencies. Prefer not to install anything?
-The [getting-started notebook](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
-runs in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
+The [5-minute offline quickstart](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/quickstart-offline.ipynb)
+and [getting-started notebook](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+run in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
 the core pipeline client-side.
 
-Recent releases add **8 categorized open-licensed Ancient, Classical, Patristic, and Byzantine
+Recent releases add the zero-dependency local **Greek visual corpus browser**
+([`aegean.browser`](api/browser.md) / `aegean browse`, with interlinear glosses, parallel
+translations, grammar/Strong's/LSJ/commentary inspectors, and a visual Library Manager),
+**8 categorized open-licensed Ancient, Classical, Patristic, and Byzantine
 Greek collections** (3,844 works across 1,414 authors, 64.35M tokens, 8th c. BCE–1453 CE,
 including the complete open Greek corpus of John Chrysostom), **first-class 56-book Septuagint
 (LXX) parity** (adding Ecclesiastes, inline references, Masoretic Psalm numbering, and automatic

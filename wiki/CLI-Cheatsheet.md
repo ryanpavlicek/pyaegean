@@ -53,7 +53,7 @@ For multi-million-word archives, use `aegean db search ddbdp "βασιλέως"`
 
 | Group | Commands |
 |---|---|
-| **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `find` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `quickstart` `repl` `tui` `browse` `info` `load` `show` `find` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`library`** | `status` `packs` `list` `search` `info` `install` `remove` (10 packs, 30 corpora, 47 datasets, 3,844 collection works, ~1,778 Perseus/First1KGreek works, 112 commentaries, lexica, models) |
 | **`bundle`** | `create` `inspect` `verify` `extract` `hydrate` (deterministic, SHA-256-verified, NC-safe `.zip` research bundles) |
 | **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `collections` `work` `works` `catalog` `eval` |
@@ -79,7 +79,8 @@ also take `-o/--output` (`.json`, `.csv`, or `.txt` by extension), printing
 |---|---|---|---|
 | `quickstart` | Offline 8-step tour on bundled data | `--no-run` | `aegean quickstart` |
 | `repl` | Interactive shell (also launched by bare `aegean` on a TTY): live inline ghost-text + dropdown prediction, persistent history, session corpus cache. Directives: `use CORPUS` (`use off`), `:examples`, `:help`, `:exit` | — | `aegean` (or `aegean repl`) |
-| `tui` | Full-screen Textual UI (`[tui]` extra): 9 screens — Home (`h`), Corpus browser (`c`), Greek workbench (`g`), Biblical Greek (`b`), Library manager (`l`), Annotation review (`r`), Works (`w`), Data store (`d`), Command console (`:`). See [TUI](TUI) | `-r/--review` `-c/--corpus` | `aegean tui --review a.csv --review b.csv --corpus nt` |
+| `tui` | Full-screen Textual UI (`[tui]` extra): 9 screens — Home (`h`), Corpus browser (`c`), Greek workbench (`g`), Biblical Greek (`b`), Library manager (`l`), Annotation review (`r`), Works (`w`), Data store (`d`), Command console (`:`), plus `v` to launch the visual Greek browser. See [TUI](TUI) | `-r/--review` `-c/--corpus` | `aegean tui --review a.csv --review b.csv --corpus nt` |
+| `browse` | Local zero-dependency Greek visual corpus browser (interlinear, parallel translations, grammar/lexicon/Strong's/commentaries inspector, Library Manager). See [Greek Visual Browser](Greek-Browser) | `-p/--port --auto-port --no-browser --neural --offline -e/--edition -d/--doc --host` | `aegean browse "John 1:1-18"` |
 | `library` | Manage 47 hosted datasets, 5 bundled corpora, 3,844 categorized Greek collection works, ~1,778 Perseus/First1KGreek works, 112 patristic commentaries, lexica, models, and 10 packs (`biblical`, `church-fathers`, `patristic`, `ancient-greek`, `byzantine-pack`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`) | `status` `packs` `list` `search` `info` `install` `remove` `--installed` `--available` `--all` `--json` | `aegean library install church-fathers` |
 | `doctor` | Offline environment check (versions, extras, data store, model bundles, analysis cache); exits `1` on issues | `--json -o/--output` | `aegean doctor` |
 | `info` | Corpus counts, provenance, license, citation | `--json` | `aegean info lineara` |

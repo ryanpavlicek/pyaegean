@@ -88,10 +88,20 @@ dispatcher. The CLI selects the metre with `--meter`.
 | `greek.scan_trimeter(line)` | iambic trimeter (with resolution) | `aegean greek scan LINE --meter trimeter` |
 | `greek.scan_aeolic(line, line_type)` | one named aeolic colon | `aegean greek scan LINE --meter <line_type>` |
 | `greek.scan_line(line, meter)` | any supported metre by name | `aegean greek scan LINE --meter <meter>` |
+| `greek.score_scansion(line, meter)` | non-raising diagnostic `ScansionScore` (fit, caesura, dactyl ratio, resolution, lexical overrides) | — |
 | `greek.syllable_options(line)` | pre-metrical syllable quantities | — |
 
-`scan_line` accepts `"hexameter"`, `"pentameter"`, `"trimeter"`, or any name in
-`AEOLIC_LINES`.
+`scan_line` and `score_scansion` accept `"hexameter"`, `"pentameter"`, `"trimeter"`,
+or any name in `AEOLIC_LINES`. Unlike `scan_line`, `score_scansion` returns
+`ScansionScore(scans=False, error=...)` on non-fitting lines instead of raising
+`ScansionError`, and reports which curated synizesis or long-by-nature entries
+were used:
+
+```python
+sc = greek.score_scansion("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος", meter="hexameter")
+sc.scans, sc.dactyl_ratio, sc.synizesis_used
+# (True, 0.75, ('Πηληϊάδεω',))
+```
 
 ### Dactylic hexameter
 

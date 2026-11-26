@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
+schema_version: 1
+
+context:
+  name: pyaegean
+  version: "0.73.1"
+  python_min: "3.10"
+
+package:
+  name: ${{ name|lower }}
+  version: ${{ version }}
+
+source:
+  url: https://pypi.org/packages/source/${{ name[0] }}/${{ name }}/${{ name }}-${{ version }}.tar.gz
+  sha256: f68d33691f018968b4beb6165c0ac2bea1ffc06675c1a95bb572cdf287912c66
+
+build:
+  number: 0
+  noarch: python
+  script: ${{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  python:
+    entry_points:
+      - aegean = aegean.cli:main
+      - aegean-mcp = aegean.mcp_server:main
+
+requirements:
+  host:
+    - python ${{ python_min }}.*
+    - setuptools >=77
+    - pip
+  run:
+    - python >=${{ python_min }}
+
+tests:
+  - python:
+      imports:
+        - aegean
+        - aegean.core
+        - aegean.greek
+        - aegean.greek.bible
+        - aegean.analysis
+        - aegean.geo
+        - aegean.io
+        - aegean.library
+        - aegean.translate
+      pip_check: true
+      python_version: ${{ python_min }}.*
+  - script:
+      - python -c "import aegean; assert len(aegean.load('lineara')) == 1721; assert aegean.greek.lemmatize('λόγοι') == 'λόγος'"
+
+about:
+  homepage: https://github.com/ryanpavlicek/pyaegean
+  repository: https://github.com/ryanpavlicek/pyaegean
+  documentation: https://pyaegean.xyz/
+  license: Apache-2.0
+  license_file:
+    - LICENSE
+    - NOTICE
+  summary: A specialist Python toolkit for Ancient Greek NLP and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan).
+  description: |
+    pyaegean is a zero-dependency-core Python toolkit for Ancient Greek NLP and
+    the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan).
+    It provides a script-agnostic corpus model, Greek normalization,
+    syllabification, accentuation, quantitative scansion, lemmatization,
+    morphology, Biblical and Koine Greek tools, and optional extras for CLI,
+    TUI, geospatial analysis, visualization, MCP, and ONNX neural parsing.
+
+extra:
+  recipe-maintainers:
+    - ryanpavlicek

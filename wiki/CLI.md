@@ -104,7 +104,7 @@ aegean --version          # pyaegean 0.73.1
 
 | Group | Commands |
 |---|---|
-| **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `find` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `quickstart` `repl` `tui` `browse` `info` `load` `show` `find` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`aegean library …`** | `status` `packs` `list` `search` `info` `install` `remove` (all 30 corpora, 47 datasets, 3,844 Greek collection works, ~1,778 Perseus/First1KGreek works, 112 patristic commentaries, lexica, models, and 10 named packs) |
 | **`aegean greek …`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse`, plus `pipeline`, `explain`, `stream`, `annotation-profiles list`/`show`, `interop export`/`import`/`report`, `gloss`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `collections`/`work`/`works`/`catalog`, and `eval` |
 | **`aegean bible …`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` (9 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's + roots, 56 LXX books with Masoretic numbering & auto-interlinear, 112 patristic commentaries) |

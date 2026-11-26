@@ -108,8 +108,8 @@ prior programming.
 | **An analyst's toolkit** | Ported from the Linear A Workbench: wildcard **sign-pattern search** (`KU-*-RO`), weighted **phonetic distance + alignment**, **morphological clustering**, **collocation statistics** (PMI, log-likelihood, Fisher's exact), and a compound **query engine** with AND / OR / NOT. |
 | **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, lossless JSON and SQLite storage (with optional fast lexical indexing), a compound **`query()`**, compact **spreadsheet review workflows** (`layout="editable"`, calibrated-risk queues, multi-reviewer merges), and export to schema-valid EpiDoc plus CSV, Parquet, CoNLL-U, Turtle, and JSON-LD via `aegean.io`. Diplomatic, regularized, and normalized word forms stay distinct; CoNLL-U preserves complete treebank structure (including multiword spans and empty nodes). Every corpus carries provenance and a one-line citation. |
 | **Loss-aware NLP interoperability** | Optional `aegean.io` adapters move Greek annotations between pyaegean and spaCy, Stanza, or CLTK while keeping extra philological metadata in a verified companion sidecar; `InteropReport` states plainly which fields transferred natively, which live in the sidecar, and which a format cannot represent. Portable JSON bundles work from Python or `aegean greek interop export\|import\|report`. |
-| **A browser UI for any corpus** | `aegean workbench` serves the [Linear A Research Workbench v2.0.0](https://linearaworkbench.xyz/) offline (34 workspaces / 59 views) with `--corpus`, `--site`/`--period`/`--module`/`--doc`, `--damos`, and live `--state workspace.json` auto-sync. `aegean.io.to_workbench()` / `from_workbench_export()` / `load_workbench_backup()` round-trip corpora and researcher workspaces between Python and the browser. |
-| **Map the find-sites** | `aegean.geo` turns a corpus into a geopandas **GeoDataFrame**: a point per inscription or per site (EPSG:4326) from a bundled Aegean gazetteer, so you can map where a word clusters or how far a script reaches. `pip install pyaegean[geo]`. |
+| **A browser UI for any corpus** | `aegean browse` (`aegean.browser`) serves a zero-dependency local **Greek visual corpus browser** with interlinear glosses, parallel translations, click/hover grammar & dependency inspection, Strong's/LSJ lexica, patristic commentaries, metrical scansion, and a visual Library Manager. For the Aegean syllabic scripts, `aegean workbench` serves the [Linear A Research Workbench](https://linearaworkbench.xyz/) offline with `--corpus`, `--site`/`--period`/`--module`/`--doc`, `--damos`, and live `--state workspace.json` auto-sync. |
+| **Map the find-sites** | `aegean.geo` turns a corpus into a geopandas **GeoDataFrame**: a point per inscription or per site (EPSG:4326) from a bundled 144-site Pleiades-aligned Mediterranean and Aegean gazetteer (with `unmapped_sites()` coverage audit). `pip install pyaegean[geo]`. |
 | **Grounded, multi-provider AI** | `aegean.ai` / `aegean.translate` front Anthropic, OpenAI, Grok, Gemini, and OpenRouter, plus a **local** option that runs a model on your own machine (Ollama, LM Studio, llama.cpp, vLLM) with no key or network. Greek translation supports local grammatical analysis, **contextual dictionary excerpts** (`--dictionary`), separate **surrounding source context**, and optional **clause-by-clause checking** (`check_policy="clauses"`). All generative readings are labeled **exploratory** with their provenance. |
 | **Measured accuracy & provenance** | Deciphered Greek uses attested lemmas, gold POS, and measured benchmarks. Structural analyses on undeciphered corpora (Linear A, Cypro-Minoan) carry an explicit `exploratory` flag. |
 
@@ -126,7 +126,7 @@ pip install "pyaegean[tui]"       # + the `aegean tui` full-screen terminal UI (
 pip install "pyaegean[neural]"    # + the neural Greek pipeline & lemmatizer (onnxruntime; no torch)
 pip install "pyaegean[ai]"        # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients (the openai SDK also drives the local option)
 pip install "pyaegean[mcp]"       # + the `aegean-mcp` Model Context Protocol server (for agents)
-pip install "pyaegean[interop]"   # + Python adapters; combine with [cli] for the interop commands
+pip install "pyaegean[interop]"   # + Python adapters; combine with [cli] for the interop CLI commands
 pip install "pyaegean[all]"       # bundled runtime extras, including neural (excludes Parquet, viz-interactive, and framework adapters)
 ```
 
@@ -134,6 +134,7 @@ pip install "pyaegean[all]"       # bundled runtime extras, including neural (ex
 
 **No install required**: run the guided tour in your browser, nothing to set up:
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+(or try the 5-minute 100% offline quickstart: [`notebooks/quickstart-offline.ipynb`](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/quickstart-offline.ipynb)).
 
 Or try the toolkit **live in your browser**: the core pipeline running client-side via Pyodide,
 nothing to install: **[pyaegean.xyz/demo](https://pyaegean.xyz/demo/)**.
@@ -188,7 +189,8 @@ with `--json` on every data-producing command and stdin piping:
 aegean quickstart                              # the guided first five minutes, offline
 aegean doctor                                  # check the environment (extras, data store, models)
 aegean                                         # interactive shell (on a TTY): live inline ghost-text + dropdown prediction
-aegean tui                                     # 8-screen terminal UI: corpora, Greek workbench, Bible (b), Library Manager (l), data store (d)
+aegean tui                                     # 9-screen terminal UI: corpora, Greek workbench, Bible (b), Library Manager (l), review (r), visual browser (v)
+aegean browse "John 1:1-18"                    # local visual Greek corpus browser: interlinear, grammar/Strong's/LSJ inspector, commentaries, Library Manager
 aegean library packs                           # view all 10 downloadable packs (biblical, church-fathers, ancient-greek, byzantine-pack, …)
 aegean library install biblical church-fathers # install Biblical pack + John Chrysostom & Greek Church Fathers (882 works)
 aegean greek collections chrysostom            # list all 155 John Chrysostom works offline
@@ -204,8 +206,8 @@ aegean bible commentary search ogc002060 ἀγάπη # search John Chrysostom's 
 aegean import myplato.txt -o myplato.json      # your own text → a corpus, then `aegean stats myplato.json`
 ```
 
-The core Greek and bundled-corpus examples run offline without heavy dependencies. All 47
-hosted datasets (corpora, 8 categorized Ancient/Patristic/Byzantine Greek collections, Biblical
+The core Greek and bundled-corpus examples run offline without heavy dependencies. All hosted
+datasets (corpora, 8 categorized Ancient/Patristic/Byzantine Greek collections, Biblical
 bundles, lexica, models, and facsimile imagery) are SHA-256-pinned, downloaded on demand into
 your local cache via `aegean library` / `aegean data`, and never bundled inside the Apache-2.0
 wheel. See [Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)
@@ -216,12 +218,12 @@ for the complete catalog, sizes, and licenses.
 Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**:
 
 - **[Getting Started](https://github.com/ryanpavlicek/pyaegean/wiki/Getting-Started)**: for newcomers to Python
-- **[Example notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)**: a runnable guided tour ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb))
+- **[Example notebooks](https://github.com/ryanpavlicek/pyaegean/tree/main/notebooks)**: [5-minute offline quickstart](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/quickstart-offline.ipynb) · [full guided tour](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb) ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb))
 - **[Tutorial](https://github.com/ryanpavlicek/pyaegean/wiki/Tutorial)**: three guided, end-to-end research walkthroughs
 - **[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)** · **[Linear B](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-B)** · **[Cypriot](https://github.com/ryanpavlicek/pyaegean/wiki/Cypriot)** · **[Cypro-Minoan](https://github.com/ryanpavlicek/pyaegean/wiki/Cypro-Minoan)**: per-script guides
 - **[Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes)**: end-to-end scholarly workflows, each ending in a citation
 - **[Corpus Catalog](https://github.com/ryanpavlicek/pyaegean/wiki/Catalog)**: categorized directory of all 30 corpora, 3,844 Greek library works, 1,778 Perseus/First1KGreek works, biblical books & witnesses, patristic commentaries, inscriptions, papyri, and lexica
-- **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[Biblical & Koine Greek](https://github.com/ryanpavlicek/pyaegean/wiki/New-Testament)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[TUI](https://github.com/ryanpavlicek/pyaegean/wiki/TUI)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)**: reference
+- **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[Biblical & Koine Greek](https://github.com/ryanpavlicek/pyaegean/wiki/New-Testament)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[TUI](https://github.com/ryanpavlicek/pyaegean/wiki/TUI)** · **[Greek Visual Browser](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-Browser)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)**: reference
 - **[Interoperability](https://github.com/ryanpavlicek/pyaegean/wiki/Interoperability)**: CoNLL-U, spaCy, Stanza, and CLTK projections, sidecars, reports, and serializer boundaries
 - **[Independent review](https://github.com/ryanpavlicek/pyaegean/wiki/Independent-Review)**: one-command evidence verification, model and data cards, limitations, and discrepancy reporting
 - **[API reference](https://pyaegean.xyz/api/)**: the supported facade modules, with public classes and functions generated from the source
