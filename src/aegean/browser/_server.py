@@ -165,6 +165,16 @@ def _make_handler(
                 self._send_bytes(200, fpath.read_bytes(), ctype)
                 return
 
+            if route == "/favicon.ico":
+                svg = (
+                    b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+                    b'<rect width="32" height="32" rx="7" fill="#8c3b2b"/>'
+                    b'<text x="16" y="23" text-anchor="middle" font-family="Georgia,serif" '
+                    b'font-size="21" font-weight="700" fill="#fbf9f4">\xce\x91</text></svg>'
+                )
+                self._send_bytes(200, svg, "image/svg+xml; charset=utf-8")
+                return
+
             try:
                 if route == "/api/health":
                     import aegean
@@ -231,6 +241,7 @@ def _make_handler(
                             strongs=self._qs_first(qs, "strongs") or None,
                             sentence_text=self._qs_first(qs, "sentence") or None,
                             book=self._qs_first(qs, "book") or None,
+                            include_study=self._qs_bool(qs, "include_study", True),
                         ),
                     )
                     return
@@ -380,7 +391,13 @@ def _make_handler(
                     return
 
                 if route == "/api/library/fetch":
-                    self._send_json(200, _service.library_fetch_payload(str(body.get("dataset") or "")))
+                    target_name = str(body.get("dataset") or body.get("target") or "")
+                    self._send_json(200, _service.library_fetch_payload(target_name))
+                    return
+
+                if route == "/api/library/remove":
+                    target_name = str(body.get("dataset") or body.get("target") or "")
+                    self._send_json(200, _service.library_remove_payload(target_name))
                     return
 
                 if route == "/api/export":

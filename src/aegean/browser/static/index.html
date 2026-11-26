@@ -185,12 +185,35 @@
       <div id="nav-pane-library" class="nav-pane">
         <div class="pane-section">
           <div class="section-row">
-            <h3 class="section-label">Local Data Store</h3>
+            <h3 class="section-label">Local Library Manager</h3>
             <button id="btn-refresh-library" type="button" class="btn-subtle btn-sm">Refresh</button>
           </div>
-          <div id="library-summary" class="muted-meta"></div>
-          <input id="library-filter" class="sidebar-input" type="search" placeholder="Filter datasets…" />
-          <div id="library-list" class="item-list"></div>
+          <div id="library-summary-card" class="lib-summary-card">
+            <div id="library-summary" class="muted-meta">Checking local cache…</div>
+            <div id="library-store-path" class="lib-path mono"></div>
+          </div>
+          <div class="lib-view-switch" role="tablist" aria-label="Library view">
+            <button id="lib-tab-datasets" type="button" class="lib-switch-btn active" data-lib-view="datasets" role="tab" aria-selected="true">Datasets</button>
+            <button id="lib-tab-packs" type="button" class="lib-switch-btn" data-lib-view="packs" role="tab" aria-selected="false">Packs</button>
+          </div>
+
+          <!-- Datasets Sub-view -->
+          <div id="lib-pane-datasets">
+            <input id="library-filter" class="sidebar-input" type="search" placeholder="Filter datasets, lexica, models…" />
+            <div id="library-status-pills" class="lib-filter-pills" role="group" aria-label="Filter by status">
+              <button type="button" class="lib-pill active" data-lib-status="all">All</button>
+              <button type="button" class="lib-pill" data-lib-status="installed">Installed</button>
+              <button type="button" class="lib-pill" data-lib-status="available">Available</button>
+              <button type="button" class="lib-pill" data-lib-status="bundled">Bundled</button>
+            </div>
+            <div id="library-category-chips" class="lib-filter-pills" role="group" aria-label="Filter by category"></div>
+            <div id="library-list" class="item-list"></div>
+          </div>
+
+          <!-- Curated Packs Sub-view -->
+          <div id="lib-pane-packs" class="hidden">
+            <div id="library-packs-list" class="item-list"></div>
+          </div>
         </div>
       </div>
     </aside>

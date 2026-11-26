@@ -385,60 +385,318 @@
   }
 
   let cachedLibrary = null;
+  let libView = "datasets";
+  let libStatusFilter = "all";
+  let libCategoryFilter = "all";
+  let pendingRemoveKey = null;
+  let pendingRemoveTimer = null;
+
+  function setPendingRemove(key) {
+    pendingRemoveKey = key;
+    if (pendingRemoveTimer) clearTimeout(pendingRemoveTimer);
+    if (key) {
+      pendingRemoveTimer = setTimeout(() => {
+        pendingRemoveKey = null;
+        renderLibraryAll();
+      }, 4500);
+    }
+  }
+
+  async function refreshPostLibraryMutation() {
+    try {
+      const [cat, eng] = await Promise.all([apiGet("/api/catalog"), apiGet("/api/engine")]);
+      renderCatalog(cat);
+      renderEngineIndicator(eng);
+    } catch (_) {
+      // Non-fatal background refresh
+    }
+  }
+
+  function switchLibraryView(view) {
+    libView = view === "packs" ? "packs" : "datasets";
+    $$(".lib-switch-btn").forEach((b) => {
+      const active = b.dataset.libView === libView;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    $("#lib-pane-datasets").classList.toggle("hidden", libView !== "datasets");
+    $("#lib-pane-packs").classList.toggle("hidden", libView !== "packs");
+    renderLibraryAll();
+  }
+
+  function renderLibrarySummary() {
+    if (!cachedLibrary) return;
+    const s = cachedLibrary.summary || {};
+    const downloaded = s.downloaded_count ?? 0;
+    const bundled = s.bundled_count ?? 0;
+    const available = s.available_count ?? 0;
+    const diskSize = s.installed_size || "0 B";
+    $("#library-summary").innerHTML = `
+      <div class="lib-metrics-row">
+        <span><strong>${downloaded}</strong> installed</span>
+        <span><strong>${bundled}</strong> bundled</span>
+        <span><strong>${available}</strong> available</span>
+        <span><strong>${esc(diskSize)}</strong> on disk</span>
+      </div>
+    `;
+    $("#library-store-path").textContent = s.store_path || "";
+    $("#lib-tab-datasets").textContent = `Datasets (${(cachedLibrary.items || []).length})`;
+    $("#lib-tab-packs").textContent = `Packs (${(cachedLibrary.packs || []).length})`;
+  }
+
+  function renderLibraryCategoryChips() {
+    if (!cachedLibrary) return;
+    const wrap = $("#library-category-chips");
+    const cats = cachedLibrary.categories || [];
+    wrap.innerHTML = cats
+      .map(
+        (c) =>
+          `<button type="button" class="lib-pill ${libCategoryFilter === c.id ? "active" : ""}" data-lib-cat="${esc(c.id)}">${esc(c.label)} (${c.count})</button>`
+      )
+      .join("");
+    wrap.querySelectorAll("[data-lib-cat]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        libCategoryFilter = btn.dataset.libCat || "all";
+        renderLibraryCategoryChips();
+        renderLibraryItems($("#library-filter").value);
+      });
+    });
+  }
+
+  async function runLibraryInstall(target, btn, idleLabel) {
+    btn.disabled = true;
+    btn.textContent = "Installing…";
+    try {
+      const out = await apiPost("/api/library/fetch", { dataset: target });
+      cachedLibrary = out.library;
+      setPendingRemove(null);
+      renderLibraryAll();
+      const failed = out.failed || [];
+      if (failed.length) {
+        showToast(`${target}: ${failed[0].error || "install failed"}`, 5000);
+      } else {
+        showToast(`Installed ${target}`);
+      }
+      await refreshPostLibraryMutation();
+    } catch (err) {
+      showToast(`Install failed: ${err.message}`, 5000);
+      btn.disabled = false;
+      btn.textContent = idleLabel;
+    }
+  }
+
+  async function runLibraryRemove(target, btn) {
+    btn.disabled = true;
+    btn.textContent = "Removing…";
+    try {
+      const out = await apiPost("/api/library/remove", { dataset: target });
+      cachedLibrary = out.library;
+      setPendingRemove(null);
+      renderLibraryAll();
+      if (out.removed_count > 0) {
+        showToast(`Removed ${target} (freed ${out.reclaimed_size})`);
+      } else {
+        showToast(`Nothing removed for ${target}`);
+      }
+      await refreshPostLibraryMutation();
+    } catch (err) {
+      showToast(`Remove failed: ${err.message}`, 5000);
+      setPendingRemove(null);
+      renderLibraryAll();
+    }
+  }
+
   async function loadLibrary() {
     $("#library-summary").textContent = "Checking local cache…";
     try {
       cachedLibrary = await apiGet("/api/library");
-      const s = cachedLibrary.summary || {};
-      $("#library-summary").textContent = `${s.downloaded || 0} installed · ${s.bundled || 0} bundled · ${s.available || 0} available`;
-      renderLibraryItems($("#library-filter").value);
+      setPendingRemove(null);
+      renderLibraryAll();
     } catch (err) {
       $("#library-summary").textContent = err.message;
     }
   }
 
+  function renderLibraryAll() {
+    if (!cachedLibrary) return;
+    renderLibrarySummary();
+    renderLibraryCategoryChips();
+    renderLibraryItems($("#library-filter").value);
+    renderLibraryPacks();
+  }
+
+  function renderLibraryPacks() {
+    if (!cachedLibrary) return;
+    const packs = cachedLibrary.packs || [];
+    const wrap = $("#library-packs-list");
+    wrap.innerHTML = packs
+      .map((p) => {
+        const key = `pack:${p.id}`;
+        const confirming = pendingRemoveKey === key;
+        const badgeText = p.complete ? `${p.installed_count}/${p.total_count} installed` : `${p.installed_count}/${p.total_count}`;
+        const installLabel =
+          p.installed_count > 0 && p.missing_ids.length > 0
+            ? `Install Missing (${p.missing_ids.length})`
+            : `Install Pack (${p.size_hint})`;
+        const installedSet = new Set(p.installed_ids || []);
+        return `
+        <div class="nav-item">
+          <div class="nav-item-title">
+            <span>${esc(p.title)}</span>
+            <span class="tag-badge ${p.complete ? "ok" : ""}">${esc(badgeText)}</span>
+          </div>
+          <div class="nav-item-sub">${esc(p.description || "")}</div>
+          <div class="lib-item-meta">
+            <span class="mono">${esc(p.id)}</span>
+            <span>· ${esc(p.size_hint || "")}</span>
+            ${p.installed_bytes > 0 ? `<span>· ${esc(p.installed_size)} cached</span>` : ""}
+          </div>
+          <div class="pack-members">
+            ${(p.items || [])
+              .map(
+                (mid) =>
+                  `<span class="pack-member-chip ${installedSet.has(mid) ? "ok" : ""}">${esc(mid)}</span>`
+              )
+              .join("")}
+          </div>
+          <div class="lib-actions">
+            ${
+              p.missing_ids && p.missing_ids.length
+                ? `<button type="button" class="btn-primary btn-sm" data-pack-install="${esc(p.id)}">${esc(installLabel)}</button>`
+                : ""
+            }
+            ${
+              p.installed_ids && p.installed_ids.length
+                ? `<button type="button" class="${confirming ? "btn-danger-confirm" : "btn-danger-subtle"}" data-pack-remove="${esc(p.id)}">${confirming ? "Confirm remove?" : "Remove Pack"}</button>`
+                : ""
+            }
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    wrap.querySelectorAll("[data-pack-install]").forEach((btn) => {
+      const pid = btn.dataset.packInstall;
+      const label = btn.textContent;
+      btn.addEventListener("click", () => runLibraryInstall(pid, btn, label));
+    });
+    wrap.querySelectorAll("[data-pack-remove]").forEach((btn) => {
+      const pid = btn.dataset.packRemove;
+      const key = `pack:${pid}`;
+      btn.addEventListener("click", () => {
+        if (pendingRemoveKey !== key) {
+          setPendingRemove(key);
+          renderLibraryPacks();
+          return;
+        }
+        runLibraryRemove(pid, btn);
+      });
+    });
+  }
+
   function renderLibraryItems(filterText) {
     if (!cachedLibrary) return;
     const q = (filterText || "").trim().toLowerCase();
-    const items = (cachedLibrary.items || []).filter(
-      (it) => !q || it.id.toLowerCase().includes(q) || it.title.toLowerCase().includes(q) || it.category.toLowerCase().includes(q)
-    );
+    const items = (cachedLibrary.items || []).filter((it) => {
+      if (libStatusFilter !== "all" && it.status !== libStatusFilter) return false;
+      if (libCategoryFilter !== "all" && it.category !== libCategoryFilter) return false;
+      if (!q) return true;
+      return (
+        (it.id || "").toLowerCase().includes(q) ||
+        (it.title || "").toLowerCase().includes(q) ||
+        (it.category || "").toLowerCase().includes(q) ||
+        (it.description || "").toLowerCase().includes(q) ||
+        (it.license || "").toLowerCase().includes(q)
+      );
+    });
     const wrap = $("#library-list");
+    if (!items.length) {
+      wrap.innerHTML = `<div class="muted-meta" style="padding:8px 2px">No datasets match the current filter.</div>`;
+      return;
+    }
     wrap.innerHTML = items
-      .slice(0, 80)
-      .map(
-        (it) => `
+      .slice(0, 120)
+      .map((it) => {
+        const isOk = it.status === "installed" || it.status === "bundled";
+        const key = `ds:${it.id}`;
+        const confirming = pendingRemoveKey === key;
+        const actions = [];
+        if (it.status === "available") {
+          actions.push(
+            `<button type="button" class="btn-primary btn-sm" data-fetch-ds="${esc(it.id)}">Download</button>`
+          );
+        }
+        if (it.can_open && it.open_spec) {
+          actions.push(
+            `<button type="button" class="btn-subtle btn-sm" data-open-ds="${esc(it.open_spec)}">Open</button>`
+          );
+        }
+        if (it.lexicon_id && isOk) {
+          if (it.lexicon_active) {
+            actions.push(`<span class="tag-badge ok">active lexicon</span>`);
+          } else {
+            actions.push(
+              `<button type="button" class="btn-subtle btn-sm" data-activate-lex="${esc(it.lexicon_id)}">Activate</button>`
+            );
+          }
+        }
+        if (it.can_remove) {
+          actions.push(
+            `<button type="button" class="${confirming ? "btn-danger-confirm" : "btn-danger-subtle"}" data-remove-ds="${esc(it.id)}">${confirming ? "Confirm remove?" : "Remove"}</button>`
+          );
+        }
+        return `
         <div class="nav-item">
           <div class="nav-item-title">
             <span>${esc(it.id)}</span>
-            <span class="tag-badge ${it.status === "downloaded" || it.status === "bundled" ? "ok" : ""}">${esc(it.status)}</span>
+            <span class="tag-badge ${isOk ? "ok" : ""}">${esc(it.status)}</span>
           </div>
-          <div class="nav-item-sub">${esc(it.title)} · ${esc(it.size_hint || "")}</div>
-          ${
-            it.status === "available"
-              ? `<div style="margin-top:6px"><button type="button" class="btn-subtle btn-sm" data-fetch-ds="${esc(it.id)}">Download</button></div>`
-              : ""
-          }
-        </div>`
-      )
+          <div class="nav-item-sub">${esc(it.title)}</div>
+          <div class="lib-item-meta">
+            <span>${esc(it.category)}</span>
+            ${it.size_display ? `<span>· ${esc(it.size_display)}</span>` : ""}
+            ${it.license ? `<span>· ${esc(it.license)}</span>` : ""}
+          </div>
+          ${actions.length ? `<div class="lib-actions">${actions.join("")}</div>` : ""}
+        </div>`;
+      })
       .join("");
+
     wrap.querySelectorAll("[data-fetch-ds]").forEach((btn) => {
+      const ds = btn.dataset.fetchDs;
+      btn.addEventListener("click", () => runLibraryInstall(ds, btn, "Download"));
+    });
+    wrap.querySelectorAll("[data-open-ds]").forEach((btn) => {
+      const spec = btn.dataset.openDs;
+      btn.addEventListener("click", () => openTarget(spec));
+    });
+    wrap.querySelectorAll("[data-activate-lex]").forEach((btn) => {
+      const lid = btn.dataset.activateLex;
       btn.addEventListener("click", async () => {
-        const ds = btn.dataset.fetchDs;
         btn.disabled = true;
-        btn.textContent = "Downloading…";
+        btn.textContent = "Activating…";
         try {
-          const out = await apiPost("/api/library/fetch", { dataset: ds });
-          cachedLibrary = out.library;
-          renderLibraryItems($("#library-filter").value);
-          showToast(`Installed ${ds}`);
-          const cat = await apiGet("/api/catalog");
-          renderCatalog(cat);
+          await apiPost("/api/lexicon/activate", { id: lid });
+          cachedLibrary = await apiGet("/api/library");
+          renderLibraryAll();
+          showToast(`Activated ${lid} dictionary`);
         } catch (err) {
-          showToast(`Download failed: ${err.message}`, 5000);
+          showToast(`Activation failed: ${err.message}`, 4000);
           btn.disabled = false;
-          btn.textContent = "Download";
+          btn.textContent = "Activate";
         }
+      });
+    });
+    wrap.querySelectorAll("[data-remove-ds]").forEach((btn) => {
+      const ds = btn.dataset.removeDs;
+      const key = `ds:${ds}`;
+      btn.addEventListener("click", () => {
+        if (pendingRemoveKey !== key) {
+          setPendingRemove(key);
+          renderLibraryItems($("#library-filter").value);
+          return;
+        }
+        runLibraryRemove(ds, btn);
       });
     });
   }
@@ -723,6 +981,7 @@
       strongs: tok.strongs || "",
       sentence: sent ? sent.text : "",
       book: (state.doc && state.doc.context && state.doc.context.book) || "",
+      include_study: "0",
     });
     try {
       const detail = await apiGet(`/api/word?${qs}`);
@@ -997,7 +1256,11 @@
                   : ""
               }
             </div>`
-          : ""
+          : `<div class="insp-card">
+              <h3>Biblical Concordance &amp; Word Study</h3>
+              <p class="muted-meta" style="margin:0 0 8px">Run an offline NT + 56-book Septuagint distribution and verse concordance for <strong class="greek-inline">${esc(detail.lemma || tok.lemma || tok.text)}</strong>${st ? ` (${esc(st.strongs)})` : ""}.</p>
+              <button type="button" id="btn-load-word-study" class="btn-subtle btn-sm">Load NT &amp; LXX Concordance</button>
+            </div>`
       }
 
       <div class="insp-card">
@@ -1010,6 +1273,35 @@
       </div>
     `;
 
+    // Wire on-demand Biblical Concordance & Word Study loader
+    const loadWsBtn = $("#btn-load-word-study");
+    if (loadWsBtn) {
+      loadWsBtn.addEventListener("click", async () => {
+        const q = (st && st.strongs) || detail.lemma || tok.lemma || tok.text;
+        loadWsBtn.disabled = true;
+        loadWsBtn.textContent = "Scanning NT & LXX…";
+        try {
+          const full = await apiGet(`/api/word-study?q=${encodeURIComponent(q)}&offline=1`);
+          detail.word_study = {
+            lemma: full.lemma,
+            strongs: full.strongs,
+            scope: full.scope,
+            total_occurrences: full.total_occurrences || 0,
+            by_book: full.by_book || {},
+            lxx_total: full.lxx_total || 0,
+            lxx_by_book: full.lxx_by_book || {},
+            sample_occurrences: (full.occurrences || []).slice(0, 6),
+            sample_lxx_occurrences: (full.lxx_occurrences || []).slice(0, 6),
+          };
+          renderLexiconTab(tok, detail);
+        } catch (err) {
+          showToast(`Word study failed: ${err.message}`, 4000);
+          loadWsBtn.disabled = false;
+          loadWsBtn.textContent = "Load NT & LXX Concordance";
+        }
+      });
+    }
+
     // Wire clickable etymology root drilling
     pane.querySelectorAll("[data-drill-word]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -1017,7 +1309,7 @@
         const sid = btn.dataset.drillStrongs;
         showToast(`Inspecting root ${w || sid}…`);
         try {
-          const d = await apiGet(`/api/word?surface=${encodeURIComponent(w || sid)}&strongs=${encodeURIComponent(sid)}`);
+          const d = await apiGet(`/api/word?surface=${encodeURIComponent(w || sid)}&strongs=${encodeURIComponent(sid)}&include_study=0`);
           renderLexiconTab({ text: w, lemma: d.lemma, strongs: sid }, d);
         } catch (err) {
           showToast(err.message, 4000);
@@ -1561,6 +1853,16 @@
     $("#search-form").addEventListener("submit", runSearch);
     $("#btn-refresh-library").addEventListener("click", loadLibrary);
     $("#library-filter").addEventListener("input", (e) => renderLibraryItems(e.target.value));
+    $$(".lib-switch-btn").forEach((btn) => {
+      btn.addEventListener("click", () => switchLibraryView(btn.dataset.libView));
+    });
+    $$("[data-lib-status]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        libStatusFilter = btn.dataset.libStatus || "all";
+        $$("[data-lib-status]").forEach((p) => p.classList.toggle("active", p === btn));
+        renderLibraryItems($("#library-filter").value);
+      });
+    });
 
     // Document toolbar controls
     $("#doc-switcher").addEventListener("change", (e) => {

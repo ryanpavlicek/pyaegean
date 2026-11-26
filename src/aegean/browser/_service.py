@@ -37,6 +37,7 @@ __all__ = [
     "export_payload",
     "library_fetch_payload",
     "library_payload",
+    "library_remove_payload",
     "scan_lines_payload",
     "search_payload",
     "word_study_payload",
@@ -1206,6 +1207,7 @@ def analyze_word_payload(
     strongs: str | None = None,
     sentence_text: str | None = None,
     book: str | None = None,
+    include_study: bool = True,
 ) -> dict[str, Any]:
     """Return deep linguistic, grammatical, lexical, etymological, and concordance data for one word."""
     from ..greek import (
@@ -1308,22 +1310,23 @@ def analyze_word_payload(
 
     # 5. Offline Biblical Word Study summary (NT + LXX distribution)
     study_summary: dict[str, Any] | None = None
-    try:
-        ws = bible.word_study(s_entry.strongs if s_entry else resolved_lemma, offline=True)
-        wsd = ws.to_dict()
-        study_summary = {
-            "lemma": wsd.get("lemma"),
-            "strongs": wsd.get("strongs"),
-            "scope": wsd.get("scope"),
-            "total_occurrences": wsd.get("total_occurrences", 0),
-            "by_book": dict(list((wsd.get("by_book") or {}).items())[:12]),
-            "lxx_total": wsd.get("lxx_total", 0),
-            "lxx_by_book": dict(list((wsd.get("lxx_by_book") or {}).items())[:12]),
-            "sample_occurrences": (wsd.get("occurrences") or [])[:6],
-            "sample_lxx_occurrences": (wsd.get("lxx_occurrences") or [])[:6],
-        }
-    except Exception:
-        study_summary = None
+    if include_study:
+        try:
+            ws = bible.word_study(s_entry.strongs if s_entry else resolved_lemma, offline=True)
+            wsd = ws.to_dict()
+            study_summary = {
+                "lemma": wsd.get("lemma"),
+                "strongs": wsd.get("strongs"),
+                "scope": wsd.get("scope"),
+                "total_occurrences": wsd.get("total_occurrences", 0),
+                "by_book": dict(list((wsd.get("by_book") or {}).items())[:12]),
+                "lxx_total": wsd.get("lxx_total", 0),
+                "lxx_by_book": dict(list((wsd.get("lxx_by_book") or {}).items())[:12]),
+                "sample_occurrences": (wsd.get("occurrences") or [])[:6],
+                "sample_lxx_occurrences": (wsd.get("lxx_occurrences") or [])[:6],
+            }
+        except Exception:
+            study_summary = None
 
     # 6. Decision explanation trace from explain_pipeline if sentence context is given
     explanation: dict[str, Any] | None = None
@@ -1598,30 +1601,163 @@ def activate_lexicon_payload(lexicon_id: str) -> dict[str, Any]:
     }
 
 
+_NON_GREEK_OPEN_SPECS: frozenset[str] = frozenset(
+    {"lineara", "linearb", "cypriot", "cyprominoan", "damos", "sigla"}
+)
+
+_LIBRARY_CATEGORY_LABELS: tuple[tuple[str, str], ...] = (
+    ("bible", "Bible"),
+    ("patristics", "Patristics"),
+    ("classical", "Classical"),
+    ("byzantine", "Byzantine"),
+    ("lexicon", "Lexica"),
+    ("model", "Models"),
+    ("corpus", "Corpora"),
+    ("work", "Works"),
+    ("commentary", "Commentaries"),
+    ("other", "Other"),
+)
+
+
+def _format_bytes(n: int | None) -> str:
+    """Format a byte count compactly for display in the browser UI."""
+    if n is None or n <= 0:
+        return "0 B"
+    val = float(n)
+    for unit in ("B", "KB", "MB", "GB"):
+        if val < 1024.0 or unit == "GB":
+            return f"{int(val)} B" if unit == "B" else f"{val:.1f} {unit}"
+        val /= 1024.0
+    return f"{val:.1f} GB"
+
+
 def library_payload() -> dict[str, Any]:
-    """Return local PyAegean Library Manager status (datasets and curated packs)."""
+    """Return local PyAegean Library Manager status (datasets, categories, and curated packs)."""
     from .. import library
+    from ..greek import lexicons
 
     items = library.list_items()
-    packs = library.list_packs()
+    raw_summary = library.summary()
+    packs_raw = library.list_packs()
+    active_lex = set(lexicons.active_lexica())
+    lex_asset_to_id = {f"{info.id}-index": info.id for info in lexicons.lexica() if info.hosted}
+
+    enriched_items: list[dict[str, Any]] = []
+    cat_counts: dict[str, int] = {}
+    available_count = 0
+    for it in items:
+        d = _json_safe(it)
+        status = str(d.get("status") or "")
+        kind = str(d.get("kind") or "")
+        cat = str(d.get("category") or "other")
+        open_spec = d.get("open_spec")
+        cat_counts[cat] = cat_counts.get(cat, 0) + 1
+        if status == "available":
+            available_count += 1
+        lex_id = lex_asset_to_id.get(str(d.get("id") or ""))
+        item_bytes = d.get("bytes")
+        d["can_open"] = bool(
+            open_spec
+            and status in {"bundled", "installed"}
+            and str(open_spec) not in _NON_GREEK_OPEN_SPECS
+        )
+        d["can_remove"] = bool(status == "installed" and kind != "bundled")
+        d["lexicon_id"] = lex_id
+        d["lexicon_active"] = bool(lex_id and lex_id in active_lex)
+        d["size_display"] = (
+            _format_bytes(int(item_bytes))
+            if isinstance(item_bytes, int) and item_bytes > 0
+            else str(d.get("size_hint") or "")
+        )
+        enriched_items.append(d)
+
+    enriched_packs: list[dict[str, Any]] = []
+    for ps in packs_raw:
+        p = ps.pack
+        inst_ids = list(ps.installed_ids)
+        miss_ids = list(ps.missing_ids)
+        total_cnt = len(p.items)
+        inst_bytes = int(ps.installed_bytes)
+        enriched_packs.append(
+            {
+                "id": p.id,
+                "title": p.title,
+                "description": p.description,
+                "size_hint": p.size_hint,
+                "items": list(p.items),
+                "installed_ids": inst_ids,
+                "missing_ids": miss_ids,
+                "installed_count": len(inst_ids),
+                "total_count": total_cnt,
+                "installed_bytes": inst_bytes,
+                "installed_size": _format_bytes(inst_bytes),
+                "complete": len(miss_ids) == 0 and total_cnt > 0,
+            }
+        )
+
+    categories: list[dict[str, Any]] = [
+        {"id": "all", "label": "All", "count": len(enriched_items)}
+    ]
+    for cid, label in _LIBRARY_CATEGORY_LABELS:
+        if cat_counts.get(cid, 0) > 0:
+            categories.append({"id": cid, "label": label, "count": cat_counts[cid]})
+
+    summary = {
+        "store_path": str(raw_summary.get("store_path") or ""),
+        "bundled_count": int(raw_summary.get("bundled_count") or 0),
+        "downloaded_count": int(raw_summary.get("downloaded_count") or 0),
+        "available_count": available_count,
+        "installed_bytes": int(raw_summary.get("installed_bytes") or 0),
+        "installed_size": str(raw_summary.get("installed_size") or "0 B"),
+        "greek_collection_works": int(raw_summary.get("greek_collection_works") or 0),
+        "pack_count": len(enriched_packs),
+    }
+
     return {
-        "summary": _json_safe(library.summary()),
-        "items": [_json_safe(it) for it in items],
-        "packs": [_json_safe(p) for p in packs],
+        "summary": summary,
+        "categories": categories,
+        "items": enriched_items,
+        "packs": enriched_packs,
     }
 
 
 def library_fetch_payload(dataset: str) -> dict[str, Any]:
-    """Install a PyAegean dataset or pack into the local cache."""
+    """Install a PyAegean dataset, Greek work, or curated pack into the local cache."""
     from .. import library
 
     name = (dataset or "").strip()
     if not name:
-        raise ValueError("dataset name must be non-empty")
+        raise ValueError("dataset or pack name must be non-empty")
     results = library.install([name])
+    serialized = [_json_safe(r) for r in results]
+    failed = [r for r in serialized if r.get("status") == "failed"]
+    installed = [r for r in serialized if r.get("status") in {"installed", "already_installed", "bundled"}]
     return {
         "requested": name,
-        "results": [_json_safe(r) for r in results],
+        "results": serialized,
+        "installed_count": len(installed),
+        "failed": failed,
+        "library": library_payload(),
+    }
+
+
+def library_remove_payload(dataset: str) -> dict[str, Any]:
+    """Remove a downloaded PyAegean dataset, Greek work, or pack from the local cache."""
+    from .. import library
+
+    name = (dataset or "").strip()
+    if not name:
+        raise ValueError("dataset or pack name must be non-empty")
+    results = library.remove([name])
+    serialized = [_json_safe(r) for r in results]
+    removed = [r for r in serialized if r.get("status") == "removed"]
+    reclaimed = sum(int(r.get("bytes_reclaimed") or 0) for r in serialized)
+    return {
+        "requested": name,
+        "results": serialized,
+        "removed_count": len(removed),
+        "bytes_reclaimed": reclaimed,
+        "reclaimed_size": _format_bytes(reclaimed),
         "library": library_payload(),
     }
 

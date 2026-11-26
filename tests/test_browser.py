@@ -200,6 +200,8 @@ def test_loopback_http_server_routes_and_security_guards() -> None:
         assert st_css == 200 and "text/css" in ct_css and b"--font-greek" in css
         st_js, ct_js, js = _get(f"{srv.url}app.js")
         assert st_js == 200 and "javascript" in ct_js and b"renderSyntaxSvg" in js
+        st_fav, ct_fav, fav = _get(f"{srv.url}favicon.ico")
+        assert st_fav == 200 and "svg" in ct_fav and b"<svg" in fav
 
         # Core JSON GET routes
         st_h, _, raw_h = _get(f"{srv.url}api/health")
@@ -208,8 +210,24 @@ def test_loopback_http_server_routes_and_security_guards() -> None:
         assert st_c == 200 and len(json.loads(raw_c)["nt_books"]) == 27
         st_o, _, raw_o = _get(f"{srv.url}api/open?target={urllib.parse.quote('John 1:1-2')}&offline=1")
         assert st_o == 200 and json.loads(raw_o)["context"]["book"] == "John"
-        st_w, _, raw_w = _get(f"{srv.url}api/word?surface={urllib.parse.quote('λόγος')}")
-        assert st_w == 200 and json.loads(raw_w)["strongs"]["strongs"] == "G3056"
+        st_w, _, raw_w = _get(f"{srv.url}api/word?surface={urllib.parse.quote('λόγος')}&include_study=0")
+        w_fast = json.loads(raw_w)
+        assert st_w == 200 and w_fast["strongs"]["strongs"] == "G3056" and w_fast["word_study"] is None
+        st_l, _, raw_l = _get(f"{srv.url}api/library")
+        lib = json.loads(raw_l)
+        assert st_l == 200
+        assert lib["summary"]["bundled_count"] >= 5
+        assert "downloaded_count" in lib["summary"] and "available_count" in lib["summary"]
+        assert "installed_size" in lib["summary"] and lib["summary"]["pack_count"] >= 10
+        assert lib["categories"][0]["id"] == "all"
+        assert len(lib["packs"]) >= 10
+        pack_ids = {p["id"] for p in lib["packs"]}
+        assert {"biblical", "church-fathers", "ancient-greek", "byzantine-pack", "lexica", "neural"} <= pack_ids
+        items_by_id = {it["id"]: it for it in lib["items"]}
+        assert items_by_id["greek"]["can_open"] is True
+        assert items_by_id["greek"]["can_remove"] is False
+        assert items_by_id["lineara"]["can_open"] is False
+        assert items_by_id["lsj-index"]["lexicon_id"] == "lsj"
 
         # POST routes (valid loopback)
         st_an, raw_an = _post(f"{srv.url}api/analyze-text", {"text": "Ἐν ἀρχῇ ἦν ὁ λόγος."})
@@ -228,10 +246,21 @@ def test_loopback_http_server_routes_and_security_guards() -> None:
         )
         assert st_ex == 200 and b"# sent_id = s1" in raw_ex and b"Strongs=G3056" in raw_ex
 
+        # Library remove safely refuses deleting bundled items & rejects empty target
+        st_rm, raw_rm = _post(f"{srv.url}api/library/remove", {"dataset": "greek"})
+        rm = json.loads(raw_rm)
+        assert st_rm == 200 and rm["removed_count"] == 0 and rm["results"][0]["status"] == "bundled"
+        with pytest.raises(urllib.error.HTTPError) as rm_empty:
+            _post(f"{srv.url}api/library/remove", {"dataset": ""})
+        assert rm_empty.value.code == 400
+
         # CSRF cross-origin POST guard -> 403
         with pytest.raises(urllib.error.HTTPError) as exc_info:
             _post(f"{srv.url}api/analyze-text", {"text": "λόγος"}, origin="https://evil.example")
         assert exc_info.value.code == 403
+        with pytest.raises(urllib.error.HTTPError) as rm_csrf:
+            _post(f"{srv.url}api/library/remove", {"dataset": "greek"}, origin="https://evil.example")
+        assert rm_csrf.value.code == 403
 
         # Unknown route -> 404
         with pytest.raises(urllib.error.HTTPError) as nf_info:
