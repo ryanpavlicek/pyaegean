@@ -24,6 +24,10 @@ See [Benchmarks](Benchmarks), [Data & Provenance](Data-and-Provenance), and
   use the [CLI guide](CLI) or [CLI cheatsheet](CLI-Cheatsheet). The `[tui]`
   extra adds the 9-screen terminal UI (`aegean tui`), including interactive
   annotation and conflict review (`aegean tui --review`).
+- **Browsing available texts and corpora?** [Corpus Catalog](Catalog) lists every
+  registered corpus, Greek library collection (3,844 works), biblical book, manuscript
+  witness, patristic commentary, inscription archive, lexicon, and Perseus/First1KGreek
+  TEI edition by category.
 - **Choosing a Greek backend?** [Choosing a Pipeline](Choosing-a-Pipeline)
   compares the deterministic, treebank, pure-Python, and neural options before
   the full [Greek NLP](Greek-NLP) reference.

@@ -2,7 +2,8 @@
 
 This page documents dataset origins, wheel contents versus on-demand downloads,
 asset sizes and licenses, local store behavior, and snapshot pinning for
-reproducible research.
+reproducible research. For a categorized work-by-work listing of every corpus
+and text, see [Corpus Catalog](Catalog).
 
 Code and compact JSON ship in the wheel and work offline. Larger or
 license-restricted assets download on demand into a permanent local store
