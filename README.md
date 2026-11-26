@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.70.0 (beta).** The API may still shift before 1.0.
+> **Latest PyPI release: v0.71.0 (beta).** The API may still shift before 1.0.
 > The bundled Linear A corpus is a normalized transcription without full epigraphic
 > apparatus; for edition-grade readings consult GORILA or SigLA.
 

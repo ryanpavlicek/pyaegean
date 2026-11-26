@@ -320,6 +320,7 @@ class TestWorkbenchServerBridge:
         opts = {opt for param in cmd.params for opt in param.opts}
         for flag in (
             "--port",
+            "--auto-port",
             "--corpus",
             "--site",
             "--period",

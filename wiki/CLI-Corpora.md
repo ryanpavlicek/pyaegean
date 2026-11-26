@@ -865,7 +865,7 @@ aegean workbench --doc HT13                              # jump straight to an i
 aegean workbench --corpus damos                          # inspect any pyaegean corpus or local JSON export
 aegean workbench --damos                                 # auto-mount DAMOS Linear B frequencies for Sign Inventory
 aegean workbench --state workspace.json                  # auto-load & save annotations/notes/collections locally
-aegean workbench --dir ../linearaworkbench/dist --port 0 # serve a local build on an auto-picked free port
+aegean workbench --dir ../linearaworkbench/dist --auto-port # serve a local build on an auto-picked free port
 ```
 
 Fetches the sha256-pinned `workbench-app-v2.0.0` static build to the cache, then serves the browser UI (corpus, maps, commentary, and all 34 workspaces / 59 views) on loopback (`127.0.0.1`) until you press Ctrl+C. Pass `--fetch-images` (or `aegean data fetch lineara-images`) to mount the ~116 MB facsimile archive at `/upstream/images/`. Pass `--state workspace.json` to enable bidirectional loopback persistence at `/api/local/backup` (readable in Python via `aegean.io.load_workbench_backup()`).

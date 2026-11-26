@@ -309,7 +309,12 @@ def workbench(
         8000,
         "--port",
         "-p",
-        help="Port to serve on (0 to auto-pick a free port, or 1-65535).",
+        help="Port to serve on (1-65535).",
+    ),
+    auto_port: bool = typer.Option(
+        False,
+        "--auto-port",
+        help="Let the OS pick any available loopback port (ignores --port).",
     ),
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't open a web browser."),
     force: bool = typer.Option(False, "--force", help="Re-download the app build."),
@@ -360,8 +365,9 @@ def workbench(
 
     from ._common import fail
 
-    if not 0 <= port <= 65535:
-        raise fail(f"--port must be between 0 and 65535, got {port}")
+    if not auto_port and not 1 <= port <= 65535:
+        raise fail(f"--port must be between 1 and 65535, got {port}")
+    bind_port = 0 if auto_port else port
 
     if app_dir is not None:
         static_dir = app_dir.expanduser().resolve()
@@ -402,13 +408,13 @@ def workbench(
         state_path=state_path,
     )
     try:
-        server = socketserver.ThreadingTCPServer(("127.0.0.1", port), handler)
+        server = socketserver.ThreadingTCPServer(("127.0.0.1", bind_port), handler)
         # Ctrl+C must stop the server even when a client holds an in-flight request it
         # has stopped reading (a handler blocked in sendall would otherwise be joined
         # forever by server_close): handler threads are daemons, shutdown never waits.
         server.daemon_threads = True
     except OSError as exc:
-        raise fail(f"could not bind port {port} ({exc}); try --port <n> or --port 0") from exc
+        raise fail(f"could not bind port {bind_port} ({exc}); try --port <n> or --auto-port") from exc
 
     actual_port = int(server.server_address[1])
     url = _build_launch_url(
