@@ -139,9 +139,9 @@ def test_gazetteer_trust_pass_coordinates_pinned() -> None:
 
     coords = site_coordinates()
     assert coords["Pylos"].pleiades == 156116232
-    # 56 Aegean find-sites + 38 Greek-epigraphy find-places (I.Sicily/IGCyr/IOSPE/IIP/EDH)
-    assert len(coords) == 94
-    assert sum(1 for s in coords.values() if s.pleiades) == 78  # 40 Aegean + 38 epigraphy, all linked
+    # 56 Aegean find-sites + 88 Greek-epigraphy / Cypriot / DAMOS / SigLA find-places
+    assert len(coords) == 144
+    assert sum(1 for s in coords.values() if s.pleiades) == 128  # 40 Aegean + 88 epigraphy/Cypriot, all linked
     assert [n for n, s in coords.items() if s.is_contested] == ["Margiana"]
     for site, (lat, lon) in _TRUST_PASS.items():
         sc = coords[site]

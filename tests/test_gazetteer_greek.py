@@ -81,7 +81,7 @@ def _corpus(*sites: tuple[str, str]) -> Corpus:
 
 def test_new_rows_present_with_pleiades_and_coords() -> None:
     coords = site_coordinates()
-    assert len(coords) == 94  # 56 Aegean + 38 Greek-epigraphy rows
+    assert len(coords) == 144  # 56 Aegean + 88 Greek-epigraphy / Cypriot / DAMOS / SigLA rows
     for corpus, label, pid in NEW_ROWS:
         assert label in coords, f"{corpus}: {label!r} missing from the gazetteer"
         sc = coords[label]
