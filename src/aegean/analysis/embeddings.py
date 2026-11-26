@@ -198,20 +198,33 @@ def _ppmi(
     return matrix
 
 
+import operator as _operator  # noqa: E402
+
+_mul = _operator.mul
+
+
+def _dot_py(a: Sequence[float], b: Sequence[float]) -> float:
+    return float(sum(map(_mul, a, b)))
+
+
+_dot: Any = getattr(math, "sumprod", _dot_py)
+
+
 def _gram(matrix: list[list[float]], n_cols: int) -> list[list[float]]:
     """The column Gram matrix ``MᵀM`` (n_cols × n_cols, symmetric PSD)."""
+    if not matrix:
+        return [[0.0] * n_cols for _ in range(n_cols)]
+    dot = _dot
+    cols = [[row[c] for row in matrix] for c in range(n_cols)]
     g = [[0.0] * n_cols for _ in range(n_cols)]
-    for row in matrix:
-        for a in range(n_cols):
-            ra = row[a]
-            if ra == 0.0:
-                continue
-            ga = g[a]
-            for b in range(a, n_cols):
-                ga[b] += ra * row[b]
     for a in range(n_cols):
+        ca = cols[a]
+        ga = g[a]
+        ga[a] = dot(ca, ca)
         for b in range(a + 1, n_cols):
-            g[b][a] = g[a][b]
+            val = dot(ca, cols[b])
+            ga[b] = val
+            g[b][a] = val
     return g
 
 
@@ -224,24 +237,43 @@ def _leading_eigenpair(
     m = len(gram)
     if m == 0:
         return None
+    dot = _dot
     v = [1 + (i + 1) / m for i in range(m)]
 
-    def orthogonalize(vec: list[float]) -> None:
-        for u in skip:
-            dot = sum(vec[i] * u[i] for i in range(m))
-            for i in range(m):
-                vec[i] -= dot * u[i]
-
     value = 0.0
-    for _ in range(300):
-        orthogonalize(v)
-        nxt = [sum(gram[i][j] * v[j] for j in range(m)) for i in range(m)]
-        norm = math.sqrt(sum(x * x for x in nxt))
+    for step in range(300):
+        # Gram is Hotelling-deflated by callers; periodic re-orthogonalization
+        # suppresses floating-point drift along previously extracted eigenvectors.
+        if skip and (step == 0 or (step & 15) == 0):
+            for u in skip:
+                proj = dot(v, u)
+                if proj:
+                    v = [vi - proj * ui for vi, ui in zip(v, u)]
+        nxt = [dot(row, v) for row in gram]
+        norm = math.sqrt(dot(nxt, nxt))
         if norm < 1e-12:
             return None
-        v = [x / norm for x in nxt]
+        inv_norm = 1.0 / norm
+        nxt_unit = [x * inv_norm for x in nxt]
+        if step >= 4:
+            diff = [a - b for a, b in zip(v, nxt_unit)]
+            if dot(diff, diff) < 1e-24:
+                return norm, nxt_unit
+        v = nxt_unit
         value = norm
     return value, v
+
+
+def _deflate_gram(gram: list[list[float]], eigval: float, vec: list[float]) -> None:
+    """In-place Hotelling deflation ``G <- G - eigval * vec @ vec^T``."""
+    m = len(gram)
+    for i in range(m):
+        scale = eigval * vec[i]
+        if scale == 0.0:
+            continue
+        row = gram[i]
+        for j in range(m):
+            row[j] -= scale * vec[j]
 
 
 def _truncated_svd(
@@ -253,6 +285,7 @@ def _truncated_svd(
     the top right singular vectors ``V`` and singular values ``σ``, then returns the
     row embeddings ``U·Σ = M·V`` (each row a sign). Components whose singular value
     collapses to ~0 are dropped, so the output may have fewer than ``dim`` columns."""
+    dot = _dot
     gram = _gram(matrix, n_cols)
     eigvecs: list[list[float]] = []
     sigmas: list[float] = []
@@ -266,12 +299,9 @@ def _truncated_svd(
             break
         eigvecs.append(vec)
         sigmas.append(sigma)
+        _deflate_gram(gram, eigval, vec)
     # Row coordinates U·Σ = M·V (V's columns are the eigenvectors).
-    out: list[list[float]] = []
-    for row in matrix:
-        coords = [sum(row[j] * vec[j] for j in range(n_cols)) for vec in eigvecs]
-        out.append(coords)
-    return out
+    return [[dot(row, vec) for vec in eigvecs] for row in matrix]
 
 
 def _l2_normalize(vec: list[float]) -> tuple[float, ...]:

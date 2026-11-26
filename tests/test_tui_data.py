@@ -128,11 +128,18 @@ def test_document_detail_raises_tui_error_for_a_missing_document() -> None:
         adapter.document_detail(corpus, "definitely-not-a-doc")
 
 
-def test_nt_detail_surfaces_per_token_annotations() -> None:
+def test_nt_detail_surfaces_per_token_annotations(monkeypatch) -> None:
     # The Greek NT carries gold lemma/morph/Strong's/gloss as token annotations;
-    # the detail must pass them through so a screen can show them.
+    # the detail must pass them through so a screen can show them. Use the bundled
+    # offline NT sample rather than triggering a 15.8 MB download in uncached CI runs.
     import pytest
 
+    from aegean import data
+
+    def _no_fetch(name: str, **_kwargs: object) -> object:
+        raise data.DataNotAvailableError("simulated offline")
+
+    monkeypatch.setattr(data, "fetch", _no_fetch)
     try:
         corpus = adapter.load_corpus("nt")
     except adapter.TuiError:

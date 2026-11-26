@@ -16,7 +16,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 CI_JOBS = (
-    "test", "geo", "interop", "neural-integration", "demo-released-wheel",
+    "quality", "test", "geo", "interop", "neural-integration", "demo-released-wheel",
     "notebooks", "build", "footprint", "cross-platform", "extras-ai-viz",
 )
 SELECTED_SHA = "1" * 40

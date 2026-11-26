@@ -535,23 +535,27 @@ def _rare_lemma_filter(
     all-common passage must not be reported the same way as a missing corpus.
     """
     try:
-        from ..greek import terminology_rarity
-        from ..scripts.greek.nt import _load_cached_full_nt
+        from ..greek.rarity import _corpus_lemma_freqs, _label, _norm, _rarity_from_freqs
+        from ..scripts.greek import nt as _nt
 
-        reference = _load_cached_full_nt()
-        if reference is None:
-            return None
-        if analysis is not None:
-            from ..greek.rarity import _corpus_lemma_freqs, _label, _norm
-
+        if _nt._load_cached_full_nt is _nt._DEFAULT_LOAD_CACHED_FULL_NT:
+            frequencies = _nt._cached_full_nt_lemma_freqs()
+            if frequencies is None:
+                return None
+        else:
+            reference = _nt._load_cached_full_nt()
+            if reference is None:
+                return None
             frequencies = _corpus_lemma_freqs(reference)
+
+        if analysis is not None:
             return frozenset(
                 record.lemma
                 for record in analysis
                 if record.upos != "PUNCT"
                 and _label(frequencies.get(_norm(record.lemma), 0)) != "common"
             )
-        result = terminology_rarity(text, reference)
+        result = _rarity_from_freqs(text, frequencies)
     except Exception:
         return None
     return frozenset(w.lemma for w in result.words if w.label != "common")

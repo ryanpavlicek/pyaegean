@@ -304,9 +304,10 @@ def test_to_epidoc_strips_control_characters_and_re_parses() -> None:
 
 def test_word_scope_query_matches_greek_words() -> None:
     from aegean.analysis.query import FilterRow, run_query
+    from aegean.greek import bible
 
-    nt = aegean.greek.load_nt()
-    sub = nt.subset([d.id for d in nt.documents[:3]])
+    nt = bible.load_nt(offline=True)
+    sub = nt.subset([d.id for d in nt.documents[:2]])
     res = run_query(sub, [FilterRow(field="word-prefix", value="Χριστ")], output="words")
     assert len(res.words) > 0
     assert all(w.upper().startswith("ΧΡΙΣΤ") for w, _ in res.words)

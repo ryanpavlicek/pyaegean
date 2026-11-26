@@ -33,6 +33,9 @@ def _run(coro) -> None:  # type: ignore[no-untyped-def]
         loop.close()
 
 
+from _tui_helpers import TuiSession  # noqa: E402
+
+
 def _row(w_id: str, *, fetched: bool = False) -> adapter.WorkRow:
     return adapter.WorkRow(
         id=w_id, author="Homer", title="Iliad", greek_title="Ἰλιάς",
@@ -40,7 +43,30 @@ def _row(w_id: str, *, fetched: bool = False) -> adapter.WorkRow:
     )
 
 
-def test_search_filters_the_catalogue_table(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.fixture(scope="module")
+def works_session():  # type: ignore[no-untyped-def]
+    session = TuiSession(size=(120, 50)).start()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+async def _open_works(app: AegeanApp, pilot, query: str = "") -> WorksScreen:  # type: ignore[no-untyped-def]
+    app.goto("works")
+    await pilot.pause()
+    screen = app.screen
+    assert isinstance(screen, WorksScreen)
+    inp = screen.query_one("#works-search", Input)
+    inp.value = query
+    screen._populate(query)
+    await pilot.pause()
+    return screen
+
+
+def test_search_filters_the_catalogue_table(
+    works_session: TuiSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def fake_catalog(query=None, *, author=None, title=None, source=None):  # type: ignore[no-untyped-def]
         rows = [_row("tlg0012.tlg001"), _row("tlg0012.tlg002")]
         if query and "iliad" in query.lower():
@@ -49,24 +75,18 @@ def test_search_filters_the_catalogue_table(monkeypatch: pytest.MonkeyPatch) -> 
 
     monkeypatch.setattr(adapter, "catalog_rows", fake_catalog)
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("works")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, WorksScreen)
-            screen.query_one("#works-search", Input).value = "iliad"
-            await pilot.pause()
-            table = screen.query_one("#works-table", DataTable)
-            assert table.row_count == 1
-            assert str(table.get_row_at(0)[0]) == "tlg0012.tlg001"
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _open_works(app, pilot, "iliad")
+        table = screen.query_one("#works-table", DataTable)
+        assert table.row_count == 1
+        assert str(table.get_row_at(0)[0]) == "tlg0012.tlg001"
 
-    _run(body())
+    works_session.run(body)
 
 
-def test_fetch_runs_on_a_worker_and_marks_the_row(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fetch_runs_on_a_worker_and_marks_the_row(
+    works_session: TuiSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     state = {"stored": False}
 
     def fake_catalog(query=None, *, author=None, title=None, source=None):  # type: ignore[no-untyped-def]
@@ -82,28 +102,22 @@ def test_fetch_runs_on_a_worker_and_marks_the_row(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(adapter, "catalog_rows", fake_catalog)
     monkeypatch.setattr(adapter, "fetch_work", fake_fetch)
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("works")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, WorksScreen)
-            screen.query_one("#works-search", Input).value = "homer"
-            await pilot.pause()
-            screen.action_fetch()
-            await pilot.pause()
-            await app.workers.wait_for_complete()
-            await pilot.pause()
-            table = screen.query_one("#works-table", DataTable)
-            assert str(table.get_row_at(0)[4]) == "downloaded"
-            assert "stored" in str(screen.query_one("#works-status", Static).content)
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _open_works(app, pilot, "homer")
+        screen.action_fetch()
+        await pilot.pause()
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        table = screen.query_one("#works-table", DataTable)
+        assert str(table.get_row_at(0)[4]) == "downloaded"
+        assert "stored" in str(screen.query_one("#works-status", Static).content)
 
-    _run(body())
+    works_session.run(body)
 
 
-def test_a_failing_fetch_notifies_and_does_not_crash(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_failing_fetch_notifies_and_does_not_crash(
+    works_session: TuiSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     notes: list[str] = []
 
     def fake_catalog(query=None, *, author=None, title=None, source=None):  # type: ignore[no-untyped-def]
@@ -115,75 +129,64 @@ def test_a_failing_fetch_notifies_and_does_not_crash(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(adapter, "catalog_rows", fake_catalog)
     monkeypatch.setattr(adapter, "fetch_work", boom)
 
-    async def body() -> None:
-        app = AegeanApp()
-        app.notify = lambda *a, **k: notes.append(str(a[0]) if a else "")  # type: ignore[method-assign]
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("works")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, WorksScreen)
-            screen.query_one("#works-search", Input).value = "homer"
-            await pilot.pause()
-            screen.action_fetch()
-            await pilot.pause()
-            await app.workers.wait_for_complete()
-            await pilot.pause()
-            assert isinstance(app.screen, WorksScreen)  # still alive, no crash
-            assert "network down" in str(screen.query_one("#works-status", Static).content)
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.setattr(app, "notify", lambda *a, **k: notes.append(str(a[0]) if a else ""))
+        screen = await _open_works(app, pilot, "homer")
+        screen.action_fetch()
+        await pilot.pause()
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert isinstance(app.screen, WorksScreen)  # still alive, no crash
+        assert "network down" in str(screen.query_one("#works-status", Static).content)
 
-    _run(body())
+    works_session.run(body)
     assert any("network down" in n for n in notes)
 
 
-def test_open_a_fetched_work_lands_on_the_corpus_browser(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_open_a_fetched_work_lands_on_the_corpus_browser(
+    works_session: TuiSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def fake_catalog(query=None, *, author=None, title=None, source=None):  # type: ignore[no-untyped-def]
         return [_row("tlg0012.tlg001", fetched=True)]
 
     def fake_spec(spec):  # type: ignore[no-untyped-def]
         import aegean
 
-        return aegean.load("lineara")  # a small real corpus stands in for the work
+        return aegean.load("cypriot")  # a small real corpus stands in for the work
 
     monkeypatch.setattr(adapter, "catalog_rows", fake_catalog)
     monkeypatch.setattr(adapter, "read_corpus_spec", fake_spec)
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("works")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, WorksScreen)
-            screen.query_one("#works-search", Input).value = "homer"
-            await pilot.pause()
-            screen.action_open_work()
-            await pilot.pause()
-            assert app.state.selected_corpus == "tlg0012.tlg001"
-            assert isinstance(app.screen, CorpusBrowserScreen)
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _open_works(app, pilot, "homer")
+        screen.action_open_work()
+        await pilot.pause()
+        assert app.state.selected_corpus == "tlg0012.tlg001"
+        assert isinstance(app.screen, CorpusBrowserScreen)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
 
-    _run(body())
+    works_session.run(body)
 
 
-def test_palette_offers_the_works_library_and_open_work(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_palette_offers_the_works_library_and_open_work(
+    works_session: TuiSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(adapter, "fetched_work_ids", lambda: ["tlg0012.tlg001"])
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            provider = CorpusCommands(app.screen)
-            await provider.startup()
-            labels = [str(hit.text) async for hit in provider.search("work")]
-            assert any("Works library" in label for label in labels)
-            assert any("Open work tlg0012.tlg001" in label for label in labels)
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        provider = CorpusCommands(app.screen)
+        await provider.startup()
+        labels = [str(hit.text) async for hit in provider.search("work")]
+        assert any("Works library" in label for label in labels)
+        assert any("Open work tlg0012.tlg001" in label for label in labels)
 
-    _run(body())
+    works_session.run(body)
 
 
-def test_enter_on_a_work_opens_it(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_enter_on_a_work_opens_it(
+    works_session: TuiSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Enter (DataTable RowSelected) on a fetched work opens it, the same as the 'o' key."""
     import types
 
@@ -193,25 +196,19 @@ def test_enter_on_a_work_opens_it(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_spec(spec):  # type: ignore[no-untyped-def]
         import aegean
 
-        return aegean.load("lineara")
+        return aegean.load("cypriot")
 
     monkeypatch.setattr(adapter, "read_corpus_spec", fake_spec)
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("works")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, WorksScreen)
-            screen.query_one("#works-search", Input).value = "homer"
-            await pilot.pause()
-            screen.on_data_table_row_selected(types.SimpleNamespace())  # Enter delegates to open
-            await pilot.pause()
-            assert app.state.selected_corpus == "tlg0012.tlg001"
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _open_works(app, pilot, "homer")
+        screen.on_data_table_row_selected(types.SimpleNamespace())  # Enter delegates to open
+        await pilot.pause()
+        assert app.state.selected_corpus == "tlg0012.tlg001"
+        await app.workers.wait_for_complete()
+        await pilot.pause()
 
-    _run(body())
+    works_session.run(body)
 
 
 def test_action_buttons_stay_on_screen_above_the_footer(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -239,7 +236,9 @@ def test_action_buttons_stay_on_screen_above_the_footer(monkeypatch: pytest.Monk
     _run(body())
 
 
-def test_x_removes_a_downloaded_work(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_x_removes_a_downloaded_work(
+    works_session: TuiSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The 'x' key removes the highlighted downloaded work via the adapter, then refreshes."""
     state = {"present": True}
     monkeypatch.setattr(
@@ -255,43 +254,30 @@ def test_x_removes_a_downloaded_work(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(adapter, "remove_work", fake_remove)
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("works")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, WorksScreen)
-            screen.query_one("#works-search", Input).value = "homer"
-            await pilot.pause()
-            screen.query_one("#works-table", DataTable).move_cursor(row=0)
-            screen.action_remove_work()
-            await pilot.pause()
-            assert removed == ["tlg0012.tlg001"]  # the adapter removal was called for the row
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _open_works(app, pilot, "homer")
+        screen.query_one("#works-table", DataTable).move_cursor(row=0)
+        screen.action_remove_work()
+        await pilot.pause()
+        assert removed == ["tlg0012.tlg001"]  # the adapter removal was called for the row
 
-    _run(body())
+    works_session.run(body)
 
 
-def test_x_on_an_undownloaded_work_does_not_remove(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_x_on_an_undownloaded_work_does_not_remove(
+    works_session: TuiSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         adapter, "catalog_rows", lambda *a, **k: [_row("tlg0012.tlg001", fetched=False)]
     )
     called: list[str] = []
     monkeypatch.setattr(adapter, "remove_work", lambda w: called.append(w) or True)
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("works")
-            await pilot.pause()
-            screen = app.screen
-            screen.query_one("#works-search", Input).value = "homer"
-            await pilot.pause()
-            screen.query_one("#works-table", DataTable).move_cursor(row=0)
-            screen.action_remove_work()
-            await pilot.pause()
-            assert called == []  # not downloaded -> no removal attempted
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _open_works(app, pilot, "homer")
+        screen.query_one("#works-table", DataTable).move_cursor(row=0)
+        screen.action_remove_work()
+        await pilot.pause()
+        assert called == []  # not downloaded -> no removal attempted
 
-    _run(body())
+    works_session.run(body)

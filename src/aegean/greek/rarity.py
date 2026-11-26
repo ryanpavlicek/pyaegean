@@ -108,18 +108,11 @@ def _corpus_lemma_freqs(corpus: object) -> Counter[str]:
     return freqs
 
 
-def terminology_rarity(text: str, corpus: object) -> RarityResult:
-    """Score the terminology rarity of ``text`` against a reference ``corpus``.
-
-    ``corpus`` is any `aegean.Corpus`, the results of a `Corpus.query`, or a list of
-    documents; its word tokens define the frequency basis, so the score is relative to
-    that material's register and a queried subset scores against the subset. Returns the
-    overall score plus a per-word breakdown (use ``.hardest()`` to surface the rare terms).
-    """
+def _rarity_from_freqs(text: str, freqs: Counter[str]) -> RarityResult:
+    """Score the terminology rarity of ``text`` from precomputed lemma frequencies."""
     from .lemmatize import lemmatize
     from .tokenize import tokenize_words
 
-    freqs = _corpus_lemma_freqs(corpus)
     total = sum(freqs.values())
     max_count = max(freqs.values(), default=0)
     denom = math.log1p(max_count) or 1.0
@@ -135,3 +128,14 @@ def terminology_rarity(text: str, corpus: object) -> RarityResult:
     return RarityResult(
         overall=overall, words=tuple(out), corpus_lemmas=len(freqs), corpus_tokens=total
     )
+
+
+def terminology_rarity(text: str, corpus: object) -> RarityResult:
+    """Score the terminology rarity of ``text`` against a reference ``corpus``.
+
+    ``corpus`` is any `aegean.Corpus`, the results of a `Corpus.query`, or a list of
+    documents; its word tokens define the frequency basis, so the score is relative to
+    that material's register and a queried subset scores against the subset. Returns the
+    overall score plus a per-word breakdown (use ``.hardest()`` to surface the rare terms).
+    """
+    return _rarity_from_freqs(text, _corpus_lemma_freqs(corpus))

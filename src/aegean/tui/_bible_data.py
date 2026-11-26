@@ -328,8 +328,13 @@ def bible_patristics_text(filter_text: str = "") -> str:
                 if not pg_hits:
                     out.append(f"  No matches for {term!r} in {vol_id}.")
             else:
+                from aegean import data as _data
                 from aegean.scripts.greek.patrologia import load_patrologia
 
+                if not _data.is_downloaded(
+                    _data._REMOTE["patrologia-graeca-corpus"], _data.cache_dir()
+                ):
+                    raise _data.DataNotAvailableError("patrologia-graeca-corpus is not cached locally")
                 corp = load_patrologia(vol_id)
                 out.append(f"── Patrologia Graeca {vol_id} ({len(corp)} page(s), OCR) ──")
                 for doc in list(corp)[:5]:

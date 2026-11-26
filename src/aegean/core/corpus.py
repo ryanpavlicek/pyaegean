@@ -21,6 +21,7 @@ from .model import (
     Document,
     DocumentMeta,
     ReadingStatus,
+    Sign,
     SignInventory,
     Token,
     TokenKind,
@@ -514,7 +515,13 @@ class Corpus:
         docs = [
             Document(
                 id=d.id, script_id=d.script_id,
-                tokens=[replace(t, annotations=dict(t.annotations)) for t in d.tokens],
+                tokens=[
+                    Token(
+                        t.text, t.kind, t.signs, t.glyphs, t.line_no, t.position,
+                        t.status, t.alt, dict(t.annotations), t.alignment, t.form_state,
+                    )
+                    for t in d.tokens
+                ],
                 lines=[list(line) for line in d.lines],
                 glyphs=d.glyphs, transcription=d.transcription,
                 translations=list(d.translations),
@@ -525,7 +532,10 @@ class Corpus:
         ]
         inv = self.sign_inventory
         if inv is not None:
-            signs = [replace(s, attrs=dict(s.attrs)) for s in inv.signs]
+            signs = [
+                Sign(s.label, s.glyph, s.codepoint, s.phonetic, s.script_id, dict(s.attrs))
+                for s in inv.signs
+            ]
             inv = SignInventory(signs, inv.script_id)
         return Corpus(docs, inv, self.provenance, self.script_id)
 

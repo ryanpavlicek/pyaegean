@@ -65,13 +65,20 @@ def capture_dispatch(dispatch: Callable[[], None]) -> str:
     return buf.getvalue()
 
 
+_CACHED_GROUP: Any = None
+_CACHED_COMPLETIONS: tuple[tuple[str, str], ...] | None = None
+
+
 def _build_group() -> Any:
     """The live root Click group (the same surface bare ``aegean`` exposes)."""
-    import typer
+    global _CACHED_GROUP
+    if _CACHED_GROUP is None:
+        import typer
 
-    from aegean.cli import _build_app
+        from aegean.cli import _build_app
 
-    return typer.main.get_command(_build_app())
+        _CACHED_GROUP = typer.main.get_command(_build_app())
+    return _CACHED_GROUP
 
 
 # The shell-only directives, with a one-line description each (mirroring the REPL's
@@ -96,6 +103,13 @@ def _command_completions(group: Any) -> list[tuple[str, str]]:
     """``(command-path, description)`` pairs for the console's completion catalog: every
     top-level command and every nested subcommand path at arbitrary depth (including
     3-level paths such as ``greek interop export`` and ``bible read``), plus shell directives."""
+    global _CACHED_COMPLETIONS
+    if _CACHED_GROUP is not None and group is _CACHED_GROUP:
+        if _CACHED_COMPLETIONS is None:
+            from aegean.cli._complete import walk_command_paths
+
+            _CACHED_COMPLETIONS = tuple(walk_command_paths(group, include_directives=True))
+        return list(_CACHED_COMPLETIONS)
     from aegean.cli._complete import walk_command_paths
 
     return walk_command_paths(group, include_directives=True)

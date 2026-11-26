@@ -14,8 +14,6 @@ renderable via ``.content`` (textual 8.x has no ``.renderable``).
 
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 pytest.importorskip("textual")
@@ -28,65 +26,66 @@ from aegean.tui.screens.home import HomeScreen  # noqa: E402
 from aegean.tui.widgets import CorpusList  # noqa: E402
 
 
-def _run(coro) -> None:  # type: ignore[no-untyped-def]
-    loop = asyncio.new_event_loop()
+from _tui_helpers import TuiSession  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def tui_session():  # type: ignore[no-untyped-def]
+    session = TuiSession(size=(100, 40)).start()
     try:
-        loop.run_until_complete(coro)
+        yield session
     finally:
-        loop.close()
+        session.close()
 
 
-def test_app_mounts_home_with_the_corpora_and_no_disclaimer_banner() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            assert isinstance(app.screen, HomeScreen)
-            assert not app.screen.query("#home-banner")
-            intro = app.screen.query_one("#home-intro", Static)
-            assert "pyaegean" in str(intro.content)
-            # the corpus overview lists every registered corpus
-            corpus_list = app.screen.query_one("#home-corpora", CorpusList)
-            from aegean.tui import data as adapter
+def test_app_mounts_home_with_the_corpora_and_no_disclaimer_banner(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        app.goto("home")
+        await pilot.pause()
+        assert isinstance(app.screen, HomeScreen)
+        assert not app.screen.query("#home-banner")
+        intro = app.screen.query_one("#home-intro", Static)
+        assert "pyaegean" in str(intro.content)
+        # the corpus overview lists every registered corpus
+        corpus_list = app.screen.query_one("#home-corpora", CorpusList)
+        from aegean.tui import data as adapter
 
-            assert len(corpus_list) == len(adapter.CORPUS_IDS)
+        assert len(corpus_list) == len(adapter.CORPUS_IDS)
 
-    _run(body())
-
-
-def test_global_bindings_switch_screens_and_set_state() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            assert isinstance(app.screen, HomeScreen)
-            # 'g' targets the greek screen; if that screen module is not
-            # registered the shell must stay runnable (goto is a no-op for an
-            # unregistered screen), so Home remains and nothing crashes.
-            await pilot.press("g")
-            await pilot.pause()
-            assert app.screen is not None
-            # open_corpus (the palette + Home-selection path) sets shared state
-            app.open_corpus("lineara")
-            await pilot.pause()
-            assert app.state.selected_corpus == "lineara"
-
-    _run(body())
+    tui_session.run(body)
 
 
-def test_set_corpus_updates_state_and_resets_the_document() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            app.set_doc("HT13")
-            assert app.state.selected_doc_id == "HT13"
-            # switching corpus records the new selection and clears the open doc
-            app.set_corpus("greek")
-            assert app.state.selected_corpus == "greek"
-            assert app.state.selected_doc_id is None
+def test_global_bindings_switch_screens_and_set_state(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        app.goto("home")
+        await pilot.pause()
+        assert isinstance(app.screen, HomeScreen)
+        # 'g' targets the greek screen; if that screen module is not
+        # registered the shell must stay runnable (goto is a no-op for an
+        # unregistered screen), so Home remains and nothing crashes.
+        await pilot.press("g")
+        await pilot.pause()
+        assert app.screen is not None
+        # open_corpus (the palette + Home-selection path) sets shared state
+        app.open_corpus("lineara")
+        await pilot.pause()
+        assert app.state.selected_corpus == "lineara"
+        await app.workers.wait_for_complete()
+        await pilot.pause()
 
-    _run(body())
+    tui_session.run(body)
+
+
+def test_set_corpus_updates_state_and_resets_the_document(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        app.set_doc("HT13")
+        assert app.state.selected_doc_id == "HT13"
+        # switching corpus records the new selection and clears the open doc
+        app.set_corpus("greek")
+        assert app.state.selected_corpus == "greek"
+        assert app.state.selected_doc_id is None
+
+    tui_session.run(body)
 
 
 def test_no_dead_cross_screen_message_subsystem() -> None:
@@ -170,43 +169,36 @@ def test_owned_tui_modules_carry_no_dev_process_language() -> None:
             assert phrase not in doc, f"{mod.__name__} docstring has a process tell: {phrase!r}"
 
 
-def test_command_palette_opens_via_ctrl_p() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            baseline = len(app.screen_stack)
-            await pilot.press("ctrl+p")
-            await pilot.pause()
-            assert len(app.screen_stack) > baseline
-            assert isinstance(app.screen, CommandPalette)
+def test_command_palette_opens_via_ctrl_p(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        baseline = len(app.screen_stack)
+        await pilot.press("ctrl+p")
+        await pilot.pause()
+        assert len(app.screen_stack) > baseline
+        assert isinstance(app.screen, CommandPalette)
+        app.pop_screen()
+        await pilot.pause()
 
-    _run(body())
-
-
-def test_corpus_commands_provider_returns_open_corpus_entries() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            provider = CorpusCommands(app.screen)
-            await provider.startup()
-            hits = [hit async for hit in provider.search("lineara")]
-            labels = [str(hit.text) for hit in hits]
-            assert any("Open corpus lineara" in label for label in labels)
-
-    _run(body())
+    tui_session.run(body)
 
 
-def test_corpus_commands_provider_offers_screen_navigation() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            provider = CorpusCommands(app.screen)
-            await provider.startup()
-            hits = [hit async for hit in provider.search("greek workbench")]
-            labels = [str(hit.text) for hit in hits]
-            assert any("Greek workbench" in label for label in labels)
+def test_corpus_commands_provider_returns_open_corpus_entries(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        provider = CorpusCommands(app.screen)
+        await provider.startup()
+        hits = [hit async for hit in provider.search("lineara")]
+        labels = [str(hit.text) for hit in hits]
+        assert any("Open corpus lineara" in label for label in labels)
 
-    _run(body())
+    tui_session.run(body)
+
+
+def test_corpus_commands_provider_offers_screen_navigation(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        provider = CorpusCommands(app.screen)
+        await provider.startup()
+        hits = [hit async for hit in provider.search("greek workbench")]
+        labels = [str(hit.text) for hit in hits]
+        assert any("Greek workbench" in label for label in labels)
+
+    tui_session.run(body)

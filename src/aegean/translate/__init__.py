@@ -490,18 +490,22 @@ def _rare_word_line(text: str, *, analysis: list[TokenRecord] | None = None) -> 
     claims. Best-effort: if the full corpus or computation is unavailable, returns
     ``""`` rather than raising — the rest of the morphology grounding still stands."""
     try:
-        from ..greek import terminology_rarity
-        from ..scripts.greek.nt import _load_cached_full_nt
+        from ..greek.rarity import _corpus_lemma_freqs, _label, _norm, _rarity_from_freqs
+        from ..scripts.greek import nt as _nt
 
-        reference = _load_cached_full_nt()
-        if reference is None:
-            return ""
+        if _nt._load_cached_full_nt is _nt._DEFAULT_LOAD_CACHED_FULL_NT:
+            frequencies = _nt._cached_full_nt_lemma_freqs()
+            if frequencies is None:
+                return ""
+        else:
+            reference = _nt._load_cached_full_nt()
+            if reference is None:
+                return ""
+            frequencies = _corpus_lemma_freqs(reference)
+
         if analysis is not None:
             import math
 
-            from ..greek.rarity import _corpus_lemma_freqs, _label, _norm
-
-            frequencies = _corpus_lemma_freqs(reference)
             maximum = max(frequencies.values(), default=0)
             denominator = math.log1p(maximum) or 1.0
             ranked: list[tuple[float, str]] = []
@@ -515,7 +519,7 @@ def _rare_word_line(text: str, *, analysis: list[TokenRecord] | None = None) -> 
                 ranked.append((rarity, record.text))
             ranked.sort(key=lambda item: -item[0])
             return ", ".join(dict.fromkeys(word for _rarity, word in ranked[:4]))
-        result = terminology_rarity(text, reference)
+        result = _rarity_from_freqs(text, frequencies)
     except Exception:
         return ""
     rare = [w.word for w in result.hardest(4) if w.label != "common"]

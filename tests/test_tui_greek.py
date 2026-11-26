@@ -78,105 +78,135 @@ async def _type(pilot, widget_id: str, text: str) -> None:
     await pilot.pause(0.2)
 
 
-def test_scansion_tab_shows_known_iliad_pattern() -> None:
-    """Typing Iliad 1.1 renders the known hexameter foot pattern in the scansion
-    tab (not a crash, not an empty tab)."""
+from _tui_helpers import TuiSession  # noqa: E402
 
-    async def body() -> None:
+
+@pytest.fixture(scope="module")
+def tui_session():  # type: ignore[no-untyped-def]
+    session = TuiSession(size=(100, 40)).start()
+
+    async def _goto_greek(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        await pilot.press("g")
+        await pilot.pause()
+
+    session.run(_goto_greek)
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+async def _reset_greek(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+    from textual.widgets import Select
+
+    select = app.screen.query_one("#greek-meter", Select)
+    if select.value != "hexameter":
+        select.value = "hexameter"
+        await pilot.pause()
+
+
+def test_empty_input_shows_hint_not_error(tui_session: TuiSession) -> None:
+    """Before anything is typed (or when input is cleared), each tab shows the
+    placeholder hint, not an error (empty input is ok, not a failure)."""
+
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Static
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")  # switch to the Greek workbench
-            await pilot.pause()
-            await _type(pilot, "#greek-input", ILIAD_1_1)
-            content = app.screen.query_one("#greek-scansion", Static).content
-            assert ILIAD_SCAN_PATTERN in content
-            # the six feet are named too (the first is a dactyl)
-            assert "dactyl" in content
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", "")
+        for tab_id in ("#greek-pipeline", "#greek-scansion", "#greek-syllables", "#greek-ipa"):
+            content = app.screen.query_one(tab_id, Static).content
+            assert content == "type a line above"
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_scansion_meter_selector_defaults_to_hexameter() -> None:
+def test_scansion_meter_selector_defaults_to_hexameter(tui_session: TuiSession) -> None:
     """The scansion tab's meter selector starts on hexameter, so the default
     scan of a hexameter line succeeds."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Select, Static
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            assert app.screen.query_one("#greek-meter", Select).value == "hexameter"
-            await _type(pilot, "#greek-input", ILIAD_1_1)
-            content = app.screen.query_one("#greek-scansion", Static).content
-            assert ILIAD_SCAN_PATTERN in content
+        await _reset_greek(app, pilot)
+        assert app.screen.query_one("#greek-meter", Select).value == "hexameter"
+        await _type(pilot, "#greek-input", ILIAD_1_1)
+        content = app.screen.query_one("#greek-scansion", Static).content
+        assert ILIAD_SCAN_PATTERN in content
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_syllables_tab_shows_hyphenated_split() -> None:
+def test_scansion_tab_shows_known_iliad_pattern(tui_session: TuiSession) -> None:
+    """Typing Iliad 1.1 renders the known hexameter foot pattern in the scansion
+    tab (not a crash, not an empty tab)."""
+
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        from textual.widgets import Static
+
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", ILIAD_1_1)
+        content = app.screen.query_one("#greek-scansion", Static).content
+        assert ILIAD_SCAN_PATTERN in content
+        # the six feet are named too (the first is a dactyl)
+        assert "dactyl" in content
+
+    tui_session.run(body)
+
+
+def test_syllables_tab_shows_hyphenated_split(tui_session: TuiSession) -> None:
     """Typing a word shows its hyphenated syllabification in the syllables tab."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Static
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            await _type(pilot, "#greek-input", "θάλασσα")
-            content = app.screen.query_one("#greek-syllables", Static).content
-            assert content == "θά-λασ-σα"
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", "θάλασσα")
+        content = app.screen.query_one("#greek-syllables", Static).content
+        assert content == "θά-λασ-σα"
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_syllables_tab_uses_first_word() -> None:
+def test_syllables_tab_uses_first_word(tui_session: TuiSession) -> None:
     """With a multi-word line the syllables tab splits the first word only."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Static
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            await _type(pilot, "#greek-input", "θάλασσα καὶ γῆ")
-            content = app.screen.query_one("#greek-syllables", Static).content
-            assert content == "θά-λασ-σα"
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", "θάλασσα καὶ γῆ")
+        content = app.screen.query_one("#greek-syllables", Static).content
+        assert content == "θά-λασ-σα"
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_pipeline_tab_shows_lemma() -> None:
+def test_pipeline_tab_shows_lemma(tui_session: TuiSession) -> None:
     """The pipeline tab shows a token's lemma (μῆνιν -> μῆνις, a NOUN)."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Static
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            await _type(pilot, "#greek-input", ILIAD_1_1)
-            content = app.screen.query_one("#greek-pipeline", Static).content
-            assert "μῆνις" in content
-            assert "NOUN" in content
-            assert "μῆνιν" in content
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", ILIAD_1_1)
+        content = app.screen.query_one("#greek-pipeline", Static).content
+        assert "μῆνις" in content
+        assert "NOUN" in content
+        assert "μῆνιν" in content
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_pipeline_tab_shows_sentence_number_for_multi_sentence_input() -> None:
+def test_pipeline_tab_shows_sentence_number_for_multi_sentence_input(
+    tui_session: TuiSession,
+) -> None:
     """The pipeline tab prefixes each token with its sentence number, so a
     multi-sentence line stays unambiguous: the per-token index restarts at each
     sentence, so two tokens both at index 1 are distinguished by ``0:`` vs ``1:``.
     Without the sentence prefix the two first-tokens would be indistinguishable."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Static
 
         # two sentences: the index restarts, so only the sentence number tells
@@ -187,45 +217,39 @@ def test_pipeline_tab_shows_sentence_number_for_multi_sentence_input() -> None:
         second_sentence = [r for r in rows if r["sentence"] == 1]
         assert second_sentence and second_sentence[0]["index"] == 1
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            await _type(pilot, "#greek-input", line)
-            content = app.screen.query_one("#greek-pipeline", Static).content
-            # both sentence prefixes appear, on their respective first tokens
-            assert "0:1" in content
-            assert "1:1" in content
-            # the first token of each sentence is rendered on its prefixed line
-            lines = content.splitlines()
-            assert any(ln.startswith("0:1") and "θεός" in ln for ln in lines)
-            assert any(ln.startswith("1:1") and "λόγος" in ln for ln in lines)
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", line)
+        content = app.screen.query_one("#greek-pipeline", Static).content
+        # both sentence prefixes appear, on their respective first tokens
+        assert "0:1" in content
+        assert "1:1" in content
+        # the first token of each sentence is rendered on its prefixed line
+        lines = content.splitlines()
+        assert any(ln.startswith("0:1") and "θεός" in ln for ln in lines)
+        assert any(ln.startswith("1:1") and "λόγος" in ln for ln in lines)
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_ipa_tab_shows_transcription() -> None:
+def test_ipa_tab_shows_transcription(tui_session: TuiSession) -> None:
     """The IPA tab shows the reconstructed Attic transcription of the line."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Static
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            await _type(pilot, "#greek-input", "λόγος")
-            content = app.screen.query_one("#greek-ipa", Static).content
-            assert content == "loɡos"
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", "λόγος")
+        content = app.screen.query_one("#greek-ipa", Static).content
+        assert content == "loɡos"
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_non_scanning_line_shows_friendly_error() -> None:
+def test_non_scanning_line_shows_friendly_error(tui_session: TuiSession) -> None:
     """A prose line that does not fit the meter shows the adapter's friendly
     'does not scan' message in the scansion tab, not a traceback or crash."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Static
 
         prose = "λόγος καὶ ἀρετή"
@@ -235,78 +259,50 @@ def test_non_scanning_line_shows_friendly_error() -> None:
         expected = result.error
         assert "does not scan" in expected
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            await _type(pilot, "#greek-input", prose)
-            content = app.screen.query_one("#greek-scansion", Static).content
-            assert content == expected
-            # the app is still alive: pipeline/syllables of the same line render
-            pipe = app.screen.query_one("#greek-pipeline", Static).content
-            assert "λόγος" in pipe
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", prose)
+        content = app.screen.query_one("#greek-scansion", Static).content
+        assert content == expected
+        # the app is still alive: pipeline/syllables of the same line render
+        pipe = app.screen.query_one("#greek-pipeline", Static).content
+        assert "λόγος" in pipe
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_empty_input_shows_hint_not_error() -> None:
-    """Before anything is typed, each tab shows the placeholder hint, not an
-    error (empty input is ok, not a failure)."""
-
-    async def body() -> None:
-        from textual.widgets import Static
-
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            for tab_id in ("#greek-pipeline", "#greek-scansion", "#greek-syllables", "#greek-ipa"):
-                content = app.screen.query_one(tab_id, Static).content
-                assert content == "type a line above"
-
-    _run(body())
-
-
-def test_changing_meter_rescan_shows_error_for_hexameter_line() -> None:
+def test_changing_meter_rescan_shows_error_for_hexameter_line(tui_session: TuiSession) -> None:
     """Switching the meter selector re-scans the current line: Iliad 1.1 scans as
     hexameter but not as trimeter, so choosing trimeter shows the friendly error."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Select, Static
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            await _type(pilot, "#greek-input", ILIAD_1_1)
-            # hexameter: scans
-            content = app.screen.query_one("#greek-scansion", Static).content
-            assert ILIAD_SCAN_PATTERN in content
-            # switch to trimeter and re-scan
-            select = app.screen.query_one("#greek-meter", Select)
-            select.value = "trimeter"
-            await pilot.pause()
-            content = app.screen.query_one("#greek-scansion", Static).content
-            assert "does not scan" in content
-            assert "trimeter" in content
+        await _reset_greek(app, pilot)
+        await _type(pilot, "#greek-input", ILIAD_1_1)
+        # hexameter: scans
+        content = app.screen.query_one("#greek-scansion", Static).content
+        assert ILIAD_SCAN_PATTERN in content
+        # switch to trimeter and re-scan
+        select = app.screen.query_one("#greek-meter", Select)
+        select.value = "trimeter"
+        await pilot.pause()
+        content = app.screen.query_one("#greek-scansion", Static).content
+        assert "does not scan" in content
+        assert "trimeter" in content
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_input_sits_below_the_header_not_on_top_of_it() -> None:
+def test_input_sits_below_the_header_not_on_top_of_it(tui_session: TuiSession) -> None:
     """The Greek input flows below the Header. Docking it to the top would land it on the
     Header's row, and the Header would paint over the input's top border."""
 
-    async def body() -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
         from textual.widgets import Header, Input
 
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.press("g")
-            await pilot.pause()
-            header = app.screen.query_one(Header)
-            inp = app.screen.query_one("#greek-input", Input)
-            header_bottom = header.region.y + header.region.height - 1
-            assert inp.region.y > header_bottom  # strictly below the header, no overlap
+        header = app.screen.query_one(Header)
+        inp = app.screen.query_one("#greek-input", Input)
+        header_bottom = header.region.y + header.region.height - 1
+        assert inp.region.y > header_bottom  # strictly below the header, no overlap
 
-    _run(body())
+    tui_session.run(body)

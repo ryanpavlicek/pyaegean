@@ -110,20 +110,33 @@ def _covariance(x_rows: Sequence[Vec], y_rows: Sequence[Vec], dim: int) -> Matri
     return c
 
 
+import operator as _operator  # noqa: E402
+
+_mul = _operator.mul
+
+
+def _dot_py(a: Sequence[float], b: Sequence[float]) -> float:
+    return float(sum(map(_mul, a, b)))
+
+
+_dot: Any = getattr(math, "sumprod", _dot_py)
+
+
 def _gram(mat: Matrix, dim: int) -> Matrix:
     """The symmetric matrix ``MᵀM`` (dim × dim)."""
+    if not mat:
+        return [[0.0] * dim for _ in range(dim)]
+    dot = _dot
+    cols = [[row[c] for row in mat] for c in range(dim)]
     g: Matrix = [[0.0] * dim for _ in range(dim)]
-    for row in mat:
-        for a in range(dim):
-            ra = row[a]
-            if ra == 0.0:
-                continue
-            ga = g[a]
-            for b in range(a, dim):
-                ga[b] += ra * row[b]
     for a in range(dim):
+        ca = cols[a]
+        ga = g[a]
+        ga[a] = dot(ca, ca)
         for b in range(a + 1, dim):
-            g[b][a] = g[a][b]
+            val = dot(ca, cols[b])
+            ga[b] = val
+            g[b][a] = val
     return g
 
 
@@ -134,24 +147,43 @@ def _leading_eigenpair(gram: Matrix, skip: list[Vec]) -> tuple[float, Vec] | Non
     m = len(gram)
     if m == 0:
         return None
+    dot = _dot
     v = [1.0 + (i + 1) / m for i in range(m)]
 
-    def orthogonalize(vec: Vec) -> None:
-        for u in skip:
-            dot = sum(vec[i] * u[i] for i in range(m))
-            for i in range(m):
-                vec[i] -= dot * u[i]
-
     value = 0.0
-    for _ in range(300):
-        orthogonalize(v)
-        nxt = [sum(gram[i][j] * v[j] for j in range(m)) for i in range(m)]
-        norm = math.sqrt(sum(x * x for x in nxt))
+    for step in range(300):
+        # Gram is Hotelling-deflated by callers; periodic re-orthogonalization
+        # suppresses floating-point drift along previously extracted eigenvectors.
+        if skip and (step == 0 or (step & 15) == 0):
+            for u in skip:
+                proj = dot(v, u)
+                if proj:
+                    v = [vi - proj * ui for vi, ui in zip(v, u)]
+        nxt = [dot(row, v) for row in gram]
+        norm = math.sqrt(dot(nxt, nxt))
         if norm < 1e-12:
             return None
-        v = [x / norm for x in nxt]
+        inv_norm = 1.0 / norm
+        nxt_unit = [x * inv_norm for x in nxt]
+        if step >= 4:
+            diff = [a - b for a, b in zip(v, nxt_unit)]
+            if dot(diff, diff) < 1e-24:
+                return norm, nxt_unit
+        v = nxt_unit
         value = norm
     return value, v
+
+
+def _deflate_gram(gram: Matrix, eigval: float, vec: Vec) -> None:
+    """In-place Hotelling deflation ``G <- G - eigval * vec @ vec^T``."""
+    m = len(gram)
+    for i in range(m):
+        scale = eigval * vec[i]
+        if scale == 0.0:
+            continue
+        row = gram[i]
+        for j in range(m):
+            row[j] -= scale * vec[j]
 
 
 def _procrustes_rotation(cov: Matrix, dim: int) -> Matrix:
@@ -162,7 +194,8 @@ def _procrustes_rotation(cov: Matrix, dim: int) -> Matrix:
     σ_i``; and returns ``R = Σ_i u_i v_iᵀ``. For a full-rank ``C`` this is the exact
     orthogonal Procrustes solution minimizing ``‖X R − Y‖``; a degenerate direction
     (σ ≈ 0) is skipped (exploratory: the anchors did not constrain that axis)."""
-    gram = _gram([[cov[i][j] for j in range(dim)] for i in range(dim)], dim)
+    dot = _dot
+    gram = _gram(cov, dim)
     eigvecs: list[Vec] = []
     sigmas: list[float] = []
     for _ in range(dim):
@@ -175,11 +208,11 @@ def _procrustes_rotation(cov: Matrix, dim: int) -> Matrix:
             break
         eigvecs.append(vvec)
         sigmas.append(sigma)
+        _deflate_gram(gram, eigval, vvec)
     r: Matrix = [[0.0] * dim for _ in range(dim)]
     for vvec, sigma in zip(eigvecs, sigmas, strict=True):
-        # u = C v / sigma  (left singular vector)
-        u = [sum(cov[i][j] * vvec[j] for j in range(dim)) / sigma for i in range(dim)]
-        # R += outer(u, v)
+        inv_sigma = 1.0 / sigma
+        u = [dot(row, vvec) * inv_sigma for row in cov]
         for i in range(dim):
             ui = u[i]
             if ui == 0.0:

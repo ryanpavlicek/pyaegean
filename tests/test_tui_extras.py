@@ -71,76 +71,83 @@ def test_persisted_theme_is_applied_on_startup(monkeypatch: pytest.MonkeyPatch) 
     _run(body())
 
 
-def test_question_mark_opens_the_help_overlay_not_home() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            baseline = len(app.screen_stack)
-            app.action_help()
-            await pilot.pause()
-            assert isinstance(app.screen, HelpScreen)
-            assert len(app.screen_stack) == baseline + 1  # a modal pushed, not a nav
-
-    _run(body())
+from _tui_helpers import TuiSession  # noqa: E402
 
 
-def test_escape_walks_back_to_the_previous_screen() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            assert app._current_screen_name == "home"
-            app.goto("corpus")
-            await pilot.pause()
-            assert app._current_screen_name == "corpus"
-            app.set_focus(None)  # so Esc goes back rather than blurring an input
-            app.action_go_back()
-            await pilot.pause()
-            assert app._current_screen_name == "home"
-            # Esc at Home with empty history is a safe no-op
-            app.action_go_back()
-            await pilot.pause()
-            assert app._current_screen_name == "home"
-
-    _run(body())
+@pytest.fixture(scope="module")
+def tui_session():  # type: ignore[no-untyped-def]
+    session = TuiSession(size=(100, 40)).start()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
-def test_greek_ipa_period_selector_switches_to_koine() -> None:
-    # the adapter accepts the koine period (the screen wires this selector to it)
-    assert adapter.greek_ipa("θεός", period="koine").ok
-    assert adapter.greek_ipa("θεός", period="attic").ok
-
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            app.goto("greek")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, GreekWorkbenchScreen)
-            select = screen.query_one("#greek-period", Select)
-            assert screen._period == "attic"
-            select.value = "koine"
-            await pilot.pause()
-            assert screen._period == "koine"
-
-    _run(body())
-
-
-def test_home_corpus_menu_starts_focused_with_first_item_highlighted() -> None:
+def test_home_corpus_menu_starts_focused_with_first_item_highlighted(
+    tui_session: TuiSession,
+) -> None:
     """The corpus list on Home is the active menu on open: framed, focused, first row
     highlighted, so up/down/Enter work immediately (the user need not discover Tab)."""
     from aegean.tui.screens.home import HomeScreen
     from aegean.tui.widgets import CorpusList
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
-            assert isinstance(app.screen, HomeScreen)
-            corpora = app.screen.query_one("#home-corpora", CorpusList)
-            assert corpora.index == 0  # first item highlighted
-            assert app.focused is corpora  # the menu is the active element
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        assert isinstance(app.screen, HomeScreen)
+        corpora = app.screen.query_one("#home-corpora", CorpusList)
+        assert corpora.index == 0  # first item highlighted
+        assert app.focused is corpora  # the menu is the active element
 
-    _run(body())
+    tui_session.run(body)
+
+
+def test_question_mark_opens_the_help_overlay_not_home(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        baseline = len(app.screen_stack)
+        app.action_help()
+        await pilot.pause()
+        assert isinstance(app.screen, HelpScreen)
+        assert len(app.screen_stack) == baseline + 1  # a modal pushed, not a nav
+        app.pop_screen()
+        await pilot.pause()
+
+    tui_session.run(body)
+
+
+def test_escape_walks_back_to_the_previous_screen(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        app._screen_history.clear()
+        app.goto("home", record=False)
+        await pilot.pause()
+        assert app._current_screen_name == "home"
+        app.goto("corpus")
+        await pilot.pause()
+        assert app._current_screen_name == "corpus"
+        app.set_focus(None)  # so Esc goes back rather than blurring an input
+        app.action_go_back()
+        await pilot.pause()
+        assert app._current_screen_name == "home"
+        # Esc at Home with empty history is a safe no-op
+        app.action_go_back()
+        await pilot.pause()
+        assert app._current_screen_name == "home"
+
+    tui_session.run(body)
+
+
+def test_greek_ipa_period_selector_switches_to_koine(tui_session: TuiSession) -> None:
+    # the adapter accepts the koine period (the screen wires this selector to it)
+    assert adapter.greek_ipa("θεός", period="koine").ok
+    assert adapter.greek_ipa("θεός", period="attic").ok
+
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        app.goto("greek")
+        await pilot.pause()
+        screen = app.screen
+        assert isinstance(screen, GreekWorkbenchScreen)
+        select = screen.query_one("#greek-period", Select)
+        assert screen._period == "attic"
+        select.value = "koine"
+        await pilot.pause()
+        assert screen._period == "koine"
+
+    tui_session.run(body)

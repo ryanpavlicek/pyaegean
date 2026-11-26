@@ -67,14 +67,21 @@ class CorpusList(ListView):
 
     def set_corpora(self, corpora: "list[CorpusEntry]") -> None:
         """Replace the list contents with ``corpora``."""
+        snapshot = tuple(corpora)
+        if getattr(self, "_corpora_snapshot", None) == snapshot:
+            return
+        self._corpora_snapshot = snapshot
         self.clear()
-        for entry in corpora:
+        items: list[ListItem] = []
+        for entry in snapshot:
             label = f"{entry.id} — {entry.blurb}"
             if entry.undeciphered:
                 label += "  · undeciphered"
             if not entry.downloaded:
                 label += "  · fetch"
-            self.append(ListItem(Static(label), name=entry.id))
+            items.append(ListItem(Static(label), name=entry.id))
+        if items:
+            self.extend(items)
 
     @property
     def selected_id(self) -> str | None:
@@ -198,12 +205,14 @@ class DetailPane(Static):
             ann = tok.annotations
             piece = ann.get("gloss") or ann.get("lemma") or ""
             morph = ann.get("morph") or ann.get("upos") or ""
+            # Parentheses match format_token_inspector and avoid hundreds of escaped
+            # square brackets (`\[...]`) that trigger quadratic parsing in Textual markup.
             if piece and morph:
-                bits.append(f"{piece} [{morph}]")
+                bits.append(f"{piece} ({morph})")
             elif piece:
                 bits.append(piece)
             elif morph:
-                bits.append(f"[{morph}]")
+                bits.append(f"({morph})")
         return " · ".join(bits)
 
     def _rebuild(self) -> None:

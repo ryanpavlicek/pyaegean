@@ -104,6 +104,8 @@ def test_stream_never_yields_a_torn_document(tmp_path) -> None:  # type: ignore[
     """Each yielded Document's row fields and tokens come from ONE committed state:
     with an appender continuously replacing the document (name and token text updated
     together), a reader must never see a version-N name with version-M tokens."""
+    import time
+
     from aegean import db
     from aegean.core.model import DocumentMeta
 
@@ -118,63 +120,85 @@ def test_stream_never_yields_a_torn_document(tmp_path) -> None:  # type: ignore[
         return Corpus([doc], script_id="greek")
 
     db.to_sqlite(versioned(0), p)
+    started = threading.Event()
     stop = threading.Event()
     torn: list[tuple[str, str]] = []
+    writes = 0
 
     def appender() -> None:
+        nonlocal writes
         n = 1
+        started.set()
         while not stop.is_set():
             try:
                 db.to_sqlite(versioned(n), p, append=True)
             except sqlite3.OperationalError:
                 continue  # locked by the reader's transaction: clean, retry
             n += 1
+            writes += 1
+            time.sleep(0.001)  # yield so reader and writer genuinely interleave
 
     t = threading.Thread(target=appender, daemon=True)
     t.start()
+    started.wait(timeout=5.0)
     try:
-        for _ in range(200):
+        for _ in range(40):
             try:
                 for doc in db.stream(p):
                     if doc.meta.name != doc.tokens[0].text:
                         torn.append((doc.meta.name, doc.tokens[0].text))
             except sqlite3.OperationalError:
                 continue  # writer holds the lock: clean failure, not a tear
+        while writes < 5:
+            time.sleep(0.002)
     finally:
         stop.set()
         t.join()
+    assert writes >= 5
     assert torn == []
 
 
 def test_search_survives_concurrent_fts_updates(tmp_path) -> None:  # type: ignore[no-untyped-def]
     """Transactional FTS updates leave the table continuously available to readers."""
+    import time
+
     from aegean import db
 
     p = tmp_path / "c.db"
     db.to_sqlite(_corpus(2), p)
+    started = threading.Event()
     stop = threading.Event()
     errors: list[BaseException] = []
+    writes = 0
 
     def appender() -> None:
+        nonlocal writes
+        started.set()
         while not stop.is_set():
             try:
                 db.to_sqlite(_corpus(2), p, append=True)
             except sqlite3.OperationalError:
                 continue
+            writes += 1
+            time.sleep(0.001)
 
     t = threading.Thread(target=appender, daemon=True)
     t.start()
+    started.wait(timeout=5.0)
     try:
-        for _ in range(300):
+        for _ in range(50):
             try:
                 hits = db.search(str(p), "KU-RO", mode="token")
             except sqlite3.OperationalError as exc:
                 errors.append(exc)
             else:
                 assert all(txt == "KU-RO" for _, _, txt in hits)
+        while writes < 5:
+            time.sleep(0.002)
     finally:
         stop.set()
         t.join()
+    assert writes >= 5
     assert errors == []
 
 

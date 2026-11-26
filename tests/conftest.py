@@ -121,8 +121,34 @@ def cached_neural_model() -> Iterator[Any]:
         yield model
 
 
+def _uses_tui_pilot(item: pytest.Item) -> bool:
+    """True if ``item`` drives a live Textual Pilot app (must share the serial 'tui' xdist group)."""
+    import types
+
+    path_text = str(item.fspath)
+    if path_text.endswith("test_tui_data.py"):
+        return False  # pure-Python adapter unit tests, no Textual Pilot
+    if "test_tui_" in path_text or "test_fix_r44_tui" in path_text:
+        return True
+    fixturenames = getattr(item, "fixturenames", ())
+    if any("tui_session" in name for name in fixturenames):
+        return True
+    fn = getattr(item, "obj", None)
+    code = getattr(fn, "__code__", None)
+    if code is None:
+        return False
+    stack = [code]
+    while stack:
+        co = stack.pop()
+        if "run_test" in co.co_names:
+            return True
+        for const in co.co_consts:
+            if isinstance(const, types.CodeType):
+                stack.append(const)
+    return False
+
+
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     for item in items:
-        path_text = str(item.fspath)
-        if "test_tui_" in path_text or "test_fix_r44_tui" in path_text:
+        if _uses_tui_pilot(item):
             item.add_marker(pytest.mark.xdist_group("tui"))

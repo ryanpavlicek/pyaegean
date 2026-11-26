@@ -139,18 +139,38 @@ def _opposite_era_sides(period: str) -> bool:
     return eras == {-1, 1}
 
 
+def _cached_periods(cid: str) -> list[str] | None:
+    """Return period strings for a locally cached corpus without touching the network."""
+    import sqlite3
+
+    import aegean
+    from aegean import data
+
+    asset = f"{cid}-corpus"
+    if not data.is_downloaded(data._REMOTE[asset], data.cache_dir()):
+        return None
+    if cid == "ddbdp":
+        from aegean.scripts.greek.ddbdp import ddbdp_db
+
+        with sqlite3.connect(ddbdp_db()) as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT period FROM documents WHERE period IS NOT NULL AND period != ''"
+            ).fetchall()
+        return [str(row[0]) for row in rows]
+    corpus = aegean.load(cid)
+    return [d.meta.period or "" for d in corpus]
+
+
 def test_no_crossera_misparse_across_corpora():
-    aegean = pytest.importorskip("aegean")
+    pytest.importorskip("aegean")
     checked = 0
     loaded = 0
     for cid in ("igcyr", "iospe", "edh", "ddbdp"):
-        try:
-            corpus = aegean.load(cid)
-        except Exception:  # noqa: BLE001 - corpus not cached offline
+        periods = _cached_periods(cid)
+        if periods is None:
             continue
         loaded += 1
-        for d in corpus:
-            period = d.meta.period or ""
+        for period in periods:
             if not _opposite_era_sides(period):
                 continue
             rng = viz.parse_period(period)
@@ -165,18 +185,17 @@ def test_no_crossera_misparse_across_corpora():
 
 
 def test_every_parsed_period_has_start_le_end():
-    aegean = pytest.importorskip("aegean")
+    pytest.importorskip("aegean")
     loaded = 0
     for cid in ("igcyr", "iospe", "edh"):
-        try:
-            corpus = aegean.load(cid)
-        except Exception:  # noqa: BLE001
+        periods = _cached_periods(cid)
+        if periods is None:
             continue
         loaded += 1
-        for d in corpus:
-            rng = viz.parse_period(d.meta.period or "")
+        for period in periods:
+            rng = viz.parse_period(period)
             if rng is not None:
-                assert rng[0] <= rng[1], (d.meta.period, rng)
+                assert rng[0] <= rng[1], (period, rng)
     if loaded == 0:
         pytest.skip("no epigraphy corpora available offline")
 
@@ -222,10 +241,11 @@ def test_plot_findspots_counts_agree_with_geo():
     matplotlib.use("Agg")
     pytest.importorskip("geopandas")
     aegean = pytest.importorskip("aegean")
-    try:
-        corpus = aegean.load("iip")
-    except Exception:  # noqa: BLE001
+    from aegean import data
+
+    if not data.is_downloaded(data._REMOTE["iip-corpus"], data.cache_dir()):
         pytest.skip("iip corpus not available offline")
+    corpus = aegean.load("iip")
 
     from aegean.geo import site_coordinates, to_geodataframe
 

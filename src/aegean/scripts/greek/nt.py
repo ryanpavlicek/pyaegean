@@ -322,6 +322,24 @@ def _bundled_payload() -> dict[str, Any]:
     return dict(load_bundled_json("greek", "nt_sample.json"))
 
 
+_NT_JSON_CACHE: tuple[tuple[str, int, int], dict[str, Any]] | None = None
+
+
+def _read_nt_json(path: Any) -> dict[str, Any]:
+    """Parse a cached ``nt-corpus`` JSON file, caching by ``(path, mtime_ns, size)``."""
+    global _NT_JSON_CACHE
+    import json as _json
+
+    st = path.stat()
+    key = (str(path), st.st_mtime_ns, st.st_size)
+    cached = _NT_JSON_CACHE
+    if cached is not None and cached[0] == key:
+        return cached[1]
+    payload: dict[str, Any] = _json.loads(path.read_text(encoding="utf-8"))
+    _NT_JSON_CACHE = (key, payload)
+    return payload
+
+
 def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = False) -> Any:
     """Load the Greek New Testament (Nestle 1904) as an annotated `Corpus`.
 
@@ -340,8 +358,6 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
     ``cite()`` names the canonical book and selected chapter/verse range before the
     unchanged edition bibliography. Missing range endpoints raise `ValueError` instead
     of silently truncating a passage while citing the requested, unavailable endpoint."""
-    import json as _json
-
     from ...core.corpus import Corpus
     from ...data import DataNotAvailableError, fetch
     from .inventory import greek_inventory
@@ -349,7 +365,7 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
     offline = False
     try:
         path = fetch("nt-corpus", force=force)
-        payload: dict[str, Any] = _json.loads(path.read_text(encoding="utf-8"))
+        payload = _read_nt_json(path)
     except DataNotAvailableError:
         payload = _bundled_payload()
         offline = True
@@ -398,7 +414,7 @@ def _load_cached_full_nt() -> Any | None:
     try:
         if not path.is_file() or sha256_file(path) != spec.sha256:
             return None
-        payload: dict[str, Any] = _json.loads(path.read_text(encoding="utf-8"))
+        payload = _read_nt_json(path)
         docs = _select(payload["documents"], None, None)
     except (OSError, ValueError, KeyError, TypeError, _json.JSONDecodeError):
         return None
@@ -408,6 +424,58 @@ def _load_cached_full_nt() -> Any | None:
         provenance=_provenance(payload.get("_meta", {}), offline=False),
         script_id="greek",
     )
+
+
+_NT_FREQ_CACHE: tuple[tuple[str, int, int, str | None], Any] | None = None
+
+
+def _cached_full_nt_lemma_freqs() -> Any | None:
+    """Return lemma frequencies of the pinned cached full NT without rebuilding Documents.
+
+    Keyed on ``(path, mtime_ns, size, expected_sha256)`` and SHA-256 verified on first load
+    or whenever the file changes on disk, so repeated translation/grounding calls do not
+    re-read and re-parse the 18 MB JSON on every call. Never touches the network.
+    """
+    global _NT_FREQ_CACHE
+    import json as _json
+    from collections import Counter
+
+    from ...data import _REMOTE, cache_dir, sha256_file
+    from ...greek.lemmatize import lemmatize
+
+    spec = _REMOTE["nt-corpus"]
+    path = cache_dir() / "nt-corpus"
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    if not path.is_file():
+        return None
+    key = (str(path), st.st_mtime_ns, st.st_size, spec.sha256)
+    cached = _NT_FREQ_CACHE
+    if cached is not None and cached[0] == key:
+        return cached[1]
+    try:
+        if sha256_file(path) != spec.sha256:
+            return None
+        payload = _read_nt_json(path)
+        documents = payload["documents"]
+    except (OSError, ValueError, KeyError, TypeError, _json.JSONDecodeError):
+        return None
+
+    nfc = unicodedata.normalize
+    freqs: Counter[str] = Counter()
+    for rec in documents:
+        for td in rec["tokens"]:
+            raw_lemma = td.get("lemma", "")
+            lemma = nfc("NFC", raw_lemma) if raw_lemma else lemmatize(nfc("NFC", td["t"]))
+            if lemma:
+                freqs[nfc("NFC", lemma).strip().lower()] += 1
+    _NT_FREQ_CACHE = (key, freqs)
+    return freqs
+
+
+_DEFAULT_LOAD_CACHED_FULL_NT = _load_cached_full_nt
 
 
 # loadable by name: aegean.load("nt") — fetches the full corpus, or the bundled sample offline

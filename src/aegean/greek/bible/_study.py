@@ -5,6 +5,7 @@ from __future__ import annotations
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Any
 
 from ._catalogs import (
@@ -21,7 +22,11 @@ from ._strongs import (
     strongs_roots,
 )
 
+_DEFAULT_LOAD_NT = load_nt
+_NT_SEARCH_CACHE: tuple[tuple[str, int, int] | str, Any, str] | None = None
 
+
+@lru_cache(maxsize=8192)
 def _fold(s: str) -> str:
     return "".join(
         c for c in unicodedata.normalize("NFD", s) if not unicodedata.combining(c)
@@ -103,7 +108,26 @@ def _load_nt_for_search(
     offline: bool = False,
 ) -> tuple[Any, str]:
     """Load NT corpus for search/word study, falling back gracefully to bundled offline sample."""
+    global _NT_SEARCH_CACHE
     if edition == "nestle1904":
+        cache_key: tuple[str, int, int] | str | None = None
+        if book is None and load_nt is _DEFAULT_LOAD_NT:
+            from ...data import _REMOTE, cache_dir, is_downloaded
+
+            root = cache_dir()
+            if is_downloaded(_REMOTE["nt-corpus"], root):
+                path = root / "nt-corpus"
+                try:
+                    st = path.stat()
+                    cache_key = (str(path), st.st_mtime_ns, st.st_size)
+                except OSError:
+                    cache_key = None
+            elif offline:
+                cache_key = "bundled"
+            cached = _NT_SEARCH_CACHE
+            if cache_key is not None and cached is not None and cached[0] == cache_key:
+                return cached[1], cached[2]
+
         corp = load_nt(book, edition="nestle1904", offline=offline)
         cit = getattr(getattr(corp, "provenance", None), "citation", "") or ""
         is_sample = "Bundled sample" in cit
@@ -112,6 +136,8 @@ def _load_nt_for_search(
             if is_sample
             else (f"Nestle 1904 ({book})" if book else "Nestle 1904 (27 books)")
         )
+        if cache_key is not None:
+            _NT_SEARCH_CACHE = (cache_key, corp, scope)
         return corp, scope
     corp = load_nt(book, edition=edition, offline=offline)
     scope = f"{edition} ({book})" if book else f"{edition} (27 books)"

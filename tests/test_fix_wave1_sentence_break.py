@@ -264,17 +264,24 @@ def test_unknown_policy_is_refused_before_any_backend_work() -> None:
 # --- corpus-scale correctness -----------------------------------------------------
 
 
+@pytest.fixture(scope="module")
+def _john1_document():
+    from aegean.greek import bible
+
+    return next(
+        item for item in bible.load_nt("John", offline=True).documents if item.id == "John 1"
+    )
+
+
 @pytest.mark.parametrize(
     "policy,expected",
     [("default", 65), ("prose", 65), ("verse", 65), ("inscription", 46), ("papyrus", 46)],
 )
-def test_nt_john_1_splits_at_exactly_its_committed_marks(policy: str, expected: int) -> None:
+def test_nt_john_1_splits_at_exactly_its_committed_marks(
+    _john1_document, policy: str, expected: int
+) -> None:
     """John 1 carries 46 periods, 12 Greek question marks and 7 ano teleia."""
-    import aegean
-
-    document = next(
-        item for item in aegean.load("nt").documents if item.id == "John 1"
-    )
+    document = _john1_document
     assert all(token.kind is TokenKind.WORD for token in document.tokens)
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)

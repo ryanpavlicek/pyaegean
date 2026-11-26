@@ -224,6 +224,17 @@ def _row_percentages(mat: Sequence[Sequence[float]]) -> list[list[float]]:
     return out
 
 
+def _dot_py(a: Sequence[float], b: Sequence[float]) -> float:
+    return float(sum(map(_mul, a, b)))
+
+
+import operator as _operator  # noqa: E402
+
+_mul = _operator.mul
+_sub = _operator.sub
+_dot: Any = getattr(math, "sumprod", _dot_py)
+
+
 def brainerd_robinson(matrix: Sequence[Sequence[float]]) -> list[list[float]]:
     """The Brainerd-Robinson similarity matrix of an abundance table.
 
@@ -239,13 +250,14 @@ def brainerd_robinson(matrix: Sequence[Sequence[float]]) -> list[list[float]]:
     pct = _row_percentages(_to_matrix(matrix))
     n = len(pct)
     sim = [[0.0] * n for _ in range(n)]
+    _abs = abs
     for i in range(n):
         pi = pct[i]
-        sim[i][i] = 200.0 if sum(pi) > 0 else 0.0
+        sim_i = sim[i]
+        sim_i[i] = 200.0 if sum(pi) > 0 else 0.0
         for j in range(i + 1, n):
-            d = sum(abs(a - b) for a, b in zip(pi, pct[j], strict=True))
-            s = 200.0 - d
-            sim[i][j] = s
+            s = 200.0 - sum(map(_abs, map(_sub, pi, pct[j])))
+            sim_i[j] = s
             sim[j][i] = s
     return sim
 
@@ -371,8 +383,13 @@ def _default_max_sweeps(n: int) -> int:
 
 def _off_diagonal_norm(a: list[list[float]]) -> float:
     """The norm of what the rotations have still to remove, over the strict upper triangle."""
-    n = len(a)
-    return math.sqrt(sum(a[i][j] * a[i][j] for i in range(n) for j in range(i + 1, n)))
+    dot = _dot
+    total = 0.0
+    for i, row in enumerate(a):
+        tail = row[i + 1 :]
+        if tail:
+            total += dot(tail, tail)
+    return math.sqrt(total)
 
 
 def _jacobi_eigh(
@@ -395,43 +412,51 @@ def _jacobi_eigh(
     n = len(matrix)
     budget = _default_max_sweeps(n) if max_sweeps is None else max_sweeps
     a = [row[:] for row in matrix]
-    v = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+    # Store eigenvector columns as contiguous rows in vt so each Jacobi rotation
+    # transforms two flat lists instead of striding across n rows.
+    vt = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
     sweeps = 0
     separated = False
+    _sqrt = math.sqrt
     for sweep in range(1, budget + 1):
         sweeps = sweep
-        off = _off_diagonal_norm(a)
-        if off <= _JACOBI_OFF_TOLERANCE:
+        if _off_diagonal_norm(a) <= _JACOBI_OFF_TOLERANCE:
             separated = True
             break
         for p in range(n - 1):
+            ap = a[p]
+            vp = vt[p]
             for q in range(p + 1, n):
-                apq = a[p][q]
+                apq = ap[q]
                 if apq == 0.0:
                     continue
-                theta = (a[q][q] - a[p][p]) / (2.0 * apq)
-                t = (1.0 if theta >= 0 else -1.0) / (abs(theta) + math.sqrt(theta * theta + 1.0))
-                cos = 1.0 / math.sqrt(t * t + 1.0)
+                aq = a[q]
+                theta = (aq[q] - ap[p]) / (2.0 * apq)
+                t = (1.0 if theta >= 0 else -1.0) / (abs(theta) + _sqrt(theta * theta + 1.0))
+                cos = 1.0 / _sqrt(t * t + 1.0)
                 sin = t * cos
+                for row in a:
+                    akp = row[p]
+                    akq = row[q]
+                    row[p] = cos * akp - sin * akq
+                    row[q] = sin * akp + cos * akq
                 for k in range(n):
-                    akp, akq = a[k][p], a[k][q]
-                    a[k][p] = cos * akp - sin * akq
-                    a[k][q] = sin * akp + cos * akq
+                    apk = ap[k]
+                    aqk = aq[k]
+                    ap[k] = cos * apk - sin * aqk
+                    aq[k] = sin * apk + cos * aqk
+                vq = vt[q]
                 for k in range(n):
-                    apk, aqk = a[p][k], a[q][k]
-                    a[p][k] = cos * apk - sin * aqk
-                    a[q][k] = sin * apk + cos * aqk
-                for k in range(n):
-                    vkp, vkq = v[k][p], v[k][q]
-                    v[k][p] = cos * vkp - sin * vkq
-                    v[k][q] = sin * vkp + cos * vkq
+                    vpk = vp[k]
+                    vqk = vq[k]
+                    vp[k] = cos * vpk - sin * vqk
+                    vq[k] = sin * vpk + cos * vqk
     else:
         # The budget ran out with the last sweep's rotations never checked, and those may have
         # been the ones that finished the job.
         separated = _off_diagonal_norm(a) <= _JACOBI_OFF_TOLERANCE
     eigvals = [a[i][i] for i in range(n)]
-    eigvecs = [[v[i][j] for i in range(n)] for j in range(n)]
-    return eigvals, eigvecs, sweeps, separated
+    return eigvals, vt, sweeps, separated
 
 
 def _fiedler_power(
@@ -455,30 +480,31 @@ def _fiedler_power(
     determines on its own."""
     n = len(sim)
     shift = 2.0 * max(row_sum) + 1.0
+    diag = [shift - s for s in row_sum]
+    dot = _dot
+    inv_n = 1.0 / n
     x = [math.sin(phase + i) for i in range(n)]
-    mean = sum(x) / n
+    mean = sum(x) * inv_n
     x = [xi - mean for xi in x]
-    norm = math.sqrt(sum(xi * xi for xi in x)) or 1.0
-    x = [xi / norm for xi in x]
+    norm = math.sqrt(dot(x, x)) or 1.0
+    inv_norm = 1.0 / norm
+    x = [xi * inv_norm for xi in x]
     used = 0
     converged = False
     for used in range(1, max_iter + 1):
-        y = [
-            (shift - row_sum[i]) * x[i] + sum(sim[i][j] * x[j] for j in range(n))
-            for i in range(n)
-        ]
-        mean = sum(y) / n
+        y = [d * xi + dot(row, x) for d, xi, row in zip(diag, x, sim)]
+        mean = sum(y) * inv_n
         y = [yi - mean for yi in y]
-        norm = math.sqrt(sum(yi * yi for yi in y))
+        norm = math.sqrt(dot(y, y))
         if norm < 1e-14:
             converged = True
             break
-        y = [yi / norm for yi in y]
+        inv_norm = 1.0 / norm
+        y = [yi * inv_norm for yi in y]
         # Converge on the vector direction (sign-agnostic), not on the argsort.
-        conv = min(
-            sum((a - b) ** 2 for a, b in zip(x, y, strict=True)),
-            sum((a + b) ** 2 for a, b in zip(x, y, strict=True)),
-        )
+        diff_sub = [a - b for a, b in zip(x, y)]
+        diff_add = [a + b for a, b in zip(x, y)]
+        conv = min(dot(diff_sub, diff_sub), dot(diff_add, diff_add))
         x = y
         if conv < 1e-14:
             converged = True

@@ -56,88 +56,83 @@ def _dataset_row(table: DataTable, name: str) -> list[str]:  # type: ignore[type
     raise AssertionError(f"no dataset row {name!r}")
 
 
+from _tui_helpers import TuiSession  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def data_tui_session():  # type: ignore[no-untyped-def]
+    session = TuiSession(size=(120, 50)).start()
+
+    async def _goto_data(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        app.goto("data")
+        await pilot.pause()
+
+    session.run(_goto_data)
+    try:
+        yield session
+    finally:
+        session.close()
+
+
 # ── environment report ───────────────────────────────────────────────────────
-def test_environment_report_shows_the_pyaegean_version() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("data")
-            await pilot.pause()
-            assert isinstance(app.screen, DataStoreScreen)
-            versions = _kv_pairs(app.screen.query_one("#data-versions", DataTable))
-            # the doctor table carries the live version, not a hard-coded string
-            assert versions["pyaegean"] == aegean.__version__
-            import platform
+def test_environment_report_shows_the_pyaegean_version(data_tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        assert isinstance(app.screen, DataStoreScreen)
+        versions = _kv_pairs(app.screen.query_one("#data-versions", DataTable))
+        # the doctor table carries the live version, not a hard-coded string
+        assert versions["pyaegean"] == aegean.__version__
+        import platform
 
-            assert versions["python"] == platform.python_version()
+        assert versions["python"] == platform.python_version()
 
-    _run(body())
+    data_tui_session.run(body)
 
 
-def test_environment_report_lists_the_tui_extra_as_installed() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("data")
-            await pilot.pause()
-            extras = _kv_pairs(app.screen.query_one("#data-extras", DataTable))
-            # the report is running under the tui extra, so it must be present
-            assert "tui" in extras
-            assert extras["tui"] == "installed"
+def test_environment_report_lists_the_tui_extra_as_installed(data_tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        extras = _kv_pairs(app.screen.query_one("#data-extras", DataTable))
+        # the report is running under the tui extra, so it must be present
+        assert "tui" in extras
+        assert extras["tui"] == "installed"
 
-    _run(body())
+    data_tui_session.run(body)
 
 
-def test_environment_report_shows_the_data_store_location() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("data")
-            await pilot.pause()
-            store = _kv_pairs(app.screen.query_one("#data-store", DataTable))
-            # the store section names the location and its writability
-            assert "location" in store
-            from aegean.data import cache_dir
+def test_environment_report_shows_the_data_store_location(data_tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        store = _kv_pairs(app.screen.query_one("#data-store", DataTable))
+        # the store section names the location and its writability
+        assert "location" in store
+        from aegean.data import cache_dir
 
-            assert store["location"] == str(cache_dir())
-            assert store["writable"] in {"yes", "no"}
+        assert store["location"] == str(cache_dir())
+        assert store["writable"] in {"yes", "no"}
 
-    _run(body())
+    data_tui_session.run(body)
 
 
 # ── dataset table ────────────────────────────────────────────────────────────
-def test_dataset_table_lists_damos_and_sigla_with_a_download_state() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("data")
-            await pilot.pause()
-            table = app.screen.query_one("#data-datasets", DataTable)
-            names = _dataset_names(table)
-            assert "damos-corpus" in names
-            assert "sigla-corpus" in names
-            # each row's state cell is one of the two download states
-            damos = _dataset_row(table, "damos-corpus")
-            assert damos[1] in {"downloaded", "not downloaded"}
+def test_dataset_table_lists_damos_and_sigla_with_a_download_state(
+    data_tui_session: TuiSession,
+) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        table = app.screen.query_one("#data-datasets", DataTable)
+        names = _dataset_names(table)
+        assert "damos-corpus" in names
+        assert "sigla-corpus" in names
+        # each row's state cell is one of the two download states
+        damos = _dataset_row(table, "damos-corpus")
+        assert damos[1] in {"downloaded", "not downloaded"}
 
-    _run(body())
+    data_tui_session.run(body)
 
 
-def test_fetch_button_is_present_for_the_download_action() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("data")
-            await pilot.pause()
-            button = app.screen.query_one("#data-fetch", Button)
-            assert "Fetch" in str(button.label)
+def test_fetch_button_is_present_for_the_download_action(data_tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        button = app.screen.query_one("#data-fetch", Button)
+        assert "Fetch" in str(button.label)
 
-    _run(body())
+    data_tui_session.run(body)
 
 
 # ── fetch action (monkeypatched: never hits the network) ─────────────────────

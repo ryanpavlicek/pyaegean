@@ -116,128 +116,128 @@ def test_command_candidates_include_subcommands() -> None:
     assert len(cands) > 60
 
 
-def test_console_shows_the_command_menu_on_entry() -> None:
+from _tui_helpers import TuiSession  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def tui_session():  # type: ignore[no-untyped-def]
+    session = TuiSession(size=(120, 40)).start()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+async def _ensure_console(app: AegeanApp, pilot) -> CommandConsoleScreen:  # type: ignore[no-untyped-def]
+    if not isinstance(app.screen, CommandConsoleScreen):
+        app.goto("console")
+        await pilot.pause()
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+    screen = app.screen
+    assert isinstance(screen, CommandConsoleScreen)
+    inp = screen.query_one("#console-input", Input)
+    inp.value = ""
+    inp.focus()
+    await pilot.pause()
+    return screen
+
+
+def test_console_shows_the_command_menu_on_entry(tui_session: TuiSession) -> None:
     """Like `aegean repl`, the console prints the command map on entry so the hints are visible
     up front, not only as ghost text once you start typing."""
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            app.goto("console")
-            await pilot.pause()
-            await app.workers.wait_for_complete()
-            await pilot.pause()
-            svg = app.export_screenshot()
-            assert "quickstart" in svg
-            assert "greek" in svg
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        await _ensure_console(app, pilot)
+        svg = app.export_screenshot()
+        assert "quickstart" in svg
+        assert "greek" in svg
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_submitting_a_line_runs_a_worker_and_clears_the_input() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("console")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, CommandConsoleScreen)
-            log = screen.query_one("#console-log", RichLog)
-            before = len(log.lines)
-            inp = screen.query_one("#console-input", Input)
-            inp.value = "info lineara"
-            screen.on_input_submitted(Input.Submitted(inp, "info lineara"))
-            await pilot.pause()
-            await app.workers.wait_for_complete()
-            await pilot.pause()
-            assert inp.value == ""  # the input cleared
-            assert len(log.lines) > before  # output landed in the log
-            assert isinstance(app.screen, CommandConsoleScreen)  # no crash
+def test_submitting_a_line_runs_a_worker_and_clears_the_input(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _ensure_console(app, pilot)
+        log = screen.query_one("#console-log", RichLog)
+        before = len(log.lines)
+        inp = screen.query_one("#console-input", Input)
+        inp.value = "info lineara"
+        screen.on_input_submitted(Input.Submitted(inp, "info lineara"))
+        await pilot.pause()
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert inp.value == ""  # the input cleared
+        assert len(log.lines) > before  # output landed in the log
+        assert isinstance(app.screen, CommandConsoleScreen)  # no crash
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_a_bad_line_does_not_crash_the_console() -> None:
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 50)) as pilot:
-            await pilot.pause()
-            app.goto("console")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, CommandConsoleScreen)
-            inp = screen.query_one("#console-input", Input)
-            screen.on_input_submitted(Input.Submitted(inp, "stats nope-corpus"))
-            await pilot.pause()
-            await app.workers.wait_for_complete()
-            await pilot.pause()
-            assert isinstance(app.screen, CommandConsoleScreen)
+def test_a_bad_line_does_not_crash_the_console(tui_session: TuiSession) -> None:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _ensure_console(app, pilot)
+        inp = screen.query_one("#console-input", Input)
+        screen.on_input_submitted(Input.Submitted(inp, "stats nope-corpus"))
+        await pilot.pause()
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert isinstance(app.screen, CommandConsoleScreen)
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_console_has_a_suggester_and_up_arrow_recalls_history() -> None:
+def test_console_has_a_suggester_and_up_arrow_recalls_history(tui_session: TuiSession) -> None:
     import types
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 40)) as pilot:
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _ensure_console(app, pilot)
+        screen._history.clear()
+        screen._hist_pos = 0
+        inp = screen.query_one("#console-input", Input)
+        assert inp.suggester is not None  # predictive completion is wired
+        for line in ("info lineara", "stats lineara"):
+            screen.on_input_submitted(Input.Submitted(inp, line))
             await pilot.pause()
-            app.goto("console")
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, CommandConsoleScreen)
-            inp = screen.query_one("#console-input", Input)
-            assert inp.suggester is not None  # predictive completion is wired
-            for line in ("info lineara", "stats lineara"):
-                screen.on_input_submitted(Input.Submitted(inp, line))
-                await pilot.pause()
-                await app.workers.wait_for_complete()
-            inp.focus()
-            await pilot.pause()
-            screen.on_key(types.SimpleNamespace(key="up", stop=lambda: None))
-            assert inp.value == "stats lineara"  # most recent first
-            screen.on_key(types.SimpleNamespace(key="up", stop=lambda: None))
-            assert inp.value == "info lineara"
+            await app.workers.wait_for_complete()
+        inp.focus()
+        await pilot.pause()
+        screen.on_key(types.SimpleNamespace(key="up", stop=lambda: None))
+        assert inp.value == "stats lineara"  # most recent first
+        screen.on_key(types.SimpleNamespace(key="up", stop=lambda: None))
+        assert inp.value == "info lineara"
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_a_stray_key_refocuses_the_prompt_instead_of_quitting_the_app() -> None:
+def test_a_stray_key_refocuses_the_prompt_instead_of_quitting_the_app(
+    tui_session: TuiSession,
+) -> None:
     """If focus drifts off the prompt (a click, a terminal quirk), a bare letter must NOT
     fall through to a global binding — pressing 'q' would otherwise quit the whole app."""
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            app.goto("console")
-            await pilot.pause()
-            await pilot.pause()
-            screen = app.screen
-            assert isinstance(screen, CommandConsoleScreen)
-            inp = screen.query_one("#console-input", Input)
-            # the log can never steal focus and turn typing into navigation
-            assert screen.query_one("#console-log", RichLog).can_focus is False
-            # force focus away, as a click on the log or a terminal focus glitch would
-            app.set_focus(None)
-            await pilot.pause()
-            await pilot.press("q")  # the letter that quits the app
-            await pilot.pause()
-            assert isinstance(app.screen, CommandConsoleScreen)  # did NOT quit
-            assert app.focused is inp  # the prompt reclaimed focus
-            # and now ordinary letters type into the prompt rather than navigating away
-            await pilot.press("q", "u", "i", "t")
-            await pilot.pause()
-            assert inp.value == "quit"
-            assert isinstance(app.screen, CommandConsoleScreen)
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        screen = await _ensure_console(app, pilot)
+        inp = screen.query_one("#console-input", Input)
+        # the log can never steal focus and turn typing into navigation
+        assert screen.query_one("#console-log", RichLog).can_focus is False
+        # force focus away, as a click on the log or a terminal focus glitch would
+        app.set_focus(None)
+        await pilot.pause()
+        await pilot.press("q")  # the letter that quits the app
+        await pilot.pause()
+        assert isinstance(app.screen, CommandConsoleScreen)  # did NOT quit
+        assert app.focused is inp  # the prompt reclaimed focus
+        # and now ordinary letters type into the prompt rather than navigating away
+        await pilot.press("q", "u", "i", "t")
+        await pilot.pause()
+        assert inp.value == "quit"
+        assert isinstance(app.screen, CommandConsoleScreen)
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_console_prompt_is_visible_above_the_footer() -> None:
+def test_console_prompt_is_visible_above_the_footer(tui_session: TuiSession) -> None:
     """The prompt must occupy its own row strictly above the Footer and fit within the screen.
 
     A bottom-docked prompt lands on the Footer's row, and the Footer paints over it, hiding the
@@ -245,47 +245,36 @@ def test_console_prompt_is_visible_above_the_footer() -> None:
     This pins the layout so that collision can't return, and confirms the prompt actually paints.
     """
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            app.goto("console")
-            await pilot.pause()
-            await pilot.pause()
-            scr = app.screen
-            inp = scr.query_one("#console-input", Input)
-            foot = scr.query_one(Footer)
-            assert inp.region.y < foot.region.y  # prompt on its own row, above the footer
-            assert inp.region.x + inp.region.width <= scr.size.width  # no width overflow
-            assert app.focused is inp  # focused, so keystrokes land in it
-            await pilot.press("q", "u", "i", "c")
-            await pilot.pause()
-            svg = app.export_screenshot()
-            assert "aegean&gt;" in svg or "aegean>" in svg  # the prompt mark is painted
-            assert "quic" in svg  # the typed text is painted (not hidden under the footer)
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        scr = await _ensure_console(app, pilot)
+        inp = scr.query_one("#console-input", Input)
+        foot = scr.query_one(Footer)
+        assert inp.region.y < foot.region.y  # prompt on its own row, above the footer
+        assert inp.region.x + inp.region.width <= scr.size.width  # no width overflow
+        assert app.focused is inp  # focused, so keystrokes land in it
+        await pilot.press("q", "u", "i", "c")
+        await pilot.pause()
+        svg = app.export_screenshot()
+        assert "aegean&gt;" in svg or "aegean>" in svg  # the prompt mark is painted
+        assert "quic" in svg  # the typed text is painted (not hidden under the footer)
 
-    _run(body())
+    tui_session.run(body)
 
 
-def test_escape_still_leaves_the_console() -> None:
+def test_escape_still_leaves_the_console(tui_session: TuiSession) -> None:
     """Esc is not printable, so the safety net lets it bubble to the app's back navigation.
     Per the app-wide convention a focused input blurs on the first Esc, then a second Esc
     (nothing focused) walks the history back — the console must not trap the user."""
 
-    async def body() -> None:
-        app = AegeanApp()
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            app.goto("corpus")
-            await pilot.pause()
-            app.goto("console")
-            await pilot.pause()
-            await pilot.pause()
-            assert isinstance(app.screen, CommandConsoleScreen)
-            await pilot.press("escape")  # blurs the prompt
-            await pilot.pause()
-            await pilot.press("escape")  # walks back
-            await pilot.pause()
-            assert not isinstance(app.screen, CommandConsoleScreen)  # navigated back
+    async def body(app: AegeanApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        app.goto("corpus")
+        await pilot.pause()
+        await _ensure_console(app, pilot)
+        assert isinstance(app.screen, CommandConsoleScreen)
+        await pilot.press("escape")  # blurs the prompt
+        await pilot.pause()
+        await pilot.press("escape")  # walks back
+        await pilot.pause()
+        assert not isinstance(app.screen, CommandConsoleScreen)  # navigated back
 
-    _run(body())
+    tui_session.run(body)

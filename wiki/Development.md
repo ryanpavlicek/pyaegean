@@ -135,10 +135,11 @@ pytest tests/test_numerals.py -q
 # ......                                                                   [100%]
 ```
 
-Run in parallel with `pytest -n 4 --dist loadgroup`. `tests/conftest.py` pins
+Run in parallel with `pytest -n auto --dist loadgroup`. `tests/conftest.py` pins
 TUI Pilot tests to a single worker group (use `--dist loadgroup`, not
-`loadfile`). CI runs `pytest --cov=aegean --cov-report=term-missing` across the
-supported Python matrix.
+`loadfile`). CI runs `pytest -n auto --dist loadgroup` across Python 3.10–3.15
+with `--cov=aegean --cov-report=term-missing` (`COVERAGE_CORE=sysmon`) on
+Python 3.12.
 
 **4. Footprint guard.** Verifies that `import aegean` stays fast and pulls zero
 heavy dependencies. Run against a core-only install (no extras) for a clean
@@ -187,14 +188,15 @@ these lazily inside functions.
 
 ### What CI runs
 
-`.github/workflows/ci.yml` defines ten jobs:
+`.github/workflows/ci.yml` defines eleven jobs:
 
 | Job | Scope |
 | --- | --- |
-| **test** | `ruff` → `mypy` → `scripts/check_api.py` → `pytest` with coverage across Python 3.10–3.15 |
+| **quality** | `ruff` → `mypy` → `scripts/check_api.py` on Python 3.12 |
+| **test** | parallel `pytest -n auto --dist loadgroup` across Python 3.10–3.15, with `sysmon` coverage on Python 3.12 |
 | **cross-platform** | storage, locking, Unicode, SQLite, and review tests natively on Windows and macOS |
 | **extras-ai-viz** | installs `[dev,ai,viz-interactive]` and runs offline AI SDK and Plotly tests without skips |
-| **geo** | installs `[dev,geo,parquet]` and runs the suite with `-rs` so geopandas and pyarrow tests execute |
+| **geo** | installs `[dev,geo,parquet]` and runs the geo and Parquet test modules with `-rs` |
 | **interop** | installs `[dev,interop]` on Python 3.14 and runs real spaCy, Stanza, and CLTK adapter tests |
 | **neural-integration** | provisions the pinned neural model and runs bounded CPU integration tests without skips |
 | **demo-released-wheel** | verifies `docs/demo` against the published PyPI wheel |

@@ -175,10 +175,11 @@ def test_noncommercial_license_survives_to_turtle(tmp_path: Path) -> None:
 
 # ── correctness: a real EDH document (skipped when not cached / offline) ────────
 def test_edh_real_document_uri_uses_its_trismegistos_id(tmp_path: Path) -> None:
-    try:
-        edh = aegean.load("edh")
-    except Exception as exc:  # not fetched / offline — the correctness of the mapping is covered above
-        pytest.skip(f"edh corpus not available: {exc}")
+    from aegean import data
+
+    if not data.is_downloaded(data._REMOTE["edh-corpus"], data.cache_dir()):
+        pytest.skip("edh corpus not cached")
+    edh = aegean.load("edh")
     # find a real document that carries a TM note and check its minted URI matches that id
     doc = next((d for d in edh if any(n.startswith("TM ") for n in d.meta.notes)), None)
     assert doc is not None, "expected EDH documents to carry Trismegistos ids"
