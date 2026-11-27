@@ -172,7 +172,7 @@ greek_reading("PA-SI-LE-U-SE")   # ('βασιλεύς', 'king')
 greek_reading("KA-SE")           # ('καί', 'and (Arcado-Cypriot κάς)')
 greek_reading("TU-KA")           # ('τύχη', 'fortune (Cypriot τύχα)')
 gloss("WA-NA-SA")                # 'queen, lady (the Paphian goddess)'
-lexicon_entry("KA-TE-TE-KE")     # CypriotLexEntry(lemma='κατατίθημι', ..., attestation='IG XV 1, 102')
+lexicon_entry("KA-TE-TI-SA-NE")  # CypriotLexEntry(lemma='κατατίθημι', ..., attestation='IG XV 1, 227')
 greek_reading("NOT-A-WORD")      # None
 ```
 
@@ -212,7 +212,7 @@ Representative entries (call `lexicon_entries()` for all 52 with citations):
 | `A-PO-LO-NI` | Ἀπόλλων | to Apollo (dative) | *IG* XV 1, 102 |
 | `E-MI` | εἰμί | I am | *IG* XV 1, 120 / Marion |
 | `KA-SE` | καί | and (Arcado-Cypriot κάς) | *IG* XV 1, 95 |
-| `KA-TE-TE-KE` | κατατίθημι | dedicated, set up | *IG* XV 1, 102 |
+| `KA-TE-TI-SA-NE` | κατατίθημι | placed, buried (aor. 3pl. κατέθισαν) | *IG* XV 1, 227 |
 | `KO-RA-I` | Κόρη | to Kore (Persephone) | *IG* XV 1, 95 |
 | `PA-I-SE` | παῖς | child | *IG* XV 1, 179 |
 | `PA-SI-LE-U-SE` | βασιλεύς | king | *IG* XV 1, 120 |
@@ -371,7 +371,7 @@ backup round-trips.
 | Transliteration → sound | `word_to_phonetic("PA-SI-LE-U-SE")` | via `bridge` / `analyze compare` |
 | Override sign values | `word_to_phonetic(w, overrides={...})` | — |
 | Greek reading (lemma + gloss) | `greek_reading("PA-SI-LE-U-SE")` | `aegean bridge cypriot PA-SI-LE-U-SE` |
-| Source-cited lexicon entry | `lexicon_entry("KA-TE-TE-KE")` / `lexicon_entries()` | — |
+| Source-cited lexicon entry | `lexicon_entry("KA-TE-TI-SA-NE")` / `lexicon_entries()` | — |
 | English gloss only | `gloss("WA-NA-SA")` | shown in `bridge` output |
 | Full dictionary entry | `aegean.greek.use_lsj()`, `greek.gloss(lemma)` | `aegean greek gloss <lemma>` |
 | Compare with Greek by sound | `aegean.analysis.phonetic_compare(w, "cypriot", g, "greek")` | `aegean analyze compare ... --script-a cypriot` |

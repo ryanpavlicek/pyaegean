@@ -3,7 +3,7 @@ schema_version: 1
 
 context:
   name: pyaegean
-  version: "0.73.1"
+  version: "0.74.0"
   python_min: "3.10"
 
 package:
@@ -12,7 +12,7 @@ package:
 
 source:
   url: https://pypi.org/packages/source/${{ name[0] }}/${{ name }}/${{ name }}-${{ version }}.tar.gz
-  sha256: f68d33691f018968b4beb6165c0ac2bea1ffc06675c1a95bb572cdf287912c66
+  sha256: d87b976210ec7c0289685d2ea28501cecfa43fb3b97264aa56051fbfd6f44de7
 
 build:
   number: 0
@@ -35,6 +35,7 @@ tests:
   - python:
       imports:
         - aegean
+        - aegean.browser
         - aegean.core
         - aegean.greek
         - aegean.greek.bible

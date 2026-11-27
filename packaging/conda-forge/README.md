@@ -13,8 +13,6 @@ This directory holds the conda-forge v1 (`rattler-build`) recipe for
    ```bash
    python3 -c 'import json, urllib.request; d = json.loads(urllib.request.urlopen("https://pypi.org/pypi/pyaegean/json").read()); print(d["info"]["version"], [u["digests"]["sha256"] for u in d["urls"] if u["packagetype"] == "sdist"])'
    ```
-   When bumping from `0.73.1` to `0.74.0+`, add `- aegean.browser` to
-   `tests[0].python.imports`.
 4. Open a pull request against `conda-forge/staged-recipes` and complete the
    conda-forge recipe checklist.
 
@@ -22,7 +20,7 @@ This directory holds the conda-forge v1 (`rattler-build`) recipe for
 
 The base `pyaegean` feedstock installs the zero-dependency core (including
 bundled corpora, Greek rule-based NLP, and the stdlib local visual corpus
-browser in `0.74.0+`). Optional extras install cleanly from `conda-forge`
+browser). Optional extras install cleanly from `conda-forge`
 alongside `pyaegean`:
 
 | Feature | conda-forge packages |
